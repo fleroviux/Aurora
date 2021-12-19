@@ -218,7 +218,7 @@ void main() {
 
   void upload_transform_uniforms(TransformComponent const& transform, GameObject* camera) {
     // TODO: need to fixup the depth component.
-    auto projection = Matrix4::perspective(75.0, 1920/1080.0, 0.01, 100.0);
+    auto projection = Matrix4::perspective(90.0, 1920/1080.0, 0.01, 100.0);
     auto view = camera->transform().world().inverse();
 
     auto u_projection = glGetUniformLocation(program, "u_projection");
@@ -265,6 +265,7 @@ void main() {
           upload_geometry(geometry, data);
         }
 
+        // TODO: check GL_INVALID_OPERATION on first draw?
         auto& index_buffer = geometry->index_buffer;
         upload_transform_uniforms(transform, camera);
         glBindVertexArray(data.vao);
@@ -387,7 +388,7 @@ int main() {
   scene->add_child(camera);
 
   auto gltf_loader = GLTFLoader{};
-  auto cyoob = gltf_loader.parse("cyoob.gltf");
+  auto cyoob = gltf_loader.parse("DamagedHelmet/DamagedHelmet.gltf");
   scene->add_child(cyoob);
 
   auto event = SDL_Event{};

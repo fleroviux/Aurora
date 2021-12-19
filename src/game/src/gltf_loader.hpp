@@ -6,6 +6,7 @@
 
 #include <aurora/scene/game_object.hpp>
 #include <aurora/integer.hpp>
+#include <filesystem>
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
@@ -60,6 +61,7 @@ private:
   static auto to_component_count(std::string type) -> int;
   static auto to_topology(int mode) -> Geometry::Topology;
 
+  std::filesystem::path base_path_;
   std::vector<Buffer> buffers_;
   std::vector<BufferView> buffer_views_;
   std::vector<Accessor> accessors_;

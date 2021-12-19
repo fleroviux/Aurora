@@ -25,6 +25,8 @@ auto GLTFLoader::parse(std::string const& path) -> GameObject* {
   auto gltf = nlohmann::json::parse(json);
   auto scene = new GameObject{"Scene"};
 
+  base_path_ = std::filesystem::path{path}.remove_filename();
+
   load_buffers(gltf);
   load_buffer_views(gltf);
   load_accessors(gltf);
@@ -44,31 +46,27 @@ void GLTFLoader::load_buffers(nlohmann::json const& gltf) {
    */
 
   if (gltf.contains("buffers")) {
-    size_t id = 0;
-
     for (auto const& buffer : gltf["buffers"]) {
       auto uri = buffer["uri"].get<std::string>();
       auto byte_length = buffer["byteLength"].get<int>();
+
+      uri = base_path_ / uri;
 
       std::ifstream file{uri, std::ios::binary};
 
       Assert(file.good(), "GLTFLoader: failed to load buffer: {}", uri);
 
-      size_t real_length;
-      file.seekg(0, std::ios::end);
-      real_length = file.tellg();
-      file.seekg(0);
+      size_t real_length = std::filesystem::file_size(uri);
 
       Assert(real_length >= byte_length, "GLTFLoader: buffer was smaller than specified");
 
-      buffers_.push_back(Buffer{});
-      buffers_[id].resize(byte_length);
-      file.read((char*)buffers_[id].data(), byte_length);
+      auto buffer_out = Buffer{};
+      buffer_out.resize(byte_length);
+      file.read((char*)buffer_out.data(), byte_length);
       file.close();
+      buffers_.push_back(buffer_out);
 
       Log<Info>("GLTFLoader: successfully read buffer {} ({} bytes)", uri, byte_length);
-
-      id++;
     }
   }
 }
@@ -215,6 +213,7 @@ auto GLTFLoader::to_vertex_data_type(int component_type) -> VertexDataType {
     case 5121: return VertexDataType::UInt8;
     case 5122: return VertexDataType::SInt16;
     case 5123: return VertexDataType::UInt16;
+    case 5125: return VertexDataType::UInt32;
     case 5126: return VertexDataType::Float32;
   }
 

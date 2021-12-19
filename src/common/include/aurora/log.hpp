@@ -50,7 +50,7 @@ inline void Log(std::string_view format, Args... args) {
 
 template<typename... Args>
 inline void Assert(bool condition, Args... args) {
-#if defined(DEBUG)
+#if !defined(NDEBUG)
   if (!condition) {
     Log<Fatal>(args...);
     std::exit(-1);
