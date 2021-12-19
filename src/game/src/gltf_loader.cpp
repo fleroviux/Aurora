@@ -17,9 +17,7 @@ auto GLTFLoader::parse(std::string const& path) -> GameObject* {
   }
 
   std::string json;
-  file.seekg(0, std::ios::end);
-  json.reserve(file.tellg());
-  file.seekg(0);
+  json.reserve(std::filesystem::file_size(path));
   json.assign(std::istream_iterator<char>(file), std::istream_iterator<char>());
 
   auto gltf = nlohmann::json::parse(json);
