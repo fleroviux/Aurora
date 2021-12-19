@@ -17,8 +17,6 @@
 
 namespace Aura {
 
-// TODO: use std::unique_ptr to manage object lifetimes?
-
 struct GameObject final {
   AURA_NO_COPY_NO_MOVE(GameObject);
 

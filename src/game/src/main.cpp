@@ -5,6 +5,7 @@
 #include <aurora/log.hpp>
 #include <aurora/math/matrix4.hpp>
 #include <aurora/scene/game_object.hpp>
+#include <aurora/scene/geometry/geometry.hpp>
 #include <functional>
 
 using namespace Aura;
