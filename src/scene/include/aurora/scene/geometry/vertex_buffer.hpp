@@ -21,6 +21,7 @@ enum class VertexDataType {
 
 struct VertexBufferLayout {
   struct Attribute {
+    size_t index = 0;
     VertexDataType data_type;
     size_t components;
     bool normalized;

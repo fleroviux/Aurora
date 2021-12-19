@@ -19,8 +19,8 @@ using namespace Aura;
 struct OpenGLRenderer {
   struct GeometryData {
     GLuint vao;
-    GLuint vbo;
     GLuint ibo;
+    std::vector<GLuint> vbos;
   };
 
   OpenGLRenderer() {
@@ -149,57 +149,69 @@ void main() {
   }
 
   void upload_geometry(Geometry* geometry, GeometryData& data) {
-    auto& vertices = geometry->vertices;
-    auto& indices = geometry->indices;
+    auto& index_buffer = geometry->index_buffer;
 
     glGenVertexArrays(1, &data.vao);
     glBindVertexArray(data.vao);
 
-    glGenBuffers(1, &data.vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, data.vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size(), vertices.data(), GL_STATIC_DRAW);
-
-    auto& layout = vertices.layout();
-
-    for (size_t i = 0; i < layout.attributes.size(); i++) {
-      auto& attribute = layout.attributes[i];
-      auto normalized = attribute.normalized ? GL_TRUE : GL_FALSE;
-      GLenum type;
-
-      switch (attribute.data_type) {
-        case VertexDataType::SInt8: {
-          type = GL_BYTE;
-          break;
-        }
-        case VertexDataType::UInt8: {
-          type = GL_UNSIGNED_BYTE;
-          break;
-        }
-        case VertexDataType::SInt16: {
-          type = GL_SHORT;
-          break;
-        }
-        case VertexDataType::UInt16: {
-          type = GL_UNSIGNED_SHORT;
-          break;
-        }
-        case VertexDataType::Float16: {
-          type = GL_HALF_FLOAT;
-          break;
-        }
-        case VertexDataType::Float32: {
-          type = GL_FLOAT;
-          break;
-        }
-      }
-
-      glVertexAttribPointer(i, attribute.components, type, normalized, layout.stride, (const void*)attribute.offset);
-      glEnableVertexAttribArray(i);
-    }
-
     glGenBuffers(1, &data.ibo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data.ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size(), indices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer.size(), index_buffer.data(), GL_STATIC_DRAW);
+
+    for (auto& buffer : geometry->buffers) {
+      GLuint vbo;
+
+      glGenBuffers(1, &vbo);
+      glBindBuffer(GL_ARRAY_BUFFER, vbo);
+      glBufferData(GL_ARRAY_BUFFER, buffer.size(), buffer.data(), GL_STATIC_DRAW);
+
+      auto& layout = buffer.layout();
+
+      for (size_t i = 0; i < layout.attributes.size(); i++) {
+        auto& attribute = layout.attributes[i];
+        auto normalized = attribute.normalized ? GL_TRUE : GL_FALSE;
+        GLenum type;
+
+        switch (attribute.data_type) {
+          case VertexDataType::SInt8: {
+            type = GL_BYTE;
+            break;
+          }
+          case VertexDataType::UInt8: {
+            type = GL_UNSIGNED_BYTE;
+            break;
+          }
+          case VertexDataType::SInt16: {
+            type = GL_SHORT;
+            break;
+          }
+          case VertexDataType::UInt16: {
+            type = GL_UNSIGNED_SHORT;
+            break;
+          }
+          case VertexDataType::Float16: {
+            type = GL_HALF_FLOAT;
+            break;
+          }
+          case VertexDataType::Float32: {
+            type = GL_FLOAT;
+            break;
+          }
+        }
+
+        glVertexAttribPointer(
+          attribute.index,
+          attribute.components,
+          type,
+          normalized,
+          layout.stride,
+          (const void*)attribute.offset);
+
+        glEnableVertexAttribArray(attribute.index);
+      }
+
+      data.vbos.push_back(vbo);
+    }
 
     geometry_data_[geometry] = data;
   }
@@ -253,19 +265,19 @@ void main() {
           upload_geometry(geometry, data);
         }
 
-        auto& indices = geometry->indices;
+        auto& index_buffer = geometry->index_buffer;
         upload_transform_uniforms(transform, camera);
         glBindVertexArray(data.vao);
         glUseProgram(program);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
-        switch (indices.data_type()) {
+        switch (index_buffer.data_type()) {
           case IndexDataType::UInt16: {
-            glDrawElements(GL_TRIANGLES, indices.size() / sizeof(u16), GL_UNSIGNED_SHORT, 0);
+            glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u16), GL_UNSIGNED_SHORT, 0);
             break;
           }
           case IndexDataType::UInt32: {
-            glDrawElements(GL_TRIANGLES, indices.size() / sizeof(u32), GL_UNSIGNED_INT, 0);
+            glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u32), GL_UNSIGNED_INT, 0);
             break;
           }
         }
@@ -307,16 +319,19 @@ auto create_example_scene() -> GameObject* {
   auto vertex_buffer_layout = VertexBufferLayout{
     .stride = sizeof(float) * 8,
     .attributes = {{
+      .index = 0,
       .data_type = VertexDataType::Float32,
       .components = 3,
       .normalized = false,
       .offset = 0
     }, {
+      .index = 1,
       .data_type = VertexDataType::Float32,
       .components = 2,
       .normalized = false,
       .offset = sizeof(float) * 3
     }, {
+      .index = 2,
       .data_type = VertexDataType::Float32,
       .components = 3,
       .normalized = false,
@@ -327,7 +342,8 @@ auto create_example_scene() -> GameObject* {
   std::memcpy(
     vertex_buffer.data(), plane_vertices, sizeof(plane_vertices));
 
-  auto geometry = new Geometry{index_buffer, vertex_buffer};
+  auto geometry = new Geometry{index_buffer};
+  geometry->buffers.push_back(std::move(vertex_buffer));
 
   auto plane0 = new GameObject{"Plane0"};
   auto plane1 = new GameObject{"Plane1"};
