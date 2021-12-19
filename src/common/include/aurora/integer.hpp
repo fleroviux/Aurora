@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 
 namespace Aura {
 
@@ -17,5 +18,6 @@ using s32 = std::int32_t;
 using u64 = std::uint64_t;
 using s64 = std::int64_t;
 using uint = unsigned int;
+using size_t = std::size_t;
 
 } // namespace Aura

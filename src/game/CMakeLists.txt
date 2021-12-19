@@ -3,6 +3,7 @@ project(Aurora-Game CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 
 set(SOURCES
   src/main.cpp
@@ -11,5 +12,11 @@ set(SOURCES
 set(HEADERS
 )
 
+include(FindSDL2)
+find_package(SDL2 REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(GLEW REQUIRED)
+
 add_executable(Aurora-Game ${SOURCES} ${HEADERS})
-target_link_libraries(Aurora-Game PRIVATE Aurora-Scene)
+target_link_libraries(Aurora-Game PRIVATE Aurora-Scene ${SDL2_LIBRARY} OpenGL::GL GLEW::GLEW)
+target_include_directories(Aurora-Game PRIVATE ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIRS})

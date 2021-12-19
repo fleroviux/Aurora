@@ -2,83 +2,102 @@
  * Copyright (C) 2021 fleroviux
  */
 
-#include <aurora/log.hpp>
-#include <aurora/math/matrix4.hpp>
-#include <aurora/scene/game_object.hpp>
 #include <aurora/scene/geometry/geometry.hpp>
-#include <functional>
+#include <aurora/scene/game_object.hpp>
+#include <cstring>
+#include <SDL.h>
+#include <GL/glew.h>
 
 using namespace Aura;
 
-struct PoggerComponent final : Component {
-  int pog_a = 1;
-  int pog_b = 2;
-
-  using Component::Component;
-
-  PoggerComponent(GameObject* owner, int a, int b)
+struct MeshComponent final : Component {
+  MeshComponent(GameObject* owner, Geometry* geometry)
       : Component(owner)
-      , pog_a(a)
-      , pog_b(b) {
+      , geometry(geometry) {
   }
+
+  Geometry* geometry;
 };
 
-void debug_dump_scene(GameObject* scene) {
-  const std::function<void(GameObject*, int)> traverse = [&](GameObject* parent, int level) -> void {
-    for (int i = 0; i < level; i++) fmt::print("  ");
+auto create_example_scene() -> GameObject* {
+  auto scene = new GameObject{};
+  auto plane = new GameObject{"Plane"};
 
-    if (parent->has_component<PoggerComponent>()) {
-      auto pogger = parent->get_component<PoggerComponent>();
-
-      fmt::print("* {} (a={} b={})\n", parent->get_name(), pogger->pog_a, pogger->pog_b);
-    } else {
-      fmt::print("* {}\n", parent->get_name());
-    }
-
-    for (auto child : parent->children()) traverse(child, level+1);
+  const u16 plane_indices[] = {
+    0, 1, 2,
+    1, 2, 3
   };
 
-  fmt::print("Scene Dump:\n");
+  const float plane_vertices[] = {
+    -1, +1, 2,
+    +1, +1, 2,
+    +1, -1, 2,
+    -1, -1, 2
+  };
 
-  traverse(scene, 0);
+  auto index_buffer = IndexBuffer{IndexDataType::UInt16, 6};
+  std::memcpy(
+    index_buffer.data(), plane_indices, sizeof(plane_indices));
+
+  auto vertex_buffer_layout = VertexBufferLayout{
+    .stride = sizeof(float) * 3,
+    .attributes = std::vector<VertexBufferLayout::Attribute>{VertexBufferLayout::Attribute{
+      .data_type = VertexDataType::Float32,
+      .components = 3,
+      .normalized = false,
+      .offset = 0
+    }}
+  };
+  auto vertex_buffer = VertexBuffer{vertex_buffer_layout, 4};
+  std::memcpy(
+    vertex_buffer.data(), plane_vertices, sizeof(plane_vertices));
+
+  auto geometry = new Geometry{index_buffer, vertex_buffer};
+  plane->add_component<MeshComponent>(geometry);
+  scene->add_child(plane);
+  return scene;
 }
 
 int main() {
-  Log<Info>("AuroraGame: we are running :rpog:");
+  SDL_Init(SDL_INIT_VIDEO);
 
-  auto scene = new GameObject{"Scene"};
-  auto child_a = new GameObject{"A"};
-  auto child_b = new GameObject{"B"};
-  auto child_c = new GameObject{"C"};
-  auto child_d = new GameObject{"D"};
+  auto window = SDL_CreateWindow(
+    "Aurora",
+    SDL_WINDOWPOS_CENTERED,
+    SDL_WINDOWPOS_CENTERED,
+    1920,
+    1080,
+    SDL_WINDOW_OPENGL
+  );
 
-  // create initial scene structure
-  scene->add_child(child_a);
-  child_a->add_child(child_b);
-  child_b->add_child(child_c);
-  child_c->add_child(child_d);
+  auto gl_context = SDL_GL_CreateContext(window);
 
-  debug_dump_scene(scene);
+  glewInit();
 
-  // restructure scene
-  child_b->add_child(child_d);
-  scene->add_child(child_b);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-  debug_dump_scene(scene);
+  glClearColor(0.1, 0.1, 0.1, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT);
 
-  child_a->add_component<PoggerComponent>();
-  child_b->add_component<PoggerComponent>(420, 69);
-  child_c->add_component<PoggerComponent>(1337, 1337);
+  auto scene = create_example_scene();
 
-  debug_dump_scene(scene);
+  auto event = SDL_Event{};
 
-  child_b->remove_component<PoggerComponent>();
+  for (;;) {
+    SDL_GL_SwapWindow(window);
 
-  debug_dump_scene(scene);
+    while (SDL_PollEvent(&event)) {
+      if (event.type == SDL_QUIT) {
+        goto done;
+      }
+    }
+  }
 
-  child_a->get_component<TransformComponent>()->scale() = Vector3{-1, 1, 1};
-  child_a->transform().position() = Vector3{1, 1, 1};
-  child_a->transform().update_local();
-  child_a->transform().update_world(true);
+done:
+  SDL_DestroyWindow(window);
+  SDL_Quit();
   return 0;
 }
