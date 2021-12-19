@@ -90,8 +90,11 @@ struct OpenGLRenderer {
 
 layout (location = 0) in vec3 position;
 
+uniform mat4 u_projection;
+uniform mat4 u_model;
+
 void main() {
-  gl_Position = vec4(position, 1.0);
+  gl_Position = u_projection * u_model * vec4(position, 1.0);
 }
     )";
 
@@ -168,8 +171,25 @@ void main() {
     geometry_data_[geometry] = data;
   }
 
+  void upload_transform_uniforms(TransformComponent const& transform) {
+    // TODO: need to fixup the depth component.
+    auto projection = Matrix4::perspective(90.0, 1920/1080.0, 0.01, 100.0);
+
+    auto u_projection = glGetUniformLocation(program, "u_projection");
+    if (u_projection != -1) {
+      glUniformMatrix4fv(u_projection, 1, GL_FALSE, (float*)&projection[0]);
+    }
+
+    auto u_model = glGetUniformLocation(program, "u_model");
+    if (u_model != -1) {
+      glUniformMatrix4fv(u_model, 1, GL_FALSE, (float*)&transform.world()[0]);
+    }
+  }
+
   void render(GameObject* scene) {
     glViewport(0, 0, 1920, 1080);
+    glClearColor(0.02, 0.02, 0.02, 1.00);
+    glClear(GL_COLOR_BUFFER_BIT);
 
     const std::function<void(GameObject*)> traverse = [&](GameObject* object) {
       auto& transform = object->transform();
@@ -195,6 +215,7 @@ void main() {
         }
 
         auto& indices = geometry->indices;
+        upload_transform_uniforms(transform);
         glBindVertexArray(data.vao);
         glUseProgram(program);
         switch (indices.data_type()) {
@@ -223,7 +244,6 @@ private:
 
 auto create_example_scene() -> GameObject* {
   auto scene = new GameObject{};
-  auto plane = new GameObject{"Plane"};
 
   const u16 plane_indices[] = {
     0, 1, 2,
@@ -231,10 +251,10 @@ auto create_example_scene() -> GameObject* {
   };
 
   const float plane_vertices[] = {
-    -1, +1, 0,
-    +1, +1, 0,
-    +1, -1, 0,
-    -1, -1, 0
+    -1, +1, 2,
+    +1, +1, 2,
+    +1, -1, 2,
+    -1, -1, 2
   };
 
   auto index_buffer = IndexBuffer{IndexDataType::UInt16, 6};
@@ -255,8 +275,16 @@ auto create_example_scene() -> GameObject* {
     vertex_buffer.data(), plane_vertices, sizeof(plane_vertices));
 
   auto geometry = new Geometry{index_buffer, vertex_buffer};
-  plane->add_component<MeshComponent>(geometry);
-  scene->add_child(plane);
+
+  auto plane0 = new GameObject{"Plane0"};
+  auto plane1 = new GameObject{"Plane1"};
+  auto plane2 = new GameObject{"Plane2"};
+  plane0->add_component<MeshComponent>(geometry);
+  plane1->add_component<MeshComponent>(geometry);
+  plane2->add_component<MeshComponent>(geometry);
+  plane0->add_child(plane1);
+  scene->add_child(plane0);
+  scene->add_child(plane2);
   return scene;
 }
 
@@ -290,6 +318,14 @@ int main() {
   auto event = SDL_Event{};
 
   for (;;) {
+    auto plane0 = scene->children()[0];
+    auto plane1 = plane0->children()[0];
+    auto plane2 = scene->children()[1];
+
+    plane0->transform().rotation().z() += 0.01;
+    plane1->transform().position().x() =  2.5;
+    plane2->transform().position().x() = -2.5;
+
     renderer.render(scene);
     SDL_GL_SwapWindow(window);
 
