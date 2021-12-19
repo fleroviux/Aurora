@@ -15,6 +15,7 @@ enum class VertexDataType {
   UInt8,
   SInt16,
   UInt16,
+  UInt32,
   Float16,
   Float32
 };

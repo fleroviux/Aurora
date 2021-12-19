@@ -28,6 +28,10 @@ auto GLTFLoader::parse(std::string const& path) -> GameObject* {
   load_buffers(gltf);
   load_buffer_views(gltf);
   load_accessors(gltf);
+  load_meshes(gltf);
+
+  // quick test:
+  scene->add_component<MeshComponent>(meshes_[0].primitives[0].geometry);
 
   return scene;
 }
@@ -46,7 +50,7 @@ void GLTFLoader::load_buffers(nlohmann::json const& gltf) {
       auto uri = buffer["uri"].get<std::string>();
       auto byte_length = buffer["byteLength"].get<int>();
 
-      std::fstream file{uri, std::ios::binary};
+      std::ifstream file{uri, std::ios::binary};
 
       Assert(file.good(), "GLTFLoader: failed to load buffer: {}", uri);
 
@@ -60,8 +64,9 @@ void GLTFLoader::load_buffers(nlohmann::json const& gltf) {
       buffers_.push_back(Buffer{});
       buffers_[id].resize(byte_length);
       file.read((char*)buffers_[id].data(), byte_length);
+      file.close();
 
-      Log<Info>("GLTFLoader: successfully read buffer {}", uri);
+      Log<Info>("GLTFLoader: successfully read buffer {} ({} bytes)", uri, byte_length);
 
       id++;
     }
@@ -134,6 +139,76 @@ void GLTFLoader::load_accessors(nlohmann::json const& gltf) {
   }
 }
 
+void GLTFLoader::load_meshes(nlohmann::json const& gltf) {
+  if (gltf.contains("meshes")) {
+    for (auto const& mesh : gltf["meshes"]) {
+      auto mesh_out = Mesh{};
+
+      for (auto const& primitive : mesh["primitives"]) {
+        auto primitive_out = Mesh::Primitive{};
+
+        // The renderer does not support non-indexed geometry yet.
+        Assert(primitive.contains("indices"), "GLTFLoader: non-indexed geometry is unsupported");
+
+        // TODO: sanity/bounds checks and all.
+        auto const& accessor = accessors_[primitive["indices"].get<int>()];
+        auto const& buffer_view = buffer_views_[accessor.buffer_view];
+        auto const& attribute = accessor.attribute;
+        auto data_type = IndexDataType{};
+        size_t bytes_per_index = 2;
+
+        switch (attribute.data_type) {
+          case VertexDataType::UInt16: data_type = IndexDataType::UInt16; break;
+          case VertexDataType::UInt32: data_type = IndexDataType::UInt32; bytes_per_index = 4; break;
+          default: 
+            Assert(false, "GLTFLoader: bad index accessor data type, must be uint16 or uint32");
+        }
+
+        auto index_buffer = IndexBuffer{data_type, accessor.count};
+        std::memcpy(index_buffer.data(), buffer_view.data, accessor.count * bytes_per_index);
+
+        std::vector<VertexBuffer> buffers;
+
+        {
+          auto const& accessor = accessors_[primitive["attributes"]["POSITION"].get<int>()];
+          auto const& buffer_view = buffer_views_[accessor.buffer_view];
+          auto const& attribute = accessor.attribute;
+
+          auto byte_stride = buffer_view.byte_stride;
+
+          // Handle non-interleaved buffers (stride = 0)
+          // TODO: check if this is robust enough
+          if (byte_stride == 0) {
+            byte_stride = buffer_view.byte_length / accessor.count;
+          }
+
+          auto layout = VertexBufferLayout{
+            .stride = byte_stride,
+            .attributes = {{
+              .index = 0,
+              .data_type = attribute.data_type,
+              .components = attribute.components,
+              .normalized = attribute.normalized,
+              .offset = attribute.offset
+            }}
+          };
+
+          auto buffer = VertexBuffer{layout, accessor.count};
+          std::memcpy(buffer.data(), buffer_view.data, buffer_view.byte_length);
+
+          buffers.push_back(buffer);
+        }
+
+        primitive_out.geometry = new Geometry{index_buffer, buffers};
+
+        mesh_out.primitives.push_back(primitive_out);
+      }
+
+      meshes_.push_back(mesh_out);
+    }
+  }
+}
+
 auto GLTFLoader::to_vertex_data_type(int component_type) -> VertexDataType {
   switch (component_type) {
     case 5120: return VertexDataType::SInt8;
@@ -156,6 +231,12 @@ auto GLTFLoader::to_component_count(std::string type) -> int {
   if (type == "MAT4") return 16;
 
   Assert(false, "GLTFLoader: unsupported accessor type: {}", type);
+}
+
+static auto to_topology(int mode) -> Geometry::Topology {
+  if (mode == 4) return Geometry::Topology::Triangles;
+
+  Assert(false, "GLTFLoader: unsupported primitive mode: {}", mode);
 }
 
 } // namespace Aura

@@ -218,7 +218,7 @@ void main() {
 
   void upload_transform_uniforms(TransformComponent const& transform, GameObject* camera) {
     // TODO: need to fixup the depth component.
-    auto projection = Matrix4::perspective(90.0, 1920/1080.0, 0.01, 100.0);
+    auto projection = Matrix4::perspective(75.0, 1920/1080.0, 0.01, 100.0);
     auto view = camera->transform().world().inverse();
 
     auto u_projection = glGetUniformLocation(program, "u_projection");
@@ -388,6 +388,7 @@ int main() {
 
   auto gltf_loader = GLTFLoader{};
   auto cyoob = gltf_loader.parse("cyoob.gltf");
+  scene->add_child(cyoob);
 
   auto event = SDL_Event{};
 

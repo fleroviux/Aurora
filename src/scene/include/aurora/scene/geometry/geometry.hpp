@@ -13,6 +13,10 @@ namespace Aura {
 struct Geometry {
   IndexBuffer index_buffer;
   std::vector<VertexBuffer> buffers;
+
+  enum class Topology {
+    Triangles
+  } topology = Topology::Triangles;
 };
 
 } // namespace Aura
