@@ -8,20 +8,13 @@
 #include <SDL.h>
 #include <GL/glew.h>
 
+#include "gltf_loader.hpp"
+
 #include <memory>
 #include <optional>
 #include <stb_image.h>
 
 using namespace Aura;
-
-struct MeshComponent final : Component {
-  MeshComponent(GameObject* owner, Geometry* geometry)
-      : Component(owner)
-      , geometry(geometry) {
-  }
-
-  Geometry* geometry;
-};
 
 struct OpenGLRenderer {
   struct GeometryData {
@@ -376,6 +369,9 @@ int main() {
   auto scene = create_example_scene();
   auto camera = new GameObject{"Camera"};
   scene->add_child(camera);
+
+  auto gltf_loader = GLTFLoader{};
+  auto cyoob = gltf_loader.parse("cyoob.gltf");
 
   auto event = SDL_Event{};
 
