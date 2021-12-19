@@ -88,15 +88,19 @@ struct OpenGLRenderer {
     auto vert_src = R"(\
 #version 330 core
 
-layout (location = 0) in vec3 position;
+layout (location = 0) in vec3 a_position;
+layout (location = 1) in vec3 a_color;
 
 // TODO: pass a unified modelview matrix.
 uniform mat4 u_projection;
 uniform mat4 u_model;
 uniform mat4 u_view;
 
+out vec3 v_color;
+
 void main() {
-  gl_Position = u_projection * u_view * u_model * vec4(position, 1.0);
+  v_color = a_color;
+  gl_Position = u_projection * u_view * u_model * vec4(a_position, 1.0);
 }
     )";
 
@@ -105,8 +109,10 @@ void main() {
 
 layout (location = 0) out vec4 frag_color;
 
+in vec3 v_color;
+
 void main() {
-  frag_color = vec4(1.0, 0.0, 0.0, 1.0);
+  frag_color = vec4(v_color, 1.0);
 }
     )";
 
@@ -259,10 +265,11 @@ auto create_example_scene() -> GameObject* {
   };
 
   const float plane_vertices[] = {
-    -1, +1, 2,
-    +1, +1, 2,
-    +1, -1, 2,
-    -1, -1, 2
+  // POSITION   COLOR
+    -1, +1, 2,  1.0, 0.0, 0.0,
+    +1, +1, 2,  0.0, 1.0, 0.0,
+    +1, -1, 2,  0.0, 0.0, 1.0,
+    -1, -1, 2,  1.0, 0.0, 1.0
   };
 
   auto index_buffer = IndexBuffer{IndexDataType::UInt16, 6};
@@ -270,12 +277,17 @@ auto create_example_scene() -> GameObject* {
     index_buffer.data(), plane_indices, sizeof(plane_indices));
 
   auto vertex_buffer_layout = VertexBufferLayout{
-    .stride = sizeof(float) * 3,
-    .attributes = std::vector<VertexBufferLayout::Attribute>{VertexBufferLayout::Attribute{
+    .stride = sizeof(float) * 6,
+    .attributes = {{
       .data_type = VertexDataType::Float32,
       .components = 3,
       .normalized = false,
       .offset = 0
+    }, {
+      .data_type = VertexDataType::Float32,
+      .components = 3,
+      .normalized = false,
+      .offset = sizeof(float) * 3
     }}
   };
   auto vertex_buffer = VertexBuffer{vertex_buffer_layout, 4};
