@@ -90,11 +90,13 @@ struct OpenGLRenderer {
 
 layout (location = 0) in vec3 position;
 
+// TODO: pass a unified modelview matrix.
 uniform mat4 u_projection;
 uniform mat4 u_model;
+uniform mat4 u_view;
 
 void main() {
-  gl_Position = u_projection * u_model * vec4(position, 1.0);
+  gl_Position = u_projection * u_view * u_model * vec4(position, 1.0);
 }
     )";
 
@@ -171,9 +173,10 @@ void main() {
     geometry_data_[geometry] = data;
   }
 
-  void upload_transform_uniforms(TransformComponent const& transform) {
+  void upload_transform_uniforms(TransformComponent const& transform, GameObject* camera) {
     // TODO: need to fixup the depth component.
     auto projection = Matrix4::perspective(90.0, 1920/1080.0, 0.01, 100.0);
+    auto view = camera->transform().world().inverse();
 
     auto u_projection = glGetUniformLocation(program, "u_projection");
     if (u_projection != -1) {
@@ -184,9 +187,14 @@ void main() {
     if (u_model != -1) {
       glUniformMatrix4fv(u_model, 1, GL_FALSE, (float*)&transform.world()[0]);
     }
+
+    auto u_view = glGetUniformLocation(program, "u_view");
+    if (u_view != -1) {
+      glUniformMatrix4fv(u_view, 1, GL_FALSE, (float*)&view[0]); 
+    }
   }
 
-  void render(GameObject* scene) {
+  void render(GameObject* scene, GameObject* camera) {
     glViewport(0, 0, 1920, 1080);
     glClearColor(0.02, 0.02, 0.02, 1.00);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -194,7 +202,7 @@ void main() {
     const std::function<void(GameObject*)> traverse = [&](GameObject* object) {
       auto& transform = object->transform();
 
-      // TODO: make sure that this algorithm is correct.
+      // TODO: this algorithm breaks with the camera at least.
       if (transform.auto_update()) {
         transform.update_local();
       }
@@ -215,7 +223,7 @@ void main() {
         }
 
         auto& indices = geometry->indices;
-        upload_transform_uniforms(transform);
+        upload_transform_uniforms(transform, camera);
         glBindVertexArray(data.vao);
         glUseProgram(program);
         switch (indices.data_type()) {
@@ -312,8 +320,10 @@ int main() {
   glClearColor(0.1, 0.1, 0.1, 1.0);
   glClear(GL_COLOR_BUFFER_BIT);
 
-  auto scene = create_example_scene();
   auto renderer = OpenGLRenderer{};
+  auto scene = create_example_scene();
+  auto camera = new GameObject{"Camera"};
+  scene->add_child(camera);
 
   auto event = SDL_Event{};
 
@@ -326,7 +336,21 @@ int main() {
     plane1->transform().position().x() =  2.5;
     plane2->transform().position().x() = -2.5;
 
-    renderer.render(scene);
+    auto state = SDL_GetKeyboardState(nullptr);
+
+    if (state[SDL_SCANCODE_W]) camera->transform().position().y() += 0.05;
+    if (state[SDL_SCANCODE_S]) camera->transform().position().y() -= 0.05;
+    if (state[SDL_SCANCODE_A]) camera->transform().position().x() -= 0.05;
+    if (state[SDL_SCANCODE_D]) camera->transform().position().x() += 0.05;
+    if (state[SDL_SCANCODE_R]) camera->transform().position().z() += 0.05;
+    if (state[SDL_SCANCODE_F]) camera->transform().position().z() -= 0.05;
+
+    if (state[SDL_SCANCODE_UP])    camera->transform().rotation().x() -= 0.01;
+    if (state[SDL_SCANCODE_DOWN])  camera->transform().rotation().x() += 0.01;
+    if (state[SDL_SCANCODE_LEFT])  camera->transform().rotation().y() -= 0.01;
+    if (state[SDL_SCANCODE_RIGHT]) camera->transform().rotation().y() += 0.01;
+
+    renderer.render(scene, camera);
     SDL_GL_SwapWindow(window);
 
     while (SDL_PollEvent(&event)) {
