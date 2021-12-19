@@ -55,6 +55,10 @@ struct IndexBuffer : Updatable {
     return buffer_.data();
   }
 
+  auto size() const -> size_t {
+    return buffer_.size();
+  }
+
 private:
   IndexDataType data_type_;
   std::vector<u8> buffer_;

@@ -58,6 +58,10 @@ struct VertexBuffer : Updatable {
     return buffer_.data();
   }
 
+  auto size() const -> size_t {
+    return buffer_.size();
+  }
+
 private:
   VertexBufferLayout layout_;
   std::vector<u8> buffer_;
