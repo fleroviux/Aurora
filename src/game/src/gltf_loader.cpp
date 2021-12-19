@@ -21,7 +21,6 @@ auto GLTFLoader::parse(std::string const& path) -> GameObject* {
   json.assign(std::istream_iterator<char>(file), std::istream_iterator<char>());
 
   auto gltf = nlohmann::json::parse(json);
-  auto scene = new GameObject{"Scene"};
 
   base_path_ = std::filesystem::path{path}.remove_filename();
 
@@ -30,10 +29,13 @@ auto GLTFLoader::parse(std::string const& path) -> GameObject* {
   load_accessors(gltf);
   load_meshes(gltf);
 
-  // quick test:
-  scene->add_component<MeshComponent>(meshes_[0].primitives[0].geometry);
+  // TODO: respect default scene.
+  if (gltf.contains("scenes")) {
+    return load_scene(gltf, 0);
+  }
 
-  return scene;
+  // TODO: throw an exception or something?
+  return nullptr;
 }
 
 void GLTFLoader::load_buffers(nlohmann::json const& gltf) {
@@ -203,6 +205,51 @@ void GLTFLoader::load_meshes(nlohmann::json const& gltf) {
       meshes_.push_back(mesh_out);
     }
   }
+}
+
+auto GLTFLoader::load_node(nlohmann::json const& nodes, size_t id) -> GameObject* {
+  auto object = new GameObject{};
+
+  auto const& node = nodes[id];
+
+  // TODO: use transform and name information.
+
+  if (node.contains("mesh")) {
+    auto const& mesh = meshes_[node["mesh"].get<int>()];
+
+    if (mesh.primitives.size() == 1) {
+      object->add_component<MeshComponent>(mesh.primitives[0].geometry);
+    } else {
+      for (auto const& primitive : mesh.primitives) {
+        auto child = new GameObject{};
+        child->add_component<MeshComponent>(primitive.geometry);
+        object->add_child(child);
+      }
+    }
+  }
+
+  if (node.contains("children")) {
+    for (auto const& child : node["children"]) {
+      object->add_child(load_node(nodes, child.get<int>()));
+    }
+  }
+
+  return object;
+}
+
+auto GLTFLoader::load_scene(nlohmann::json const& gltf, size_t id) -> GameObject* {
+  auto object = new GameObject{};
+  auto const& scene = gltf["scenes"][id];
+
+  // TODO: do something with the scene name
+
+  if (scene.contains("nodes")) {
+    for (auto const& node : scene["nodes"]) {
+      object->add_child(load_node(gltf["nodes"], node.get<int>()));
+    }
+  }
+
+  return object;
 }
 
 auto GLTFLoader::to_vertex_data_type(int component_type) -> VertexDataType {

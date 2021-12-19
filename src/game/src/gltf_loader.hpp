@@ -56,6 +56,8 @@ private:
   void load_buffer_views(nlohmann::json const& gltf);
   void load_accessors(nlohmann::json const& gltf);
   void load_meshes(nlohmann::json const& gltf);
+  auto load_node(nlohmann::json const& nodes, size_t id) -> GameObject*;
+  auto load_scene(nlohmann::json const& gltf, size_t id) -> GameObject*;
 
   static auto to_vertex_data_type(int component_type) -> VertexDataType;
   static auto to_component_count(std::string type) -> int;
