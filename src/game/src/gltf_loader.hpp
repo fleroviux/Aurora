@@ -31,9 +31,28 @@ struct GLTFLoader {
 private:
   using Buffer = std::vector<u8>;
 
+  struct BufferView {
+    u8 const* data;
+    size_t byte_length;
+    size_t byte_stride = 0;
+  };
+
+  struct Accessor {
+    int buffer_view;
+    int count;
+    VertexBufferLayout::Attribute attribute;
+  };
+
   void load_buffers(nlohmann::json const& gltf);
+  void load_buffer_views(nlohmann::json const& gltf);
+  void load_accessors(nlohmann::json const& gltf);
+
+  static auto to_vertex_data_type(int component_type) -> VertexDataType;
+  static auto to_component_count(std::string type) -> int;
 
   std::vector<Buffer> buffers_;
+  std::vector<BufferView> buffer_views_;
+  std::vector<Accessor> accessors_;
 };
 
 } // namespace Aura
