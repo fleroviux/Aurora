@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <optional>
+#include <stb_image.h>
 
 using namespace Aura;
 
@@ -31,6 +32,13 @@ struct OpenGLRenderer {
 
   OpenGLRenderer() {
     create_default_program();
+    create_default_texture();
+
+    // Set texture uniform 
+    auto u_diffuse_map = glGetUniformLocation(program, "u_diffuse_map");
+    if (u_diffuse_map != -1) {
+      glUniform1i(u_diffuse_map, 0);
+    }
   }
 
  ~OpenGLRenderer() {
@@ -77,7 +85,6 @@ struct OpenGLRenderer {
       glLinkProgram(prog);
       glDeleteShader(vert.value());
       glDeleteShader(frag.value());
-
       return prog;
     }
 
@@ -89,7 +96,8 @@ struct OpenGLRenderer {
 #version 330 core
 
 layout (location = 0) in vec3 a_position;
-layout (location = 1) in vec3 a_color;
+layout (location = 1) in vec2 a_uv;
+layout (location = 2) in vec3 a_color;
 
 // TODO: pass a unified modelview matrix.
 uniform mat4 u_projection;
@@ -97,9 +105,11 @@ uniform mat4 u_model;
 uniform mat4 u_view;
 
 out vec3 v_color;
+out vec2 v_uv;
 
 void main() {
   v_color = a_color;
+  v_uv = a_uv;
   gl_Position = u_projection * u_view * u_model * vec4(a_position, 1.0);
 }
     )";
@@ -110,9 +120,12 @@ void main() {
 layout (location = 0) out vec4 frag_color;
 
 in vec3 v_color;
+in vec2 v_uv;
+
+uniform sampler2D u_diffuse_map;
 
 void main() {
-  frag_color = vec4(v_color, 1.0);
+  frag_color = vec4(v_color * texture(u_diffuse_map, v_uv).rgb, 1.0);
 }
     )";
 
@@ -121,6 +134,25 @@ void main() {
     Assert(prog.has_value(), "AuroraRender: failed to compile default shader");
 
     program = prog.value();
+  }
+
+  void create_default_texture() {
+    glEnable(GL_TEXTURE_2D);
+
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    int width;
+    int height;
+    int components;
+
+    auto image_data = stbi_load("cirno.jpg", &width, &height, &components, STBI_rgb_alpha);
+
+    Assert(image_data != nullptr, "AuroraRender: failed to load texture: cirno.jpg");
+
+    glTexImage2D(GL_TEXTURE_2D, 0, components, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
   }
 
   void upload_geometry(Geometry* geometry, GeometryData& data) {
@@ -232,6 +264,8 @@ void main() {
         upload_transform_uniforms(transform, camera);
         glBindVertexArray(data.vao);
         glUseProgram(program);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
         switch (indices.data_type()) {
           case IndexDataType::UInt16: {
             glDrawElements(GL_TRIANGLES, indices.size() / sizeof(u16), GL_UNSIGNED_SHORT, 0);
@@ -252,6 +286,7 @@ void main() {
 
 private:
   GLuint program;
+  GLuint texture;
 
   std::unordered_map<Geometry*, GeometryData> geometry_data_;
 };
@@ -265,11 +300,11 @@ auto create_example_scene() -> GameObject* {
   };
 
   const float plane_vertices[] = {
-  // POSITION   COLOR
-    -1, +1, 2,  1.0, 0.0, 0.0,
-    +1, +1, 2,  0.0, 1.0, 0.0,
-    +1, -1, 2,  0.0, 0.0, 1.0,
-    -1, -1, 2,  1.0, 0.0, 1.0
+  // POSITION   UV         COLOR
+    -1, +1, 2,  0.0, 0.0,  1.0, 0.0, 0.0,
+    +1, +1, 2,  1.0, 0.0,  0.0, 1.0, 0.0,
+    +1, -1, 2,  1.0, 1.0,  0.0, 0.0, 1.0,
+    -1, -1, 2,  0.0, 1.0,  1.0, 0.0, 1.0
   };
 
   auto index_buffer = IndexBuffer{IndexDataType::UInt16, 6};
@@ -277,7 +312,7 @@ auto create_example_scene() -> GameObject* {
     index_buffer.data(), plane_indices, sizeof(plane_indices));
 
   auto vertex_buffer_layout = VertexBufferLayout{
-    .stride = sizeof(float) * 6,
+    .stride = sizeof(float) * 8,
     .attributes = {{
       .data_type = VertexDataType::Float32,
       .components = 3,
@@ -285,9 +320,14 @@ auto create_example_scene() -> GameObject* {
       .offset = 0
     }, {
       .data_type = VertexDataType::Float32,
-      .components = 3,
+      .components = 2,
       .normalized = false,
       .offset = sizeof(float) * 3
+    }, {
+      .data_type = VertexDataType::Float32,
+      .components = 3,
+      .normalized = false,
+      .offset = sizeof(float) * 5
     }}
   };
   auto vertex_buffer = VertexBuffer{vertex_buffer_layout, 4};

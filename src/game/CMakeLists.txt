@@ -18,5 +18,5 @@ find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 
 add_executable(Aurora-Game ${SOURCES} ${HEADERS})
-target_link_libraries(Aurora-Game PRIVATE Aurora-Scene ${SDL2_LIBRARY} OpenGL::GL GLEW::GLEW)
+target_link_libraries(Aurora-Game PRIVATE Aurora-Scene ${SDL2_LIBRARY} OpenGL::GL GLEW::GLEW stb)
 target_include_directories(Aurora-Game PRIVATE ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIRS})
