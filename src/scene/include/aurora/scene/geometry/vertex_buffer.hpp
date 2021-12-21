@@ -52,6 +52,10 @@ struct VertexBuffer : Updatable {
     return layout_;
   }
 
+  auto layout() -> VertexBufferLayout& {
+    return layout_;
+  }
+
   auto data() const -> u8 const* {
     return buffer_.data();
   }

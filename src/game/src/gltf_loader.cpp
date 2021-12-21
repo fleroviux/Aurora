@@ -143,68 +143,110 @@ void GLTFLoader::load_meshes(nlohmann::json const& gltf) {
       auto mesh_out = Mesh{};
 
       for (auto const& primitive : mesh["primitives"]) {
-        auto primitive_out = Mesh::Primitive{};
+        Assert(primitive.contains("indices"),
+          "GLTFLoader: non-indexed geometry is unsupported");
 
-        // The renderer does not support non-indexed geometry yet.
-        Assert(primitive.contains("indices"), "GLTFLoader: non-indexed geometry is unsupported");
-
-        // TODO: sanity/bounds checks and all.
-        auto const& accessor = accessors_[primitive["indices"].get<int>()];
-        auto const& buffer_view = buffer_views_[accessor.buffer_view];
-        auto const& attribute = accessor.attribute;
-        auto data_type = IndexDataType{};
-        size_t bytes_per_index = 2;
-
-        switch (attribute.data_type) {
-          case VertexDataType::UInt16: data_type = IndexDataType::UInt16; break;
-          case VertexDataType::UInt32: data_type = IndexDataType::UInt32; bytes_per_index = 4; break;
-          default: 
-            Assert(false, "GLTFLoader: bad index accessor data type, must be uint16 or uint32");
-        }
-
-        auto index_buffer = IndexBuffer{data_type, accessor.count};
-        std::memcpy(index_buffer.data(), buffer_view.data, accessor.count * bytes_per_index);
-
-        std::vector<VertexBuffer> buffers;
-
-        {
-          auto const& accessor = accessors_[primitive["attributes"]["POSITION"].get<int>()];
-          auto const& buffer_view = buffer_views_[accessor.buffer_view];
-          auto const& attribute = accessor.attribute;
-
-          auto byte_stride = buffer_view.byte_stride;
-
-          // Handle non-interleaved buffers (stride = 0)
-          // TODO: check if this is robust enough
-          if (byte_stride == 0) {
-            byte_stride = buffer_view.byte_length / accessor.count;
+        mesh_out.primitives.push_back(Mesh::Primitive{
+          .geometry = new Geometry{
+            load_primitive_idx(primitive),
+            load_primitive_vtx(primitive)
           }
-
-          auto layout = VertexBufferLayout{
-            .stride = byte_stride,
-            .attributes = {{
-              .index = 0,
-              .data_type = attribute.data_type,
-              .components = attribute.components,
-              .normalized = attribute.normalized,
-              .offset = attribute.offset
-            }}
-          };
-
-          auto buffer = VertexBuffer{layout, accessor.count};
-          std::memcpy(buffer.data(), buffer_view.data, buffer_view.byte_length);
-
-          buffers.push_back(buffer);
-        }
-
-        primitive_out.geometry = new Geometry{index_buffer, buffers};
-
-        mesh_out.primitives.push_back(primitive_out);
+        });
       }
 
       meshes_.push_back(mesh_out);
     }
   }
+}
+
+auto GLTFLoader::load_primitive_idx(
+  nlohmann::json const& primitive
+) -> IndexBuffer {
+  auto const& accessor = accessors_[primitive["indices"].get<int>()];
+  auto const& buffer_view = buffer_views_[accessor.buffer_view];
+  auto const& attribute = accessor.attribute;
+
+  auto data_type = IndexDataType{};
+  auto data_width = size_t{};
+
+  switch (attribute.data_type) {
+    case VertexDataType::UInt16:
+      data_type = IndexDataType::UInt16;
+      data_width = sizeof(u16);
+      break;
+    case VertexDataType::UInt32:
+      data_type = IndexDataType::UInt32;
+      data_width = sizeof(u32);
+      break;
+    default: 
+      Assert(false, "GLTFLoader: bad index accessor data type, must be uint16 or uint32");
+  }
+
+  auto buffer = IndexBuffer{data_type, accessor.count};
+
+  std::memcpy(buffer.data(), buffer_view.data, accessor.count * data_width);
+
+  return buffer;
+}
+
+auto GLTFLoader::load_primitive_vtx(
+  nlohmann::json const& primitive
+) -> std::vector<VertexBuffer> {
+  auto const& attributes = primitive["attributes"];
+  
+  auto buffers = std::vector<VertexBuffer>{};
+  VertexBufferLayout* layout_table[buffer_views_.size()];
+
+  for (auto& v : layout_table) v = nullptr;
+
+  const auto add_attribute = [&](char const* name, int index) {
+    if (!attributes.contains(name)) {
+      return;
+    }
+
+    auto const& accessor = accessors_[attributes[name].get<int>()];
+    auto const& attribute = accessor.attribute;
+
+    auto layout = layout_table[accessor.buffer_view];
+
+    if (layout == nullptr) {
+      auto const& buffer_view = buffer_views_[accessor.buffer_view];
+
+      auto byte_stride = buffer_view.byte_stride;
+
+      // Handle non-interleaved buffers (stride = 0)
+      // TODO: check if this is robust enough
+      if (byte_stride == 0) {
+        byte_stride = buffer_view.byte_length / accessor.count;
+      }
+
+      auto buffer = VertexBuffer{VertexBufferLayout{
+        .stride = byte_stride,
+        .attributes = {}
+      }, accessor.count};
+
+      std::memcpy(buffer.data(), buffer_view.data, buffer_view.byte_length);
+
+      buffers.push_back(std::move(buffer));
+      layout = &buffers.back().layout();
+      layout_table[accessor.buffer_view] = layout; 
+    }
+
+    layout->attributes.push_back(VertexBufferLayout::Attribute{
+      .index = index,
+      .data_type = attribute.data_type,
+      .components = attribute.components,
+      .normalized = attribute.normalized,
+      .offset = attribute.offset
+    });
+  };
+
+  add_attribute("POSITION", 0);
+  add_attribute("NORMAL", 1);
+  add_attribute("TEXCOORD_0", 2);
+  add_attribute("COLOR_0", 3);
+
+  return buffers;
 }
 
 auto GLTFLoader::load_node(nlohmann::json const& nodes, size_t id) -> GameObject* {

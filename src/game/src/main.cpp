@@ -24,6 +24,9 @@ struct OpenGLRenderer {
   };
 
   OpenGLRenderer() {
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
     create_default_program();
     create_default_texture();
 
@@ -89,8 +92,9 @@ struct OpenGLRenderer {
 #version 330 core
 
 layout (location = 0) in vec3 a_position;
-layout (location = 1) in vec2 a_uv;
-layout (location = 2) in vec3 a_color;
+layout (location = 1) in vec3 a_normal;
+layout (location = 2) in vec2 a_uv;
+layout (location = 3) in vec3 a_color;
 
 // TODO: pass a unified modelview matrix.
 uniform mat4 u_projection;
@@ -99,10 +103,12 @@ uniform mat4 u_view;
 
 out vec3 v_color;
 out vec2 v_uv;
+out vec3 v_normal;
 
 void main() {
   v_color = a_color;
   v_uv = a_uv;
+  v_normal = a_normal;
   gl_Position = u_projection * u_view * u_model * vec4(a_position, 1.0);
 }
     )";
@@ -114,11 +120,13 @@ layout (location = 0) out vec4 frag_color;
 
 in vec3 v_color;
 in vec2 v_uv;
+in vec3 v_normal;
 
 uniform sampler2D u_diffuse_map;
 
 void main() {
-  frag_color = vec4(v_color * texture(u_diffuse_map, v_uv).rgb, 1.0);
+  //frag_color = vec4(v_color * texture(u_diffuse_map, v_uv).rgb, 1.0);
+  frag_color = vec4(normalize(v_normal) * 0.5 + 0.5, 1.0);
 }
     )";
 
@@ -240,7 +248,7 @@ void main() {
   void render(GameObject* scene, GameObject* camera) {
     glViewport(0, 0, 1920, 1080);
     glClearColor(0.02, 0.02, 0.02, 1.00);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     const std::function<void(GameObject*)> traverse = [&](GameObject* object) {
       auto& transform = object->transform();
@@ -326,13 +334,13 @@ auto create_example_scene() -> GameObject* {
       .normalized = false,
       .offset = 0
     }, {
-      .index = 1,
+      .index = 2,
       .data_type = VertexDataType::Float32,
       .components = 2,
       .normalized = false,
       .offset = sizeof(float) * 3
     }, {
-      .index = 2,
+      .index = 3,
       .data_type = VertexDataType::Float32,
       .components = 3,
       .normalized = false,
@@ -388,7 +396,7 @@ int main() {
   scene->add_child(camera);
 
   auto gltf_loader = GLTFLoader{};
-  auto cyoob = gltf_loader.parse("Sponza/Sponza.gltf");
+  auto cyoob = gltf_loader.parse("DamagedHelmet/DamagedHelmet.gltf");
   //cyoob->transform().scale() = Vector3{0.001, 0.001, 0.001};
   scene->add_child(cyoob);
 
