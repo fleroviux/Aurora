@@ -128,7 +128,11 @@ in vec3 v_normal;
 uniform sampler2D u_diffuse_map;
 
 void main() {
-  frag_color = vec4(v_color * texture(u_diffuse_map, v_uv).rgb, 1.0);
+  vec4 diffuse = texture(u_diffuse_map, v_uv);
+  if (diffuse.a < 0.5) {
+    discard;
+  }
+  frag_color = vec4(v_color * diffuse.rgb, 1.0);
   //frag_color = vec4(normalize(v_normal) * 0.5 + 0.5, 1.0);
 }
     )";
@@ -428,8 +432,8 @@ int main() {
   scene->add_child(camera);
 
   auto gltf_loader = GLTFLoader{};
-  auto cyoob = gltf_loader.parse("DamagedHelmet/DamagedHelmet.gltf");
-  //cyoob->transform().scale() = Vector3{0.001, 0.001, 0.001};
+  auto cyoob = gltf_loader.parse("Sponza/Sponza.gltf");
+  cyoob->transform().scale() = Vector3{0.05, 0.05, 0.05};
   scene->add_child(cyoob);
 
   auto event = SDL_Event{};
