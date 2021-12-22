@@ -12,6 +12,7 @@ set(SOURCES
 
 set(HEADERS
   src/gltf_loader.hpp
+  src/material.hpp
   src/texture.hpp
 )
 

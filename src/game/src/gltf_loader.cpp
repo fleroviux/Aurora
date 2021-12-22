@@ -26,9 +26,10 @@ auto GLTFLoader::parse(std::string const& path) -> GameObject* {
 
   load_buffers(gltf);
   load_buffer_views(gltf);
+  load_images(gltf);
+  load_materials(gltf);
   load_accessors(gltf);
   load_meshes(gltf);
-  load_images(gltf);
 
   // TODO: respect default scene.
   if (gltf.contains("scenes")) {
@@ -147,11 +148,13 @@ void GLTFLoader::load_meshes(nlohmann::json const& gltf) {
         Assert(primitive.contains("indices"),
           "GLTFLoader: non-indexed geometry is unsupported");
 
+        // TODO: material is not a required field - fallback to a standard material.
         mesh_out.primitives.push_back(Mesh::Primitive{
           .geometry = new Geometry{
             load_primitive_idx(primitive),
             load_primitive_vtx(primitive)
-          }
+          },
+          .material = materials_[primitive["material"].get<int>()]
         });
       }
 
@@ -266,6 +269,24 @@ void GLTFLoader::load_images(nlohmann::json const& gltf) {
   }
 }
 
+void GLTFLoader::load_materials(nlohmann::json const& gltf) {
+  if (gltf.contains("materials")) {
+    for (auto const& material : gltf["materials"]) {
+      auto material_out = new Material{};
+
+      if (material.contains("pbrMetallicRoughness")) {
+        auto const& pbr = material["pbrMetallicRoughness"];
+
+        if (pbr.contains("baseColorTexture")) {
+          material_out->albedo = images_[pbr["baseColorTexture"]["index"].get<int>()];
+        }
+      }
+
+      materials_.push_back(material_out);
+    }
+  }
+}
+
 auto GLTFLoader::load_node(nlohmann::json const& nodes, size_t id) -> GameObject* {
   auto object = new GameObject{};
 
@@ -277,11 +298,11 @@ auto GLTFLoader::load_node(nlohmann::json const& nodes, size_t id) -> GameObject
     auto const& mesh = meshes_[node["mesh"].get<int>()];
 
     if (mesh.primitives.size() == 1) {
-      object->add_component<MeshComponent>(mesh.primitives[0].geometry);
+      object->add_component<MeshComponent>(mesh.primitives[0].geometry, mesh.primitives[0].material);
     } else {
       for (auto const& primitive : mesh.primitives) {
         auto child = new GameObject{};
-        child->add_component<MeshComponent>(primitive.geometry);
+        child->add_component<MeshComponent>(primitive.geometry, primitive.material);
         object->add_child(child);
       }
     }

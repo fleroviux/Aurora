@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "texture.hpp"
+#include "material.hpp"
 
 // TODO: move this somewhere more appropriate.
 #include <aurora/scene/geometry/geometry.hpp>
@@ -20,12 +21,14 @@ namespace Aura {
 
 // TODO: move this somewhere more appropriate.
 struct MeshComponent final : Component {
-  MeshComponent(GameObject* owner, Geometry* geometry)
+  MeshComponent(GameObject* owner, Geometry* geometry, Material* material)
       : Component(owner)
-      , geometry(geometry) {
+      , geometry(geometry)
+      , material(material) {
   }
 
   Geometry* geometry;
+  Material* material;
 };
 
 struct GLTFLoader {
@@ -48,8 +51,8 @@ private:
 
   struct Mesh {
     struct Primitive {
-      std::string name;
       Geometry* geometry;
+      Material* material;
     };
     std::vector<Primitive> primitives;
   };
@@ -61,6 +64,7 @@ private:
   auto load_primitive_idx(nlohmann::json const& primitive) -> IndexBuffer;
   auto load_primitive_vtx(nlohmann::json const& primitive) -> std::vector<VertexBuffer>;
   void load_images(nlohmann::json const& gltf);
+  void load_materials(nlohmann::json const& gltf);
   auto load_node(nlohmann::json const& nodes, size_t id) -> GameObject*;
   auto load_scene(nlohmann::json const& gltf, size_t id) -> GameObject*;
 
@@ -74,6 +78,7 @@ private:
   std::vector<Accessor> accessors_;
   std::vector<Mesh> meshes_;
   std::vector<std::shared_ptr<Texture>> images_;
+  std::vector<Material*> materials_;
 };
 
 } // namespace Aura

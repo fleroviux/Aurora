@@ -32,7 +32,7 @@ struct OpenGLRenderer {
     create_default_program();
     create_default_texture();
 
-    cirno_texture_ = Texture::load("cirno.jpg");
+    default_texture_ = Texture::load("cirno.jpg");
 
     // Set texture uniform 
     auto u_diffuse_map = glGetUniformLocation(program, "u_diffuse_map");
@@ -178,6 +178,7 @@ void main() {
       texture->data()
     );
 
+    texture_data_[texture] = id;
     return id;
   }
 
@@ -302,6 +303,7 @@ void main() {
 
       if (mesh != nullptr) {
         auto geometry = mesh->geometry;
+        auto material = mesh->material;
 
         auto data = GeometryData{};
         auto it = geometry_data_.find(geometry);
@@ -317,7 +319,11 @@ void main() {
         upload_transform_uniforms(transform, camera);
         glBindVertexArray(data.vao);
         glUseProgram(program);
-        bind_texture(GL_TEXTURE0, cirno_texture_.get());
+        if (material->albedo) {
+          bind_texture(GL_TEXTURE0, material->albedo.get());
+        } else {
+          bind_texture(GL_TEXTURE0, default_texture_.get());
+        }
         switch (index_buffer.data_type()) {
           case IndexDataType::UInt16: {
             glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u16), GL_UNSIGNED_SHORT, 0);
@@ -340,7 +346,7 @@ private:
   GLuint program;
   GLuint texture;
 
-  std::unique_ptr<Texture> cirno_texture_;
+  std::unique_ptr<Texture> default_texture_;
 
   std::unordered_map<Texture*, GLuint> texture_data_;
   std::unordered_map<Geometry*, GeometryData> geometry_data_;
@@ -395,12 +401,14 @@ auto create_example_scene() -> GameObject* {
   auto geometry = new Geometry{index_buffer};
   geometry->buffers.push_back(std::move(vertex_buffer));
 
+  auto material = new Material{};
+
   auto plane0 = new GameObject{"Plane0"};
   auto plane1 = new GameObject{"Plane1"};
   auto plane2 = new GameObject{"Plane2"};
-  plane0->add_component<MeshComponent>(geometry);
-  plane1->add_component<MeshComponent>(geometry);
-  plane2->add_component<MeshComponent>(geometry);
+  plane0->add_component<MeshComponent>(geometry, material);
+  plane1->add_component<MeshComponent>(geometry, material);
+  plane2->add_component<MeshComponent>(geometry, material);
   plane0->add_child(plane1);
   scene->add_child(plane0);
   scene->add_child(plane2);
