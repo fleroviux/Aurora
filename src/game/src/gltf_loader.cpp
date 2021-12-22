@@ -278,7 +278,8 @@ void GLTFLoader::load_materials(nlohmann::json const& gltf) {
         auto const& pbr = material["pbrMetallicRoughness"];
 
         if (pbr.contains("baseColorTexture")) {
-          material_out->albedo = images_[pbr["baseColorTexture"]["index"].get<int>()];
+          auto tid = pbr["baseColorTexture"]["index"].get<int>();
+          material_out->albedo = images_[gltf["textures"][tid]["source"].get<int>()];
         }
       }
 

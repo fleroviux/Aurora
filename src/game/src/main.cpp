@@ -30,7 +30,6 @@ struct OpenGLRenderer {
     glEnable(GL_TEXTURE_2D);
 
     create_default_program();
-    create_default_texture();
 
     default_texture_ = Texture::load("cirno.jpg");
 
@@ -141,30 +140,13 @@ void main() {
     program = prog.value();
   }
 
-  void create_default_texture() {
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    int width;
-    int height;
-    int components;
-
-    auto image_data = stbi_load("cirno.jpg", &width, &height, &components, STBI_rgb_alpha);
-
-    Assert(image_data != nullptr, "AuroraRender: failed to load texture: cirno.jpg");
-
-    glTexImage2D(GL_TEXTURE_2D, 0, components, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
-  }
-
   auto upload_texture(Texture* texture) -> GLuint {
     GLuint id;
 
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_LINEAR);
 
     glTexImage2D(
       GL_TEXTURE_2D,
@@ -177,6 +159,8 @@ void main() {
       GL_UNSIGNED_BYTE,
       texture->data()
     );
+
+    glGenerateTextureMipmap(id);
 
     texture_data_[texture] = id;
     return id;
@@ -266,7 +250,7 @@ void main() {
 
   void upload_transform_uniforms(TransformComponent const& transform, GameObject* camera) {
     // TODO: need to fixup the depth component.
-    auto projection = Matrix4::perspective(90.0, 1920/1080.0, 0.01, 100.0);
+    auto projection = Matrix4::perspective(45.0, 1920/1080.0, 0.01, 2000.0);
     auto view = camera->transform().world().inverse();
 
     auto u_projection = glGetUniformLocation(program, "u_projection");
@@ -344,7 +328,6 @@ void main() {
 
 private:
   GLuint program;
-  GLuint texture;
 
   std::unique_ptr<Texture> default_texture_;
 
