@@ -9,6 +9,7 @@
 #include <GL/glew.h>
 
 #include "gltf_loader.hpp"
+#include "texture.hpp"
 
 #include <memory>
 #include <optional>
@@ -26,9 +27,12 @@ struct OpenGLRenderer {
   OpenGLRenderer() {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+    glEnable(GL_TEXTURE_2D);
 
     create_default_program();
     create_default_texture();
+
+    cirno_texture_ = Texture::load("cirno.jpg");
 
     // Set texture uniform 
     auto u_diffuse_map = glGetUniformLocation(program, "u_diffuse_map");
@@ -125,8 +129,8 @@ in vec3 v_normal;
 uniform sampler2D u_diffuse_map;
 
 void main() {
-  //frag_color = vec4(v_color * texture(u_diffuse_map, v_uv).rgb, 1.0);
-  frag_color = vec4(normalize(v_normal) * 0.5 + 0.5, 1.0);
+  frag_color = vec4(v_color * texture(u_diffuse_map, v_uv).rgb, 1.0);
+  //frag_color = vec4(normalize(v_normal) * 0.5 + 0.5, 1.0);
 }
     )";
 
@@ -138,8 +142,6 @@ void main() {
   }
 
   void create_default_texture() {
-    glEnable(GL_TEXTURE_2D);
-
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -154,6 +156,29 @@ void main() {
     Assert(image_data != nullptr, "AuroraRender: failed to load texture: cirno.jpg");
 
     glTexImage2D(GL_TEXTURE_2D, 0, components, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+  }
+
+  auto upload_texture(Texture* texture) -> GLuint {
+    GLuint id;
+
+    glGenTextures(1, &id);
+    glBindTexture(GL_TEXTURE_2D, id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexImage2D(
+      GL_TEXTURE_2D,
+      0,
+      GL_RGBA,
+      texture->width(),
+      texture->height(),
+      0,
+      GL_RGBA,
+      GL_UNSIGNED_BYTE,
+      texture->data()
+    );
+
+    return id;
   }
 
   void upload_geometry(Geometry* geometry, GeometryData& data) {
@@ -224,6 +249,20 @@ void main() {
     geometry_data_[geometry] = data;
   }
 
+  void bind_texture(GLenum slot, Texture* texture) {
+    auto match = texture_data_.find(texture);
+    auto id = GLuint{};
+
+    if (match == texture_data_.end()) {
+      id = upload_texture(texture);
+    } else {
+      id = match->second;
+    }
+
+    glActiveTexture(slot);
+    glBindTexture(GL_TEXTURE_2D, id);
+  }
+
   void upload_transform_uniforms(TransformComponent const& transform, GameObject* camera) {
     // TODO: need to fixup the depth component.
     auto projection = Matrix4::perspective(90.0, 1920/1080.0, 0.01, 100.0);
@@ -278,8 +317,7 @@ void main() {
         upload_transform_uniforms(transform, camera);
         glBindVertexArray(data.vao);
         glUseProgram(program);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture);
+        bind_texture(GL_TEXTURE0, cirno_texture_.get());
         switch (index_buffer.data_type()) {
           case IndexDataType::UInt16: {
             glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u16), GL_UNSIGNED_SHORT, 0);
@@ -302,6 +340,9 @@ private:
   GLuint program;
   GLuint texture;
 
+  std::unique_ptr<Texture> cirno_texture_;
+
+  std::unordered_map<Texture*, GLuint> texture_data_;
   std::unordered_map<Geometry*, GeometryData> geometry_data_;
 };
 

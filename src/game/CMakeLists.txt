@@ -12,6 +12,7 @@ set(SOURCES
 
 set(HEADERS
   src/gltf_loader.hpp
+  src/texture.hpp
 )
 
 include(FindSDL2)
