@@ -28,6 +28,7 @@ auto GLTFLoader::parse(std::string const& path) -> GameObject* {
   load_buffer_views(gltf);
   load_accessors(gltf);
   load_meshes(gltf);
+  load_images(gltf);
 
   // TODO: respect default scene.
   if (gltf.contains("scenes")) {
@@ -247,6 +248,22 @@ auto GLTFLoader::load_primitive_vtx(
   add_attribute("COLOR_0", 3);
 
   return buffers;
+}
+
+void GLTFLoader::load_images(nlohmann::json const& gltf) {
+  if (gltf.contains("images")) {
+    for (auto const& image : gltf["images"]) {
+      Assert(image.contains("uri"),
+        "GLTFLoader: loading textures from buffers is not supported");
+
+      auto uri = image["uri"].get<std::string>();
+
+      // TODO: URI can be a data-URI but we assume a file path right now
+      images_.push_back(Texture::load(base_path_ / uri));
+
+      Log<Info>("GLTFLoader: loaded image: {}", uri);
+    }
+  }
 }
 
 auto GLTFLoader::load_node(nlohmann::json const& nodes, size_t id) -> GameObject* {

@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include "texture.hpp"
+
 // TODO: move this somewhere more appropriate.
 #include <aurora/scene/geometry/geometry.hpp>
 
@@ -58,6 +60,7 @@ private:
   void load_meshes(nlohmann::json const& gltf);
   auto load_primitive_idx(nlohmann::json const& primitive) -> IndexBuffer;
   auto load_primitive_vtx(nlohmann::json const& primitive) -> std::vector<VertexBuffer>;
+  void load_images(nlohmann::json const& gltf);
   auto load_node(nlohmann::json const& nodes, size_t id) -> GameObject*;
   auto load_scene(nlohmann::json const& gltf, size_t id) -> GameObject*;
 
@@ -70,6 +73,7 @@ private:
   std::vector<BufferView> buffer_views_;
   std::vector<Accessor> accessors_;
   std::vector<Mesh> meshes_;
+  std::vector<std::shared_ptr<Texture>> images_;
 };
 
 } // namespace Aura
