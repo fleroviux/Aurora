@@ -15,12 +15,14 @@ enum class VertexDataType {
   UInt8,
   SInt16,
   UInt16,
+  UInt32,
   Float16,
   Float32
 };
 
 struct VertexBufferLayout {
   struct Attribute {
+    size_t index = 0;
     VertexDataType data_type;
     size_t components;
     bool normalized;
@@ -47,6 +49,10 @@ struct VertexBuffer : Updatable {
   }
 
   auto layout() const -> VertexBufferLayout const& {
+    return layout_;
+  }
+
+  auto layout() -> VertexBufferLayout& {
     return layout_;
   }
 

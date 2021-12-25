@@ -4,3 +4,6 @@
 [submodule "external/stb"]
 	path = external/stb
 	url = https://github.com/nothings/stb
+[submodule "external/json"]
+	path = external/json
+	url = https://github.com/nlohmann/json
