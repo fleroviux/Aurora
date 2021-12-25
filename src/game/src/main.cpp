@@ -132,8 +132,7 @@ void main() {
   if (diffuse.a < 0.5) {
     discard;
   }
-  frag_color = vec4(v_color * diffuse.rgb, 1.0);
-  //frag_color = vec4(normalize(v_normal) * 0.5 + 0.5, 1.0);
+  frag_color = vec4(diffuse.rgb, 1.0);
 }
     )";
 
@@ -164,7 +163,7 @@ void main() {
       texture->data()
     );
 
-    glGenerateTextureMipmap(id);
+    glGenerateMipmap(GL_TEXTURE_2D);
 
     texture_data_[texture] = id;
     return id;
@@ -254,7 +253,7 @@ void main() {
 
   void upload_transform_uniforms(TransformComponent const& transform, GameObject* camera) {
     // TODO: need to fixup the depth component.
-    auto projection = Matrix4::perspective(45.0, 1920/1080.0, 0.01, 2000.0);
+    auto projection = Matrix4::perspective(45.0, 1600/900.0, 0.01, 2000.0);
     auto view = camera->transform().world().inverse();
 
     auto u_projection = glGetUniformLocation(program, "u_projection");
@@ -274,7 +273,7 @@ void main() {
   }
 
   void render(GameObject* scene, GameObject* camera) {
-    glViewport(0, 0, 1920, 1080);
+    glViewport(0, 0, 1600, 900);
     glClearColor(0.02, 0.02, 0.02, 1.00);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -409,19 +408,19 @@ int main() {
     "Aurora",
     SDL_WINDOWPOS_CENTERED,
     SDL_WINDOWPOS_CENTERED,
-    1920,
-    1080,
+    1600,
+    900,
     SDL_WINDOW_OPENGL
   );
-
-  auto gl_context = SDL_GL_CreateContext(window);
-
-  glewInit();
 
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+  auto gl_context = SDL_GL_CreateContext(window);
+
+  glewInit();
 
   glClearColor(0.1, 0.1, 0.1, 1.0);
   glClear(GL_COLOR_BUFFER_BIT);
@@ -432,8 +431,8 @@ int main() {
   scene->add_child(camera);
 
   auto gltf_loader = GLTFLoader{};
-  auto cyoob = gltf_loader.parse("Sponza/Sponza.gltf");
-  cyoob->transform().scale() = Vector3{0.05, 0.05, 0.05};
+  auto cyoob = gltf_loader.parse("DamagedHelmet/DamagedHelmet.gltf");
+  //cyoob->transform().scale() = Vector3{0.05, 0.05, 0.05};
   scene->add_child(cyoob);
 
   auto event = SDL_Event{};
