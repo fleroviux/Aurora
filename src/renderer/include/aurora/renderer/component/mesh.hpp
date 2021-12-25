@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include <aurora/renderer/geometry/geometry.hpp>
 #include <aurora/renderer/material.hpp>
 #include <aurora/scene/component.hpp>
-#include <aurora/scene/geometry/geometry.hpp>
 #include <memory>
 
 namespace Aura {

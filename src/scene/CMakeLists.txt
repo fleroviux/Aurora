@@ -13,9 +13,6 @@ set(HEADERS
 
 set(HEADERS_PUBLIC
   include/aurora/scene/component/transform.hpp
-  include/aurora/scene/geometry/geometry.hpp
-  include/aurora/scene/geometry/index_buffer.hpp
-  include/aurora/scene/geometry/vertex_buffer.hpp
   include/aurora/scene/component.hpp
   include/aurora/scene/game_object.hpp
 )

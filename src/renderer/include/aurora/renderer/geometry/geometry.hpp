@@ -4,11 +4,9 @@
 
 #pragma once
 
-#include <aurora/scene/geometry/index_buffer.hpp>
-#include <aurora/scene/geometry/vertex_buffer.hpp>
+#include <aurora/renderer/geometry/index_buffer.hpp>
+#include <aurora/renderer/geometry/vertex_buffer.hpp>
 #include <optional>
-
-#include <aurora/log.hpp>
 
 namespace Aura {
 

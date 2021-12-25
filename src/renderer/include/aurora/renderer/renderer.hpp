@@ -22,7 +22,6 @@ struct OpenGLRenderer {
   void render(GameObject* scene, GameObject* camera);
 
 private:
-
   auto upload_texture(Texture* texture) -> GLuint;
   void upload_geometry(Geometry* geometry, GeometryData& data);
   void bind_texture(GLenum slot, Texture* texture);
