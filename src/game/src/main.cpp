@@ -169,6 +169,19 @@ void main() {
     return id;
   }
 
+  static auto get_gl_attribute_type(VertexDataType data_type) -> GLenum {
+    switch (data_type) {
+      case VertexDataType::SInt8: return GL_BYTE;
+      case VertexDataType::UInt8: return GL_UNSIGNED_BYTE;
+      case VertexDataType::SInt16: return GL_SHORT;
+      case VertexDataType::UInt16: return GL_UNSIGNED_SHORT;
+      case VertexDataType::Float16: return GL_HALF_FLOAT;
+      case VertexDataType::Float32: return GL_FLOAT;
+    }
+
+    Assert(false, "AuroraRender: unsupported vertex data type: {}", (int)data_type);
+  }
+
   void upload_geometry(Geometry* geometry, GeometryData& data) {
     auto& index_buffer = geometry->index_buffer;
 
@@ -191,34 +204,7 @@ void main() {
       for (size_t i = 0; i < layout.attributes.size(); i++) {
         auto& attribute = layout.attributes[i];
         auto normalized = attribute.normalized ? GL_TRUE : GL_FALSE;
-        GLenum type;
-
-        switch (attribute.data_type) {
-          case VertexDataType::SInt8: {
-            type = GL_BYTE;
-            break;
-          }
-          case VertexDataType::UInt8: {
-            type = GL_UNSIGNED_BYTE;
-            break;
-          }
-          case VertexDataType::SInt16: {
-            type = GL_SHORT;
-            break;
-          }
-          case VertexDataType::UInt16: {
-            type = GL_UNSIGNED_SHORT;
-            break;
-          }
-          case VertexDataType::Float16: {
-            type = GL_HALF_FLOAT;
-            break;
-          }
-          case VertexDataType::Float32: {
-            type = GL_FLOAT;
-            break;
-          }
-        }
+        auto type = get_gl_attribute_type(attribute.data_type);
 
         glVertexAttribPointer(
           attribute.index,
