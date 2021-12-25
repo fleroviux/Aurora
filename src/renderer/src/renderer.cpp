@@ -396,8 +396,6 @@ vec3 PerturbNormal() {
   vec3 dPdx = dFdx(v_world_position);
   vec3 dPdy = dFdy(v_world_position);
 
-  // TODO: think about backface rendering?
-
   /*
    * dPdx = T * dUVdx.x + B * dUVdx.y
    * dPdy = T * dUVdy.x + B * dUVdy.y
@@ -409,26 +407,18 @@ vec3 PerturbNormal() {
    *
    * det = dUVdx.x * dUVdy.y - dUVdy.x * dUVdx.y
    *
-   * TODO: check that this formula really is correct.
    * inverse = 1/det * |  dUVdy.y   -dUVdx.y |
    *                   | -dUVdy.x    dUVdx.x |
    */
 
-  vec3 T = normalize(vec3(
-    dUVdy.y * dPdx.x - dUVdx.y * dPdy.x,
-    dUVdy.y * dPdx.y - dUVdx.y * dPdy.y,
-    dUVdy.y * dPdx.z - dUVdx.y * dPdy.z
-  ));
-
-  vec3 B = normalize(vec3(
-    -dUVdy.x * dPdx.x + dUVdx.x * dPdy.x,
-    -dUVdy.x * dPdx.y + dUVdx.x * dPdy.y,
-    -dUVdy.x * dPdx.z + dUVdx.x * dPdy.z
-  ));
-
-  vec3 N = normalize(v_world_normal);
-
   float det = dUVdx.x * dUVdy.y - dUVdy.x * dUVdx.y;
+
+  // TODO: handle backfaces?
+  float flip = sign(det);
+
+  vec3 T = normalize( dUVdy.y * dPdx - dUVdx.y * dPdy) * flip;
+  vec3 B = normalize(-dUVdy.x * dPdx + dUVdx.x * dPdy) * flip;
+  vec3 N = normalize(v_world_normal);
 
   if (det == 0.0) {
     // There is no solution because the UVs are degenerate.
