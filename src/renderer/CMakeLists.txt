@@ -16,6 +16,7 @@ set(HEADERS
 set(HEADERS_PUBLIC
   include/aurora/renderer/component/camera.hpp
   include/aurora/renderer/component/mesh.hpp
+  include/aurora/renderer/component/scene.hpp
   include/aurora/renderer/geometry/geometry.hpp
   include/aurora/renderer/geometry/index_buffer.hpp
   include/aurora/renderer/geometry/vertex_buffer.hpp

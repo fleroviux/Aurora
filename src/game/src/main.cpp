@@ -104,6 +104,7 @@ int main() {
   auto camera = new GameObject{"Camera"};
   camera->transform().position() = Vector3{4.0, 4.0, -3.0};
   camera->add_component<CameraComponent>();
+  scene->add_component<SceneComponent>(camera);
   scene->add_child(camera);
 
   auto behemoth = GLTFLoader{}.parse("behemoth_sane/scene.gltf");
@@ -145,7 +146,7 @@ int main() {
     if (state[SDL_SCANCODE_LEFT])  camera->transform().rotation().y() -= 0.01;
     if (state[SDL_SCANCODE_RIGHT]) camera->transform().rotation().y() += 0.01;
 
-    renderer.render(scene, camera);
+    renderer.render(scene);
     SDL_GL_SwapWindow(window);
 
     while (SDL_PollEvent(&event)) {

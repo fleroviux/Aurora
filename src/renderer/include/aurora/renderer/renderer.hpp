@@ -4,6 +4,7 @@
 
 #include <aurora/renderer/component/camera.hpp>
 #include <aurora/renderer/component/mesh.hpp>
+#include <aurora/renderer/component/scene.hpp>
 #include <aurora/scene/game_object.hpp>
 #include <GL/glew.h>
 #include <optional>
@@ -20,7 +21,7 @@ struct OpenGLRenderer {
   OpenGLRenderer();
  ~OpenGLRenderer();
 
-  void render(GameObject* scene, GameObject* camera);
+  void render(GameObject* scene);
 
 private:
   auto upload_texture(Texture* texture) -> GLuint;

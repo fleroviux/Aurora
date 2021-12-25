@@ -19,7 +19,10 @@ OpenGLRenderer::OpenGLRenderer() {
 OpenGLRenderer::~OpenGLRenderer() {
 }
 
-void OpenGLRenderer::render(GameObject* scene, GameObject* camera) {
+void OpenGLRenderer::render(GameObject* scene) {
+  // TODO: validate that the scene component exists and the camera is valid.
+  auto camera = scene->get_component<SceneComponent>()->camera;
+
   glViewport(0, 0, 1600, 900);
   glClearColor(0.02, 0.02, 0.02, 1.00);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -213,6 +216,7 @@ void OpenGLRenderer::bind_texture(GLenum slot, Texture* texture) {
 }
 
 void OpenGLRenderer::upload_transform_uniforms(TransformComponent const& transform, GameObject* camera) {
+  // TODO: validate that the camera component exists.
   auto camera_component = camera->get_component<CameraComponent>();
   
   // TODO: need to fixup the depth component.
