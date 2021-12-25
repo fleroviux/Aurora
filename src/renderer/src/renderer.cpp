@@ -76,11 +76,11 @@ void OpenGLRenderer::render(GameObject* scene, GameObject* camera) {
         }
 
         if (u_metalness != -1) {
-          glUniform1i(u_metalness, material->metalness);
+          glUniform1f(u_metalness, material->metalness);
         }
 
         if (u_roughness != -1) {
-          glUniform1i(u_roughness, material->roughness);
+          glUniform1f(u_roughness, material->roughness);
         }
 
         if (material->albedo) {
@@ -257,14 +257,23 @@ in vec3 v_color;
 in vec2 v_uv;
 in vec3 v_normal;
 
+uniform float u_metalness;
+uniform float u_roughness;
 uniform sampler2D u_diffuse_map;
+uniform sampler2D u_metalness_map;
+uniform sampler2D u_roughness_map;
 
 void main() {
-vec4 diffuse = texture(u_diffuse_map, v_uv);
-if (diffuse.a < 0.5) {
-  discard;
-}
-frag_color = vec4(diffuse.rgb, 1.0);
+  vec4 diffuse = texture(u_diffuse_map, v_uv);
+  if (diffuse.a < 0.5) {
+    discard;
+  }
+
+  float metalness = u_metalness * texture(u_metalness_map, v_uv).b;
+  float roughness = u_roughness * texture(u_roughness_map, v_uv).g;
+
+
+  frag_color = vec4(vec3(roughness), 1.0);
 }
   )";
 
