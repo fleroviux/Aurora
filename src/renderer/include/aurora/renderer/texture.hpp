@@ -23,17 +23,6 @@ struct Texture{
     delete data();
   }
 
-  static auto load(std::string const& path) -> std::unique_ptr<Texture> {
-    int width;
-    int height;
-    int components;
-    auto data = stbi_load(path.c_str(), &width, &height, &components, STBI_rgb_alpha);
-
-    Assert(data != nullptr, "Failed to load texture: {}", path);
-
-    return std::make_unique<Texture>(width, height, data);
-  }
-
   auto data() const -> u8 const* {
     return data_;
   }
@@ -45,6 +34,8 @@ struct Texture{
   auto height() const -> uint {
     return height_;
   }
+
+  static auto load(std::string const& path) -> std::unique_ptr<Texture>;
 
 private:
   uint width_;

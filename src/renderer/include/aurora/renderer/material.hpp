@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "texture.hpp"
+#include <aurora/renderer/texture.hpp>
 
 namespace Aura {
 

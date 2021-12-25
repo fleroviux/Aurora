@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <aurora/renderer/component/mesh.hpp>
 #include <aurora/scene/game_object.hpp>
 #include <aurora/integer.hpp>
 #include <filesystem>
@@ -11,28 +12,7 @@
 #include <string>
 #include <vector>
 
-#include "texture.hpp"
-#include "material.hpp"
-
-// TODO: move this somewhere more appropriate.
-#include <aurora/scene/geometry/geometry.hpp>
-
 namespace Aura {
-
-// TODO: move this somewhere more appropriate.
-struct MeshComponent final : Component {
-  MeshComponent(
-    GameObject* owner,
-    std::shared_ptr<Geometry> geometry,
-    std::shared_ptr<Material> material
-  )   : Component(owner)
-      , geometry(geometry)
-      , material(material) {
-  }
-
-  std::shared_ptr<Geometry> geometry;
-  std::shared_ptr<Material> material;
-};
 
 struct GLTFLoader {
   auto parse(std::string const& path) -> GameObject*;
