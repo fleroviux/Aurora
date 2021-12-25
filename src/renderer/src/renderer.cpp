@@ -14,12 +14,6 @@ OpenGLRenderer::OpenGLRenderer() {
   create_default_program();
 
   default_texture_ = Texture::load("cirno.jpg");
-
-  // Set texture uniform 
-  auto u_diffuse_map = glGetUniformLocation(program, "u_diffuse_map");
-  if (u_diffuse_map != -1) {
-    glUniform1i(u_diffuse_map, 0);
-  }
 }
 
 OpenGLRenderer::~OpenGLRenderer() {
@@ -59,11 +53,55 @@ void OpenGLRenderer::render(GameObject* scene, GameObject* camera) {
       upload_transform_uniforms(transform, camera);
       glBindVertexArray(data.vao);
       glUseProgram(program);
-      if (material->albedo) {
-        bind_texture(GL_TEXTURE0, material->albedo.get());
-      } else {
-        bind_texture(GL_TEXTURE0, default_texture_.get());
+      
+      // TODO: rewrite this... it is terrifying.
+      {
+        // TODO: rename uniform to u_albedo_map or rename Material::albedo
+        auto u_diffuse_map = glGetUniformLocation(program, "u_diffuse_map");
+        auto u_metalness_map = glGetUniformLocation(program, "u_metalness_map");
+        auto u_roughness_map = glGetUniformLocation(program, "u_roughness_map");
+        auto u_metalness = glGetUniformLocation(program, "u_metalness");
+        auto u_roughness = glGetUniformLocation(program, "u_roughness");
+
+        if (u_diffuse_map != -1) {
+          glUniform1i(u_diffuse_map, 0);
+        }
+
+        if (u_metalness_map != -1) {
+          glUniform1i(u_metalness_map, 1);
+        }
+
+        if (u_roughness_map != -1) {
+          glUniform1i(u_roughness_map, 2);
+        }
+
+        if (u_metalness != -1) {
+          glUniform1i(u_metalness, material->metalness);
+        }
+
+        if (u_roughness != -1) {
+          glUniform1i(u_roughness, material->roughness);
+        }
+
+        if (material->albedo) {
+          bind_texture(GL_TEXTURE0, material->albedo.get());
+        } else {
+          bind_texture(GL_TEXTURE0, default_texture_.get());
+        }
+
+        if (material->metalness_map) {
+          bind_texture(GL_TEXTURE1, material->metalness_map.get());
+        } else {
+          bind_texture(GL_TEXTURE1, default_texture_.get());
+        }
+
+        if (material->roughness_map) {
+          bind_texture(GL_TEXTURE2, material->roughness_map.get());
+        } else {
+          bind_texture(GL_TEXTURE2, default_texture_.get());
+        }
       }
+      
       switch (index_buffer.data_type()) {
         case IndexDataType::UInt16: {
           glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u16), GL_UNSIGNED_SHORT, 0);

@@ -103,7 +103,7 @@ int main() {
   scene->add_child(camera);
 
   auto gltf_loader = GLTFLoader{};
-  auto cyoob = gltf_loader.parse("DamagedHelmet/DamagedHelmet.gltf");
+  auto cyoob = gltf_loader.parse("behemoth_sane/scene.gltf");
   //cyoob->transform().scale() = Vector3{0.05, 0.05, 0.05};
   scene->add_child(cyoob);
 
