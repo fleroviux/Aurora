@@ -103,8 +103,9 @@ int main() {
   scene->add_child(camera);
 
   auto gltf_loader = GLTFLoader{};
-  auto cyoob = gltf_loader.parse("DamagedHelmet/DamagedHelmet.gltf");
+  auto cyoob = gltf_loader.parse("behemoth_sane/scene.gltf");
   //cyoob->transform().scale() = Vector3{0.05, 0.05, 0.05};
+  cyoob->transform().rotation().x() = -3.141592*0.5;
   scene->add_child(cyoob);
 
   auto event = SDL_Event{};

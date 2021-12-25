@@ -277,9 +277,27 @@ void GLTFLoader::load_materials(nlohmann::json const& gltf) {
       if (material.contains("pbrMetallicRoughness")) {
         auto const& pbr = material["pbrMetallicRoughness"];
 
+        if (pbr.contains("metallicFactor")) {
+          material_out->metalness = pbr["metallicFactor"].get<float>();
+        } else {
+          material_out->metalness = 1.0;
+        }
+
+        if (pbr.contains("roughnessFactor")) {
+          material_out->roughness = pbr["roughnessFactor"].get<float>();
+        } else {
+          material_out->roughness = 1.0;
+        }
+
         if (pbr.contains("baseColorTexture")) {
           auto tid = pbr["baseColorTexture"]["index"].get<int>();
           material_out->albedo = images_[gltf["textures"][tid]["source"].get<int>()];
+        }
+
+        if (pbr.contains("metallicRoughnessTexture")) {
+          auto tid = pbr["metallicRoughnessTexture"]["index"].get<int>();
+          material_out->metalness_map = images_[gltf["textures"][tid]["source"].get<int>()];
+          material_out->roughness_map = material_out->metalness_map;
         }
       }
 
