@@ -275,8 +275,8 @@ void main() {
       auto mesh = object->get_component<MeshComponent>();
 
       if (mesh != nullptr) {
-        auto geometry = mesh->geometry;
-        auto material = mesh->material;
+        auto geometry = mesh->geometry.get();
+        auto material = mesh->material.get();
 
         auto data = GeometryData{};
         auto it = geometry_data_.find(geometry);
@@ -370,10 +370,10 @@ auto create_example_scene() -> GameObject* {
   std::memcpy(
     vertex_buffer.data(), plane_vertices, sizeof(plane_vertices));
 
-  auto geometry = new Geometry{index_buffer};
+  auto geometry = std::make_shared<Geometry>(index_buffer);
   geometry->buffers.push_back(std::move(vertex_buffer));
 
-  auto material = new Material{};
+  auto material = std::make_shared<Material>();
 
   auto plane0 = new GameObject{"Plane0"};
   auto plane1 = new GameObject{"Plane1"};

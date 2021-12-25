@@ -21,14 +21,17 @@ namespace Aura {
 
 // TODO: move this somewhere more appropriate.
 struct MeshComponent final : Component {
-  MeshComponent(GameObject* owner, Geometry* geometry, Material* material)
-      : Component(owner)
+  MeshComponent(
+    GameObject* owner,
+    std::shared_ptr<Geometry> geometry,
+    std::shared_ptr<Material> material
+  )   : Component(owner)
       , geometry(geometry)
       , material(material) {
   }
 
-  Geometry* geometry;
-  Material* material;
+  std::shared_ptr<Geometry> geometry;
+  std::shared_ptr<Material> material;
 };
 
 struct GLTFLoader {
@@ -51,8 +54,8 @@ private:
 
   struct Mesh {
     struct Primitive {
-      Geometry* geometry;
-      Material* material;
+      std::shared_ptr<Geometry> geometry;
+      std::shared_ptr<Material> material;
     };
     std::vector<Primitive> primitives;
   };
@@ -78,7 +81,7 @@ private:
   std::vector<Accessor> accessors_;
   std::vector<Mesh> meshes_;
   std::vector<std::shared_ptr<Texture>> images_;
-  std::vector<Material*> materials_;
+  std::vector<std::shared_ptr<Material>> materials_;
 };
 
 } // namespace Aura

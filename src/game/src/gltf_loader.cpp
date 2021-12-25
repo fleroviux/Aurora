@@ -150,10 +150,10 @@ void GLTFLoader::load_meshes(nlohmann::json const& gltf) {
 
         // TODO: material is not a required field - fallback to a standard material.
         mesh_out.primitives.push_back(Mesh::Primitive{
-          .geometry = new Geometry{
+          .geometry = std::make_shared<Geometry>(
             load_primitive_idx(primitive),
             load_primitive_vtx(primitive)
-          },
+          ),
           .material = materials_[primitive["material"].get<int>()]
         });
       }
@@ -272,7 +272,7 @@ void GLTFLoader::load_images(nlohmann::json const& gltf) {
 void GLTFLoader::load_materials(nlohmann::json const& gltf) {
   if (gltf.contains("materials")) {
     for (auto const& material : gltf["materials"]) {
-      auto material_out = new Material{};
+      auto material_out = std::make_shared<Material>();
 
       if (material.contains("pbrMetallicRoughness")) {
         auto const& pbr = material["pbrMetallicRoughness"];
