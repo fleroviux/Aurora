@@ -2,6 +2,7 @@
  * Copyright (C) 2021 fleroviux
  */
 
+#include <aurora/renderer/component/camera.hpp>
 #include <aurora/renderer/component/mesh.hpp>
 #include <aurora/scene/game_object.hpp>
 #include <GL/glew.h>

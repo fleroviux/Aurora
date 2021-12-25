@@ -103,6 +103,7 @@ int main() {
   auto scene = new GameObject{"Scene"};
   auto camera = new GameObject{"Camera"};
   camera->transform().position() = Vector3{4.0, 4.0, -3.0};
+  camera->add_component<CameraComponent>();
   scene->add_child(camera);
 
   auto behemoth = GLTFLoader{}.parse("behemoth_sane/scene.gltf");

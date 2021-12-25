@@ -213,8 +213,16 @@ void OpenGLRenderer::bind_texture(GLenum slot, Texture* texture) {
 }
 
 void OpenGLRenderer::upload_transform_uniforms(TransformComponent const& transform, GameObject* camera) {
+  auto camera_component = camera->get_component<CameraComponent>();
+  
   // TODO: need to fixup the depth component.
-  auto projection = Matrix4::perspective(45.0, 1600/900.0, 0.01, 2000.0);
+  auto projection = Matrix4::perspective(
+    camera_component->field_of_view,
+    camera_component->aspect_ratio,
+    camera_component->near,
+    camera_component->far
+  );
+  
   auto view = camera->transform().world().inverse();
 
   auto u_projection = glGetUniformLocation(program, "u_projection");
