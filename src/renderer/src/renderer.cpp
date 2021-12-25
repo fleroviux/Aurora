@@ -456,9 +456,9 @@ void main() {
   my_light.color = vec3(10.0);
   result += ShadeDirectLight(geometry, my_light, view_dir);
 
-  my_light.position = vec4(0.0, 2.0, -3.0, 1.0);
-  my_light.color = vec3(10.0, 0.0, 0.0);
-  result += ShadeDirectLight(geometry, my_light, view_dir);
+  //my_light.position = vec4(4.0, 10.0, -3.0, 1.0);
+  //my_light.color = vec3(0.0, 10.0, 8.0);
+  //result += ShadeDirectLight(geometry, my_light, view_dir);
 
   result = ACESFilm(result);
   result = LinearTosRGB(result);

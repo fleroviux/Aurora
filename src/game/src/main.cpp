@@ -89,6 +89,8 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+  SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+  SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
 
   auto gl_context = SDL_GL_CreateContext(window);
 
@@ -98,35 +100,44 @@ int main() {
   glClear(GL_COLOR_BUFFER_BIT);
 
   auto renderer = OpenGLRenderer{};
-  auto scene = create_example_scene();
+  auto scene = new GameObject{"Scene"};
   auto camera = new GameObject{"Camera"};
+  camera->transform().position() = Vector3{4.0, 4.0, -3.0};
   scene->add_child(camera);
 
-  auto gltf_loader = GLTFLoader{};
-  auto cyoob = gltf_loader.parse("behemoth_sane/scene.gltf");
-  //cyoob->transform().scale() = Vector3{0.05, 0.05, 0.05};
-  cyoob->transform().rotation().x() = -3.141592*0.5;
-  scene->add_child(cyoob);
+  auto behemoth = GLTFLoader{}.parse("behemoth_sane/scene.gltf");
+  behemoth->transform().position().y() = 2.8;
+  behemoth->transform().position().x() = 10.0;
+  behemoth->transform().rotation().x() = -3.141592*0.5;  
+  scene->add_child(behemoth);
+
+  auto valley = GLTFLoader{}.parse("death_valley/death_valley.gltf");
+  valley->transform().rotation().x() = -3.141592;
+  valley->transform().scale() = Vector3{100.0, 100.0, 100.0};
+  scene->add_child(valley);
 
   auto event = SDL_Event{};
 
   for (;;) {
-    auto plane0 = scene->children()[0];
-    auto plane1 = plane0->children()[0];
-    auto plane2 = scene->children()[1];
-
-    plane0->transform().rotation().z() += 0.01;
-    plane1->transform().position().x() =  2.5;
-    plane2->transform().position().x() = -2.5;
-
     auto state = SDL_GetKeyboardState(nullptr);
 
-    if (state[SDL_SCANCODE_W]) camera->transform().position().y() += 0.05;
-    if (state[SDL_SCANCODE_S]) camera->transform().position().y() -= 0.05;
-    if (state[SDL_SCANCODE_A]) camera->transform().position().x() -= 0.05;
-    if (state[SDL_SCANCODE_D]) camera->transform().position().x() += 0.05;
-    if (state[SDL_SCANCODE_R]) camera->transform().position().z() += 0.05;
-    if (state[SDL_SCANCODE_F]) camera->transform().position().z() -= 0.05;
+    auto const& camera_local = camera->transform().local();
+
+    if (state[SDL_SCANCODE_W]) {
+      camera->transform().position() += camera_local[2].xyz() * 0.05;
+    }
+
+    if (state[SDL_SCANCODE_S]) {
+      camera->transform().position() -= camera_local[2].xyz() * 0.05;
+    }
+
+    if (state[SDL_SCANCODE_A]) {
+      camera->transform().position() -= camera_local[0].xyz() * 0.05;
+    }
+
+    if (state[SDL_SCANCODE_D]) {
+      camera->transform().position() += camera_local[0].xyz() * 0.05;
+    }
 
     if (state[SDL_SCANCODE_UP])    camera->transform().rotation().x() -= 0.01;
     if (state[SDL_SCANCODE_DOWN])  camera->transform().rotation().x() += 0.01;
