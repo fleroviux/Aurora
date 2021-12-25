@@ -60,6 +60,7 @@ void OpenGLRenderer::render(GameObject* scene, GameObject* camera) {
         auto u_diffuse_map = glGetUniformLocation(program, "u_diffuse_map");
         auto u_metalness_map = glGetUniformLocation(program, "u_metalness_map");
         auto u_roughness_map = glGetUniformLocation(program, "u_roughness_map");
+        auto u_normal_map = glGetUniformLocation(program, "u_normal_map");
         auto u_metalness = glGetUniformLocation(program, "u_metalness");
         auto u_roughness = glGetUniformLocation(program, "u_roughness");
 
@@ -73,6 +74,10 @@ void OpenGLRenderer::render(GameObject* scene, GameObject* camera) {
 
         if (u_roughness_map != -1) {
           glUniform1i(u_roughness_map, 2);
+        }
+
+        if (u_roughness_map != -1) {
+          glUniform1i(u_normal_map, 3);
         }
 
         if (u_metalness != -1) {
@@ -99,6 +104,12 @@ void OpenGLRenderer::render(GameObject* scene, GameObject* camera) {
           bind_texture(GL_TEXTURE2, material->roughness_map.get());
         } else {
           bind_texture(GL_TEXTURE2, default_texture_.get());
+        }
+
+        if (material->normal_map) {
+          bind_texture(GL_TEXTURE3, material->normal_map.get());
+        } else {
+          bind_texture(GL_TEXTURE3, default_texture_.get());
         }
       }
       
@@ -355,6 +366,7 @@ uniform float u_roughness;
 uniform sampler2D u_diffuse_map;
 uniform sampler2D u_metalness_map;
 uniform sampler2D u_roughness_map;
+uniform sampler2D u_normal_map;
 
 vec3 sRGBToLinear(vec3 color) {
   return pow(color, vec3(2.2));
@@ -375,6 +387,57 @@ vec3 ACESFilm(vec3 x) {
   return clamp((x*(a*x+b))/(x*(c*x+d)+e), vec3(0.0), vec3(1.0));
 }
 
+vec3 PerturbNormal() {
+  vec3 tbn_normal = texture(u_normal_map, v_uv).xyz * 2.0 - 1.0;
+
+  vec2 dUVdx = dFdx(v_uv);
+  vec2 dUVdy = dFdy(v_uv);
+
+  vec3 dPdx = dFdx(v_world_position);
+  vec3 dPdy = dFdy(v_world_position);
+
+  // TODO: think about backface rendering?
+
+  /*
+   * dPdx = T * dUVdx.x + B * dUVdx.y
+   * dPdy = T * dUVdy.x + B * dUVdy.y
+   *
+   * | dUVdx.x  dUVdx.y | * | T.x  T.y  T.z | = | dPdx.x  dPdx.y dPdx.z |
+   * | dUVdy.x  dUVdy.y |   | B.x  B.y  B.z |   | dPdy.x  dPdy.y dPdy.z |
+   *
+   * Take 2x2 matrix inverse of dUVdx/dy matrix to solve for T and B.
+   *
+   * det = dUVdx.x * dUVdy.y - dUVdy.x * dUVdx.y
+   *
+   * TODO: check that this formula really is correct.
+   * inverse = 1/det * |  dUVdy.y   -dUVdx.y |
+   *                   | -dUVdy.x    dUVdx.x |
+   */
+
+  vec3 T = normalize(vec3(
+    dUVdy.y * dPdx.x - dUVdx.y * dPdy.x,
+    dUVdy.y * dPdx.y - dUVdx.y * dPdy.y,
+    dUVdy.y * dPdx.z - dUVdx.y * dPdy.z
+  ));
+
+  vec3 B = normalize(vec3(
+    -dUVdy.x * dPdx.x + dUVdx.x * dPdy.x,
+    -dUVdy.x * dPdx.y + dUVdx.x * dPdy.y,
+    -dUVdy.x * dPdx.z + dUVdx.x * dPdy.z
+  ));
+
+  vec3 N = normalize(v_world_normal);
+
+  float det = dUVdx.x * dUVdy.y - dUVdy.x * dUVdx.y;
+
+  if (det == 0.0) {
+    // There is no solution because the UVs are degenerate.
+    return N;
+  }
+
+  return mat3(T, B, N) * tbn_normal;
+}
+
 void main() {
   vec4 diffuse = texture(u_diffuse_map, v_uv);
   if (diffuse.a < 0.5) {
@@ -391,7 +454,7 @@ void main() {
 
   Geometry geometry;
   geometry.position = v_world_position;
-  geometry.normal = normalize(v_world_normal);
+  geometry.normal = PerturbNormal();
   geometry.albedo = diffuse.rgb;
   geometry.metalness = metalness;
   geometry.roughness = max(roughness, 0.001);

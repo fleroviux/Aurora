@@ -16,6 +16,7 @@ struct Material {
   std::shared_ptr<Texture> albedo;
   std::shared_ptr<Texture> metalness_map;
   std::shared_ptr<Texture> roughness_map;
+  std::shared_ptr<Texture> normal_map;
 };
 
 } // namespace Aura

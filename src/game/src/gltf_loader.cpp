@@ -301,6 +301,12 @@ void GLTFLoader::load_materials(nlohmann::json const& gltf) {
         }
       }
 
+      if (material.contains("normalTexture")) {
+        // TODO: read out and use normal scale.
+        auto tid = material["normalTexture"]["index"].get<int>();
+        material_out->normal_map = images_[gltf["textures"][tid]["source"].get<int>()];
+      }
+
       materials_.push_back(material_out);
     }
   }
