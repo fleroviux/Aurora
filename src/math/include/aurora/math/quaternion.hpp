@@ -47,10 +47,8 @@ struct Quaternion {
   }
 
   auto operator+=(Derived const& rhs) -> Derived& {
-    x() += rhs.x();
-    y() += rhs.y();
-    z() += rhs.z();
-    w() += rhs.w();
+    for (auto i : {0, 1, 2, 3}) data[i] += rhs[i];
+
     return *static_cast<Derived*>(this);
   }
 
@@ -64,10 +62,8 @@ struct Quaternion {
   }
 
   auto operator-=(Derived const& rhs) -> Derived& {
-    x() -= rhs.x();
-    y() -= rhs.y();
-    z() -= rhs.z();
-    w() -= rhs.w();
+    for (auto i : {0, 1, 2, 3}) data[i] -= rhs[i];
+
     return *static_cast<Derived*>(this);
   }
 
@@ -81,9 +77,8 @@ struct Quaternion {
   }
 
   auto operator*=(T scale) -> Derived& {
-    for (auto i : {0, 1, 2, 3}) {
-      data[i] *= scale;
-    }
+    for (auto i : {0, 1, 2, 3}) data[i] *= scale;
+
     return *static_cast<Derived*>(this);
   }
 
