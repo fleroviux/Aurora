@@ -2,6 +2,7 @@
  * Copyright (C) 2021 fleroviux
  */
 
+#include <aurora/math/quaternion.hpp>
 #include <aurora/renderer/renderer.hpp>
 #include <cstring>
 #include <SDL.h>

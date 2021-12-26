@@ -8,6 +8,7 @@ set(HEADERS_PUBLIC
   include/aurora/math/matrix4.hpp
   include/aurora/math/numeric_traits.hpp
   include/aurora/math/vector.hpp
+  include/aurora/math/quaternion.hpp
 )
 
 add_library(Aurora-Math INTERFACE ${HEADERS_PUBLIC})
