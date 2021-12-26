@@ -219,8 +219,7 @@ void OpenGLRenderer::upload_transform_uniforms(TransformComponent const& transfo
   // TODO: validate that the camera component exists.
   auto camera_component = camera->get_component<CameraComponent>();
   
-  // TODO: need to fixup the depth component.
-  auto projection = Matrix4::perspective(
+  auto projection = Matrix4::perspective_gl(
     camera_component->field_of_view,
     camera_component->aspect_ratio,
     camera_component->near,
@@ -285,9 +284,10 @@ void main() {
   auto frag_src = R"(\
 #version 330 core
 
-// PBR library begin
+#define PI  3.14159265358
+#define TAU 6.28318530717
 
-#define PI 3.141592
+// PBR library begin
 
 // Normal-distribution function
 float ThrowbridgeReitzNDF(float n_dot_h, float roughness) {
@@ -362,6 +362,51 @@ vec3 ShadeDirectLight(in Geometry geometry, in Light light, vec3 view_dir) {
 }
 
 // PBR library end
+
+// SH library begin
+
+const vec3 SH[9] = vec3[9](
+  vec3(1.2526156902313232, 1.2436836957931519, 1.2180569171905518),
+  vec3(0.12890386581420898, 0.3892329931259155, 0.727676510810852),
+  vec3(0.09071195870637894, 0.0888092964887619, 0.08513105660676956),
+  vec3(-0.09755872189998627, -0.08879192918539047, -0.07212600857019424),
+  vec3(-0.1784418523311615, -0.1668754369020462, -0.13851317763328552),
+  vec3(0.22431527078151703, 0.19814930856227875, 0.15394988656044006),
+  vec3(-0.23336298763751984, -0.22071699798107147, -0.2437698394060135),
+  vec3(-0.1290844827890396, -0.11162897199392319, -0.09100642800331116),
+  vec3(-0.44091033935546875, -0.40154850482940674, -0.4266403019428253)
+);
+
+vec3 CalculateSH(in vec3 sh[9], vec3 normal) {
+  // l = 0
+  const float c0 = 0.28209479177 * 0.00600642757;
+
+  // l = 1
+  const float c1 = 0.48860251190 * 1.53498363494;
+
+  // l = 2
+  const float c2 = 1.09254843059 * 0.00387886399;
+  const float c3 = 0.31539156525 * 0.00387886399;
+  const float c4 = 0.54627421529 * 0.00387886399;
+
+  vec3 result = vec3(0.0);
+
+  result += c0 * sh[0];
+
+  result += c1 * normal.y * sh[1];
+  result += c1 * normal.z * sh[2];
+  result += c1 * normal.x * sh[3];
+
+  result += c2 * normal.x * normal.y * sh[4];
+  result += c2 * normal.y * normal.z * sh[5];
+  result += c3 * (-normal.x * normal.x - normal.y * normal.y + 2.0 * normal.z * normal.z) * sh[6];
+  result += c2 * normal.z * normal.x * sh[7];
+  result += c4 * (normal.x * normal.x - normal.y * normal.y) * sh[8];
+
+  return result;
+}
+
+// SH library end
 
 layout (location = 0) out vec4 frag_color;
 
@@ -471,6 +516,8 @@ void main() {
   //my_light.position = vec4(4.0, 10.0, -3.0, 1.0);
   //my_light.color = vec3(0.0, 10.0, 8.0);
   //result += ShadeDirectLight(geometry, my_light, view_dir);
+
+  result += CalculateSH(SH, geometry.normal) * (1.0 - geometry.metalness) * geometry.albedo;
 
   result = ACESFilm(result);
   result = LinearTosRGB(result);

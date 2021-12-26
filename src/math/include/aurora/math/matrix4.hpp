@@ -181,18 +181,41 @@ struct Matrix4 : detail::Matrix4<Matrix4, float> {
     return Matrix4::translation(vec.x(), vec.y(), vec.z());
   }
 
-  static auto perspective(
+  static auto perspective_gl(
     float fov_y,
     float aspect_ratio,
     float near,
     float far
   ) -> Matrix4 {
-    float y = 1.0 / std::tan(fov_y * 0.5);
-    float x = y / aspect_ratio;
+    // cot(fov_y/2) = tan((pi - fov_y)/2)
+    auto y = std::tan((M_PI - fov_y) * 0.5);
+    auto x = y / aspect_ratio;
+
+    auto a = 1 / (near - far);
+    auto b = (far + near) * a;
+    auto c = (2 * far * near) * a;
+
+    return Matrix4{{
+      x, 0,  0, 0,
+      0, y,  0, 0,
+      0, 0,  b, c,
+      0, 0, -1, 0
+    }};
+  }
+
+  static auto perspective_dx(
+    float fov_y,
+    float aspect_ratio,
+    float near,
+    float far
+  ) -> Matrix4 {
+    // cot(fov_y/2) = tan((pi - fov_y)/2)
+    auto y = std::tan((M_PI - fov_y) * 0.5);
+    auto x = y / aspect_ratio;
     
-    float a = far - near;
-    float b = far / a;
-    float c = -near * far / a;
+    float a = 1.0 / (far - near);
+    float b = far * a;
+    float c = -near * far * a;
 
     return Matrix4{{
       x, 0, 0, 0,

@@ -126,11 +126,11 @@ int main() {
     auto const& camera_local = camera->transform().local();
 
     if (state[SDL_SCANCODE_W]) {
-      camera->transform().position() += camera_local[2].xyz() * 0.05;
+      camera->transform().position() -= camera_local[2].xyz() * 0.05;
     }
 
     if (state[SDL_SCANCODE_S]) {
-      camera->transform().position() -= camera_local[2].xyz() * 0.05;
+      camera->transform().position() += camera_local[2].xyz() * 0.05;
     }
 
     if (state[SDL_SCANCODE_A]) {
@@ -141,10 +141,10 @@ int main() {
       camera->transform().position() += camera_local[0].xyz() * 0.05;
     }
 
-    if (state[SDL_SCANCODE_UP])    camera->transform().rotation().x() -= 0.01;
-    if (state[SDL_SCANCODE_DOWN])  camera->transform().rotation().x() += 0.01;
-    if (state[SDL_SCANCODE_LEFT])  camera->transform().rotation().y() -= 0.01;
-    if (state[SDL_SCANCODE_RIGHT]) camera->transform().rotation().y() += 0.01;
+    if (state[SDL_SCANCODE_UP])    camera->transform().rotation().x() += 0.01;
+    if (state[SDL_SCANCODE_DOWN])  camera->transform().rotation().x() -= 0.01;
+    if (state[SDL_SCANCODE_LEFT])  camera->transform().rotation().y() += 0.01;
+    if (state[SDL_SCANCODE_RIGHT]) camera->transform().rotation().y() -= 0.01;
 
     renderer.render(scene);
     SDL_GL_SwapWindow(window);
