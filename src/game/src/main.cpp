@@ -74,6 +74,10 @@ auto create_example_scene() -> GameObject* {
   return scene;
 }
 
+void quaternion_test() {
+  auto quat = Quaternion{4, 3, 2, 1};
+}
+
 int main() {
   SDL_Init(SDL_INIT_VIDEO);
 
@@ -118,6 +122,8 @@ int main() {
   valley->transform().rotation().x() = -3.141592;
   valley->transform().scale() = Vector3{100.0, 100.0, 100.0};
   scene->add_child(valley);
+
+  quaternion_test();
 
   auto event = SDL_Event{};
 
