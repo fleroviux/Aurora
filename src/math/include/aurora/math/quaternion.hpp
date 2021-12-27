@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <aurora/math/numeric_traits.hpp>
+#include <aurora/math/matrix4.hpp>
 #include <cmath>
 #include <initializer_list>
 
@@ -167,6 +168,46 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
     auto scale = 1.0 / length();
     *this *= scale;
     return *this;
+  }
+
+  auto to_rotation_matrix() const -> Matrix4 {
+    auto aa = x() * x();
+    auto bb = y() * y();
+    auto cc = z() * z();
+    auto dd = w() * w();
+
+    auto two_ab = 2 * x() * y();
+    auto two_ac = 2 * x() * z();
+    auto two_ad = 2 * x() * w();
+    auto two_bc = 2 * y() * z();
+    auto two_bd = 2 * y() * w();
+    auto two_cd = 2 * z() * w();
+
+    auto mat = Matrix4{};
+
+    mat.x() = Vector4{
+      bb + aa - dd - cc,
+      two_bc + two_ad,
+      two_bd - two_ac,
+      0
+    };
+
+    mat.y() = Vector4{
+      two_bc - two_ad,
+      cc - dd + aa - bb,
+      two_cd + two_ab,
+      0
+    };
+
+    mat.z() = Vector4{
+      two_bd + two_ac,
+      two_cd - two_ab,
+      dd - cc - bb + aa,
+      0
+    };
+
+    mat.w().w() = 1;
+    return mat;
   }
 
   static auto lerp(

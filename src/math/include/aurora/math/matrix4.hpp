@@ -30,6 +30,16 @@ struct Matrix4 {
     return data[i];
   }
 
+  auto x() -> Vector4<T>& { return data[0]; }
+  auto y() -> Vector4<T>& { return data[1]; }
+  auto z() -> Vector4<T>& { return data[2]; }
+  auto w() -> Vector4<T>& { return data[3]; }
+
+  auto x() const -> Vector4<T> const& { return data[0]; }
+  auto y() const -> Vector4<T> const& { return data[1]; }
+  auto z() const -> Vector4<T> const& { return data[2]; }
+  auto w() const -> Vector4<T> const& { return data[3]; }
+
   auto operator*(Vector4<T> const& vec) const -> Vector4<T> {
     Vector4<T> result{};
     for (uint i = 0; i < 4; i++)

@@ -75,7 +75,41 @@ auto create_example_scene() -> GameObject* {
 }
 
 void quaternion_test() {
-  auto quat = Quaternion{4, 3, 2, 1};
+  auto q0 = Quaternion{-3, 8, 5, -1};
+  auto q0n = ~q0;
+
+  auto m = q0.to_rotation_matrix();
+
+  auto q_x = q0 * Quaternion{0, 1, 0, 0} * q0n;
+  auto q_y = q0 * Quaternion{0, 0, 1, 0} * q0n;
+  auto q_z = q0 * Quaternion{0, 0, 0, 1} * q0n;
+
+  Log<Info>("{} {} {} | {} {} {}",
+    m[0][0], m[0][1], m[0][2],
+    q_x.y(), q_x.z(), q_x.w());
+
+  Log<Info>("{} {} {} | {} {} {}",
+    m[1][0], m[1][1], m[1][2],
+    q_y.y(), q_y.z(), q_y.w());
+
+  Log<Info>("{} {} {} | {} {} {}",
+    m[2][0], m[2][1], m[2][2],
+    q_z.y(), q_z.z(), q_z.w());
+
+  Log<Info>("{}", q_x.dot(q_y));
+  Log<Info>("{}", q_x.dot(q_z));
+  Log<Info>("{}", q_y.dot(q_z));
+
+  /*// Log<Info>("{} - {}", q0.x(), q0[0]);
+  // Log<Info>("{} - {}", q0.y(), q0[1]);
+  // Log<Info>("{} - {}", q0.z(), q0[2]);
+  // Log<Info>("{} - {}", q0.w(), q0[3]);
+
+  auto q1 = Quaternion{-1, -2, -3, -4};
+
+  auto q2 = q0.length();
+  Log<Info>("{}", q2);
+  //Log<Info>("{} {} {} {}", q2.x(), q2.y(), q2.z(), q2.w());*/
 }
 
 int main() {
