@@ -130,6 +130,14 @@ struct Quaternion {
     return *static_cast<Derived*>(this);
   }
 
+  auto inverse() const -> Derived {
+    return ~(*this) * (NumericConstants<T>::one() / length_squared());
+  }
+
+  auto length_squared() const -> T {
+    return w() * w() + x() * x() + y() * y() + z() * z();
+  }
+
   auto dot(Derived const& rhs) const -> T {
     return w() * rhs.w() +
            x() * rhs.x() +
@@ -161,7 +169,7 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
   using detail::Quaternion<Quaternion, float>::Quaternion;
 
   auto length() const -> float {
-    return std::sqrt(w() * w() + x() * x() + y() * y() + z() * z());
+    return std::sqrt(length_squared());
   }
 
   auto normalize() -> Quaternion& {
