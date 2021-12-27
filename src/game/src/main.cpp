@@ -86,15 +86,15 @@ void quaternion_test() {
 
   Log<Info>("{} {} {} | {} {} {}",
     m[0][0], m[0][1], m[0][2],
-    q_x.y(), q_x.z(), q_x.w());
+    q_x.x(), q_x.y(), q_x.z());
 
   Log<Info>("{} {} {} | {} {} {}",
     m[1][0], m[1][1], m[1][2],
-    q_y.y(), q_y.z(), q_y.w());
+    q_y.x(), q_y.y(), q_y.z());
 
   Log<Info>("{} {} {} | {} {} {}",
     m[2][0], m[2][1], m[2][2],
-    q_z.y(), q_z.z(), q_z.w());
+    q_z.x(), q_z.y(), q_z.z());
 
   Log<Info>("{}", q_x.dot(q_y));
   Log<Info>("{}", q_x.dot(q_z));

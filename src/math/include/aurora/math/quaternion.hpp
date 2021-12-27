@@ -28,22 +28,22 @@ struct Quaternion {
     return data[index];
   }
 
-  auto x() -> T& { return data[0]; }
-  auto y() -> T& { return data[1]; }
-  auto z() -> T& { return data[2]; }
-  auto w() -> T& { return data[3]; }
+  auto w() -> T& { return data[0]; }
+  auto x() -> T& { return data[1]; }
+  auto y() -> T& { return data[2]; }
+  auto z() -> T& { return data[3]; }
 
-  auto x() const -> T { return data[0]; }
-  auto y() const -> T { return data[1]; }
-  auto z() const -> T { return data[2]; }
-  auto w() const -> T { return data[3]; }
+  auto w() const -> T { return data[0]; }
+  auto x() const -> T { return data[1]; }
+  auto y() const -> T { return data[2]; }
+  auto z() const -> T { return data[3]; }
 
   auto operator+(Derived const& rhs) const -> Derived {
     return Derived{
+      w() + rhs.w(),
       x() + rhs.x(),
       y() + rhs.y(),
-      z() + rhs.z(),
-      w() + rhs.w()
+      z() + rhs.z()
     };
   }
 
@@ -55,10 +55,10 @@ struct Quaternion {
 
   auto operator-(Derived const& rhs) const -> Derived {
     return Derived{
+      w() - rhs.w(),
       x() - rhs.x(),
       y() - rhs.y(),
-      z() - rhs.z(),
-      w() - rhs.w()
+      z() - rhs.z()
     };
   }
 
@@ -70,10 +70,10 @@ struct Quaternion {
 
   auto operator*(T scale) const -> Derived {
     return Derived{
+      w() * scale,
       x() * scale,
       y() * scale,
-      z() * scale,
-      w() * scale
+      z() * scale
     };
   }
 
@@ -94,28 +94,28 @@ struct Quaternion {
      * ki =  j
      * kj = -i
      *
-     * (x0 + y0*i + z0*j + w0*k) * (x1 + y1*i + z1*j + w1*k) = 
+     * (w0 + x0*i + y0*j + z0*k) * (w1 + x1*i + y1*j + w1*k) = 
      *
-     * x0*x1   + x0*y1*i  + x0*z1*j  + x0*w1*k  + 
-     * y0*x1*i + y0*y1*ii + y0*z1*ij + y0*w1*ik +
-     * z0*x1*j + z0*y1*ji + z0*z1*jj + z0*w1*jk +
-     * w0*x1*k + w0*y1*ki + w0*z1*kj + w0*w1*kk =
+     * w0*w1   + w0*x1*i  + w0*y1*j  + w0*w1*k  + 
+     * x0*w1*i + x0*x1*ii + x0*y1*ij + x0*w1*ik +
+     * y0*w1*j + y0*x1*ji + y0*y1*jj + y0*w1*jk +
+     * z0*w1*k + z0*x1*ki + z0*y1*kj + z0*w1*kk =
      *
-     * x0*x1   + x0*y1*i  + x0*z1*j  + x0*w1*k  + 
-     * y0*x1*i - y0*y1    + y0*z1*k  - y0*w1*j  +
-     * z0*x1*j - z0*y1*k  - z0*z1    + z0*w1*i  +
-     * w0*x1*k + w0*y1*j  - w0*z1*i  - w0*w1   = 
+     * w0*w1   + w0*x1*i  + w0*y1*j  + w0*w1*k  + 
+     * x0*w1*i - x0*x1    + x0*y1*k  - x0*w1*j  +
+     * y0*w1*j - y0*x1*k  - y0*y1    + y0*w1*i  +
+     * z0*w1*k + z0*x1*j  - z0*y1*i  - z0*w1   = 
      *
-     * (x0*x1 - y0*y1 - z0*z1 - w0*w1) +
-     * (y0*x1 + x0*y1 - w0*z1 + z0*w1)*i +
-     * (z0*x1 + w0*y1 + x0*z1 - y0*w1)*j +
-     * (w0*x1 - z0*y1 + y0*z1 + x0*w1)*k 
+     * (w0*w1 - x0*x1 - y0*y1 - z0*w1) +
+     * (x0*w1 + w0*x1 - z0*y1 + y0*w1)*i +
+     * (y0*w1 + z0*x1 + w0*y1 - x0*w1)*j +
+     * (z0*w1 - y0*x1 + x0*y1 + w0*w1)*k 
      */
     return Derived{
-      x() * rhs.x() - y() * rhs.y() - z() * rhs.z() - w() * rhs.w(),
-      y() * rhs.x() + x() * rhs.y() - w() * rhs.z() + z() * rhs.w(),
-      z() * rhs.x() + w() * rhs.y() + x() * rhs.z() - y() * rhs.w(),
-      w() * rhs.x() - z() * rhs.y() + y() * rhs.z() + x() * rhs.w()
+      w() * rhs.w() - x() * rhs.x() - y() * rhs.y() - z() * rhs.z(),
+      x() * rhs.w() + w() * rhs.x() - z() * rhs.y() + y() * rhs.z(),
+      y() * rhs.w() + z() * rhs.x() + w() * rhs.y() - x() * rhs.z(),
+      z() * rhs.w() - y() * rhs.x() + x() * rhs.y() + w() * rhs.z()
     };
   }
 
@@ -124,25 +124,25 @@ struct Quaternion {
   }
 
   auto conjugate() -> Derived& {
+    x() = -x();
     y() = -y();
     z() = -z();
-    w() = -w();
     return *static_cast<Derived*>(this);
   }
 
   auto dot(Derived const& rhs) const -> T {
-    return x() * rhs.x() +
+    return w() * rhs.w() +
+           x() * rhs.x() +
            y() * rhs.y() +
-           z() * rhs.z() +
-           w() * rhs.w();
+           z() * rhs.z();
   }
 
   auto cross(Derived const& rhs) const -> Derived {
     return Derived{
       NumericConstants<T>::zero(),
-      z() * rhs.w() - w() * rhs.z(),
-      w() * rhs.y() - y() * rhs.w(),
-      y() * rhs.z() - z() * rhs.y()
+      y() * rhs.z() - z() * rhs.y(),
+      z() * rhs.x() - x() * rhs.z(),
+      x() * rhs.y() - y() * rhs.x()
     };
   }
 
@@ -161,7 +161,7 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
   using detail::Quaternion<Quaternion, float>::Quaternion;
 
   auto length() const -> float {
-    return std::sqrt(x() * x() + y() * y() + z() * z() + w() * w());
+    return std::sqrt(w() * w() + x() * x() + y() * y() + z() * z());
   }
 
   auto normalize() -> Quaternion& {
@@ -171,17 +171,17 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
   }
 
   auto to_rotation_matrix() const -> Matrix4 {
-    auto aa = x() * x();
-    auto bb = y() * y();
-    auto cc = z() * z();
-    auto dd = w() * w();
+    auto aa = w() * w();
+    auto bb = x() * x();
+    auto cc = y() * y();
+    auto dd = z() * z();
 
-    auto two_ab = 2 * x() * y();
-    auto two_ac = 2 * x() * z();
-    auto two_ad = 2 * x() * w();
-    auto two_bc = 2 * y() * z();
-    auto two_bd = 2 * y() * w();
-    auto two_cd = 2 * z() * w();
+    auto two_ab = 2 * w() * x();
+    auto two_ac = 2 * w() * y();
+    auto two_ad = 2 * w() * z();
+    auto two_bc = 2 * x() * y();
+    auto two_bd = 2 * x() * z();
+    auto two_cd = 2 * y() * z();
 
     auto mat = Matrix4{};
 
