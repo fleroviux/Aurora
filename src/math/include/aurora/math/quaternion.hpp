@@ -38,6 +38,8 @@ struct Quaternion {
   auto y() const -> T { return data[2]; }
   auto z() const -> T { return data[3]; }
 
+  auto xyz() const -> Vector3<T> { return Vector3<T>{x(), y(), z()}; }
+
   auto operator+(Derived const& rhs) const -> Derived {
     return Derived{
       w() + rhs.w(),
