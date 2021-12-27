@@ -210,6 +210,57 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
     return mat;
   }
 
+  static auto from_rotation_matrix(Matrix4 const& mat) -> Quaternion {
+    /*
+     * Thanks to Martin John Baker from euclideanspace.com:
+     *   http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
+     *
+     * Note that we use column-major indices unlike the original code.
+     */
+    auto m00 = mat[0][0];
+    auto m11 = mat[1][1];
+    auto m22 = mat[2][2];
+    auto trace = m00 + m11 + m22;
+
+    if (trace > 0.0) {
+      auto s = std::sqrt(trace + 1) * 2;
+      auto s_inv = 1 / s;
+      return Quaternion{
+        0.25 * s,
+        (mat[1][2] - mat[2][1]) * s_inv,
+        (mat[2][0] - mat[0][2]) * s_inv,
+        (mat[0][1] - mat[1][0]) * s_inv
+      };
+    } else if (m00 > m11 && m00 > m22) {
+      auto s = std::sqrt(1 + m00 - m11 - m22) * 2;
+      auto s_inv = 1 / s;
+      return Quaternion{
+        (mat[1][2] - mat[2][1]) * s_inv,
+        0.25 * s,
+        (mat[1][0] + mat[0][1]) * s_inv,
+        (mat[2][0] + mat[0][2]) * s_inv
+      };
+    } else if (m11 > m22) {
+      auto s = std::sqrt(1 + m11 - m00 - m22) * 2;
+      auto s_inv = 1 / s;
+      return Quaternion{
+        (mat[2][0] - mat[0][2]) * s_inv,
+        (mat[1][0] + mat[0][1]) * s_inv,
+        0.25 * s,
+        (mat[2][1] + mat[1][2]) * s_inv
+      };
+    } else {
+      auto s = std::sqrt(1 + m22 - m00 - m11) * 2;
+      auto s_inv = 1 / s;
+      return Quaternion{
+        (mat[0][1] - mat[1][0]) * s_inv,
+        (mat[2][0] + mat[0][2]) * s_inv,
+        (mat[2][1] + mat[1][2]) * s_inv,
+        0.25 * s
+      };
+    }
+  }
+
   static auto lerp(
     Quaternion const& q0,
     Quaternion const& q1,

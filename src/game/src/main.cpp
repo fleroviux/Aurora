@@ -100,6 +100,12 @@ void quaternion_test() {
   Log<Info>("{}", q_x.dot(q_z));
   Log<Info>("{}", q_y.dot(q_z));
 
+  auto qn = Quaternion{q0}.normalize();
+  auto mn = qn.to_rotation_matrix();
+  auto qm = Quaternion::from_rotation_matrix(mn);
+  Log<Info>("{} {} {} {}", qn.w(), qn.x(), qn.y(), qn.z());
+  Log<Info>("{} {} {} {}", qm.w(), qm.x(), qm.y(), qm.z());
+
   /*// Log<Info>("{} - {}", q0.x(), q0[0]);
   // Log<Info>("{} - {}", q0.y(), q0[1]);
   // Log<Info>("{} - {}", q0.z(), q0[2]);
