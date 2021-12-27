@@ -119,7 +119,7 @@ struct Quaternion {
   }
 
   auto operator~() const -> Derived {
-    return Derived{*static_cast<Derived*>(this)}.conjugate();
+    return Derived{*static_cast<Derived const*>(this)}.conjugate();
   }
 
   auto conjugate() -> Derived& {
