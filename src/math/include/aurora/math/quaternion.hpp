@@ -148,10 +148,10 @@ struct Quaternion {
 
 private:
   T data[4] {
+    NumericConstants<T>::one(),
     NumericConstants<T>::zero(),
     NumericConstants<T>::zero(),
-    NumericConstants<T>::zero(),
-    NumericConstants<T>::one()
+    NumericConstants<T>::zero()
   };
 };
 
