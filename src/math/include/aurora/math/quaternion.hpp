@@ -171,38 +171,46 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
   }
 
   auto to_rotation_matrix() const -> Matrix4 {
-    auto aa = w() * w();
-    auto bb = x() * x();
-    auto cc = y() * y();
-    auto dd = z() * z();
+    /*
+     * To derive this formula apply quaternion rotation on each
+     * basis vector of the 3x3 identity matrix.
+     *
+     * mat[0] = Im(q * (0 1 0 0) * ~q)  (~q is the conjugate of q)
+     * mat[1] = Im(q * (0 0 1 0) * ~q)
+     * mat[2] = Im(q * (0 0 0 1) * ~q)
+     */
+    auto ww = w() * w();
+    auto xx = x() * x();
+    auto yy = y() * y();
+    auto zz = z() * z();
 
-    auto two_ab = 2 * w() * x();
-    auto two_ac = 2 * w() * y();
-    auto two_ad = 2 * w() * z();
-    auto two_bc = 2 * x() * y();
-    auto two_bd = 2 * x() * z();
-    auto two_cd = 2 * y() * z();
+    auto two_wx = 2 * w() * x();
+    auto two_wy = 2 * w() * y();
+    auto two_wz = 2 * w() * z();
+    auto two_xy = 2 * x() * y();
+    auto two_xz = 2 * x() * z();
+    auto two_yz = 2 * y() * z();
 
     auto mat = Matrix4{};
 
     mat.x() = Vector4{
-      bb + aa - dd - cc,
-      two_bc + two_ad,
-      two_bd - two_ac,
+      xx + ww - zz - yy,
+      two_xy + two_wz,
+      two_xz - two_wy,
       0
     };
 
     mat.y() = Vector4{
-      two_bc - two_ad,
-      cc - dd + aa - bb,
-      two_cd + two_ab,
+      two_xy - two_wz,
+      yy - zz + ww - xx,
+      two_yz + two_wx,
       0
     };
 
     mat.z() = Vector4{
-      two_bd + two_ac,
-      two_cd - two_ab,
-      dd - cc - bb + aa,
+      two_xz + two_wy,
+      two_yz - two_wx,
+      zz - yy - xx + ww,
       0
     };
 
