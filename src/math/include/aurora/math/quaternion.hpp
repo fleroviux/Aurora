@@ -279,6 +279,14 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
     }
   }
 
+  static auto from_axis_angle(Vector3 const& axis, float angle) -> Quaternion {
+    auto a = angle * 0.5;
+    auto c = std::cos(a);
+    auto s = std::sin(a);
+
+    return Quaternion{c, axis.x() * s, axis.y() * s, axis.z() * s};
+  }
+
   static auto lerp(
     Quaternion const& q0,
     Quaternion const& q1,
