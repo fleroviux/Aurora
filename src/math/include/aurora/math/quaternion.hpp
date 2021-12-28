@@ -18,7 +18,7 @@ template<typename Derived, typename T>
 struct Quaternion {
   Quaternion() {}
 
-  Quaternion(T x, T y, T z, T w) : data{x, y, z, w} {}
+  Quaternion(T w, T x, T y, T z) : data{w, x, y, z} {}
 
   auto operator[](int index) -> T& {
     return data[index];
