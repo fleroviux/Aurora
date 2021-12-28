@@ -2,7 +2,7 @@
  * Copyright (C) 2021 fleroviux
  */
 
-#include <aurora/math/quaternion.hpp>
+#include <aurora/math/rotator.hpp>
 #include <aurora/renderer/renderer.hpp>
 #include <cstring>
 #include <SDL.h>
@@ -74,50 +74,6 @@ auto create_example_scene() -> GameObject* {
   return scene;
 }
 
-void quaternion_test() {
-  auto q0 = Quaternion{-3, 8, 5, -1};
-  auto q0n = ~q0;
-
-  auto m = q0.to_rotation_matrix();
-
-  auto q_x = q0 * Quaternion{0, 1, 0, 0} * q0n;
-  auto q_y = q0 * Quaternion{0, 0, 1, 0} * q0n;
-  auto q_z = q0 * Quaternion{0, 0, 0, 1} * q0n;
-
-  Log<Info>("{} {} {} | {} {} {}",
-    m[0][0], m[0][1], m[0][2],
-    q_x.x(), q_x.y(), q_x.z());
-
-  Log<Info>("{} {} {} | {} {} {}",
-    m[1][0], m[1][1], m[1][2],
-    q_y.x(), q_y.y(), q_y.z());
-
-  Log<Info>("{} {} {} | {} {} {}",
-    m[2][0], m[2][1], m[2][2],
-    q_z.x(), q_z.y(), q_z.z());
-
-  Log<Info>("{}", q_x.dot(q_y));
-  Log<Info>("{}", q_x.dot(q_z));
-  Log<Info>("{}", q_y.dot(q_z));
-
-  auto qn = Quaternion{q0}.normalize();
-  auto mn = qn.to_rotation_matrix();
-  auto qm = Quaternion::from_rotation_matrix(mn);
-  Log<Info>("{} {} {} {}", qn.w(), qn.x(), qn.y(), qn.z());
-  Log<Info>("{} {} {} {}", qm.w(), qm.x(), qm.y(), qm.z());
-
-  /*// Log<Info>("{} - {}", q0.x(), q0[0]);
-  // Log<Info>("{} - {}", q0.y(), q0[1]);
-  // Log<Info>("{} - {}", q0.z(), q0[2]);
-  // Log<Info>("{} - {}", q0.w(), q0[3]);
-
-  auto q1 = Quaternion{-1, -2, -3, -4};
-
-  auto q2 = q0.length();
-  Log<Info>("{}", q2);
-  //Log<Info>("{} {} {} {}", q2.x(), q2.y(), q2.z(), q2.w());*/
-}
-
 int main() {
   SDL_Init(SDL_INIT_VIDEO);
 
@@ -155,17 +111,19 @@ int main() {
   auto behemoth = GLTFLoader{}.parse("behemoth_sane/scene.gltf");
   behemoth->transform().position().y() = 2.8;
   behemoth->transform().position().x() = 10.0;
-  behemoth->transform().rotation().x() = -3.141592*0.5;  
+  behemoth->transform().rotation().set_euler(-3.141592*0.5, 0, 0);  
   scene->add_child(behemoth);
 
   auto valley = GLTFLoader{}.parse("death_valley/death_valley.gltf");
-  valley->transform().rotation().x() = -3.141592;
+  valley->transform().rotation().set_euler(-3.141592, 0, 0);
   valley->transform().scale() = Vector3{100.0, 100.0, 100.0};
   scene->add_child(valley);
 
-  quaternion_test();
-
   auto event = SDL_Event{};
+
+  float x = 0;
+  float y = 0;
+  float z = 0;
 
   for (;;) {
     auto state = SDL_GetKeyboardState(nullptr);
@@ -188,10 +146,14 @@ int main() {
       camera->transform().position() += camera_local[0].xyz() * 0.05;
     }
 
-    if (state[SDL_SCANCODE_UP])    camera->transform().rotation().x() += 0.01;
-    if (state[SDL_SCANCODE_DOWN])  camera->transform().rotation().x() -= 0.01;
-    if (state[SDL_SCANCODE_LEFT])  camera->transform().rotation().y() += 0.01;
-    if (state[SDL_SCANCODE_RIGHT]) camera->transform().rotation().y() -= 0.01;
+    if (state[SDL_SCANCODE_UP])    x += 0.01;
+    if (state[SDL_SCANCODE_DOWN])  x -= 0.01;
+    if (state[SDL_SCANCODE_LEFT])  y += 0.01;
+    if (state[SDL_SCANCODE_RIGHT]) y -= 0.01;
+    if (state[SDL_SCANCODE_M])     z -= 0.01;
+    if (state[SDL_SCANCODE_N])     z += 0.01;
+
+    camera->transform().rotation().set_euler(x, y, z);
 
     renderer.render(scene);
     SDL_GL_SwapWindow(window);

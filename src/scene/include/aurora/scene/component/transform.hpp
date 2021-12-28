@@ -3,15 +3,13 @@
  */
 
 #include <aurora/math/matrix4.hpp>
+#include <aurora/math/rotator.hpp>
 #include <aurora/scene/component.hpp>
 
 namespace Aura {
 
 /**
  * TODO:
- *  - Rotations right now are a stub:
- *    - represent them internally as quaternions
- *    - support euler rotation order, i.e. XYZ, ZYX etc.
  * - Think about a better interface for matrix updated
  */
 
@@ -26,11 +24,11 @@ struct TransformComponent final : Component {
     return position_;
   }
 
-  auto rotation() -> Vector3& {
+  auto rotation() -> Rotator& {
     return rotation_;
   }
 
-  auto rotation() const -> Vector3 const& {
+  auto rotation() const -> Rotator const& {
     return rotation_;
   }
 
@@ -63,7 +61,7 @@ struct TransformComponent final : Component {
 
 private:
   Vector3 position_ {0, 0, 0};
-  Vector3 rotation_ {0, 0, 0};
+  Rotator rotation_;
   Vector3 scale_ {1, 1, 1};
 
   bool auto_update_ = true;
