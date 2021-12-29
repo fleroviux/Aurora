@@ -8,8 +8,8 @@
 
 namespace Aura {
 
-struct SceneComponent final : Component {
-  SceneComponent(GameObject* owner, GameObject* camera)
+struct Scene final : Component {
+  Scene(GameObject* owner, GameObject* camera)
       : Component(owner)
       , camera(camera) {
   }

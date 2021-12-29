@@ -21,7 +21,7 @@ OpenGLRenderer::~OpenGLRenderer() {
 
 void OpenGLRenderer::render(GameObject* scene) {
   // TODO: validate that the scene component exists and the camera is valid.
-  auto camera = scene->get_component<SceneComponent>()->camera;
+  auto camera = scene->get_component<Scene>()->camera;
 
   glViewport(0, 0, 1600, 900);
   glClearColor(0.02, 0.02, 0.02, 1.00);
@@ -36,7 +36,7 @@ void OpenGLRenderer::render(GameObject* scene) {
     }
     transform.update_world(false);
 
-    auto mesh = object->get_component<MeshComponent>();
+    auto mesh = object->get_component<Mesh>();
 
     if (mesh != nullptr) {
       auto geometry = mesh->geometry.get();
@@ -215,9 +215,9 @@ void OpenGLRenderer::bind_texture(GLenum slot, Texture* texture) {
   glBindTexture(GL_TEXTURE_2D, id);
 }
 
-void OpenGLRenderer::upload_transform_uniforms(TransformComponent const& transform, GameObject* camera) {
+void OpenGLRenderer::upload_transform_uniforms(Transform const& transform, GameObject* camera) {
   // TODO: validate that the camera component exists.
-  auto camera_component = camera->get_component<CameraComponent>();
+  auto camera_component = camera->get_component<Camera>();
   
   auto projection = Matrix4::perspective_gl(
     camera_component->field_of_view,

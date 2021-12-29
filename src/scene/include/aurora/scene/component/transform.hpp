@@ -13,8 +13,8 @@ namespace Aura {
  * - Think about a better interface for matrix updated
  */
 
-struct TransformComponent final : Component {
-  TransformComponent(GameObject* owner) : Component(owner) {}
+struct Transform final : Component {
+  Transform(GameObject* owner) : Component(owner) {}
 
   auto position() -> Vector3& {
     return position_;

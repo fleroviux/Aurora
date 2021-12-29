@@ -27,7 +27,7 @@ private:
   auto upload_texture(Texture* texture) -> GLuint;
   void upload_geometry(Geometry* geometry, GeometryData& data);
   void bind_texture(GLenum slot, Texture* texture);
-  void upload_transform_uniforms(TransformComponent const& transform, GameObject* camera);
+  void upload_transform_uniforms(Transform const& transform, GameObject* camera);
 
   void create_default_program();
 

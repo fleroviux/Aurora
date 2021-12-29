@@ -355,11 +355,11 @@ auto GLTFLoader::load_node(nlohmann::json const& nodes, size_t id) -> GameObject
     auto const& mesh = meshes_[node["mesh"].get<int>()];
 
     if (mesh.primitives.size() == 1) {
-      object->add_component<MeshComponent>(mesh.primitives[0].geometry, mesh.primitives[0].material);
+      object->add_component<Aura::Mesh>(mesh.primitives[0].geometry, mesh.primitives[0].material);
     } else {
       for (auto const& primitive : mesh.primitives) {
         auto child = new GameObject{};
-        child->add_component<MeshComponent>(primitive.geometry, primitive.material);
+        child->add_component<Aura::Mesh>(primitive.geometry, primitive.material);
         object->add_child(child);
       }
     }

@@ -11,8 +11,8 @@
 
 namespace Aura {
 
-struct MeshComponent final : Component {
-  MeshComponent(
+struct Mesh final : Component {
+  Mesh(
     GameObject* owner,
     std::shared_ptr<Geometry> geometry,
     std::shared_ptr<Material> material

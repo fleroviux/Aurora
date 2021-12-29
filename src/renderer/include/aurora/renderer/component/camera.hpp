@@ -8,10 +8,10 @@
 
 namespace Aura {
 
-struct CameraComponent final : Component {
+struct Camera final : Component {
   using Component::Component;
 
-  CameraComponent(
+  Camera(
     GameObject* owner,
     double field_of_view,
     double aspect_ratio,

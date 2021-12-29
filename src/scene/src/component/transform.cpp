@@ -7,7 +7,7 @@
 
 namespace Aura {
 
-void TransformComponent::update_local() {
+void Transform::update_local() {
   auto scale = Matrix4::scale(scale_);
   auto rotation = rotation_.get_matrix();
   auto translation = Matrix4::translation(position());
@@ -15,7 +15,7 @@ void TransformComponent::update_local() {
   matrix_local_ = translation * rotation * scale;
 }
 
-void TransformComponent::update_world(bool update_children) {
+void Transform::update_world(bool update_children) {
   if (owner()->has_parent()) {
     matrix_world_ = owner()->parent()->transform().world() * local();
   } else {

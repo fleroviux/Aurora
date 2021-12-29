@@ -47,11 +47,11 @@ struct GameObject final {
     return children_;
   }
 
-  auto transform() const -> TransformComponent const& {
+  auto transform() const -> Transform const& {
     return *transform_;
   }
 
-  auto transform() -> TransformComponent& {
+  auto transform() -> Transform& {
     return *transform_;
   }
 
@@ -128,14 +128,14 @@ struct GameObject final {
 
 private:
   void add_default_components() {
-    transform_ = add_component<TransformComponent>();
+    transform_ = add_component<Transform>();
   }
 
   GameObject* parent_ = nullptr;
   std::vector<GameObject*> children_;
   std::string name_ = "GameObject";
   std::unordered_map<std::type_index, Component*> components_;
-  TransformComponent* transform_;
+  Transform* transform_;
 };
 
 } // namespace Aura

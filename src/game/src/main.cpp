@@ -65,9 +65,9 @@ auto create_example_scene() -> GameObject* {
   auto plane0 = new GameObject{"Plane0"};
   auto plane1 = new GameObject{"Plane1"};
   auto plane2 = new GameObject{"Plane2"};
-  plane0->add_component<MeshComponent>(geometry, material);
-  plane1->add_component<MeshComponent>(geometry, material);
-  plane2->add_component<MeshComponent>(geometry, material);
+  plane0->add_component<Mesh>(geometry, material);
+  plane1->add_component<Mesh>(geometry, material);
+  plane2->add_component<Mesh>(geometry, material);
   plane0->add_child(plane1);
   scene->add_child(plane0);
   scene->add_child(plane2);
@@ -104,8 +104,8 @@ int main() {
   auto scene = new GameObject{"Scene"};
   auto camera = new GameObject{"Camera"};
   camera->transform().position() = Vector3{4.0, 4.0, -3.0};
-  camera->add_component<CameraComponent>();
-  scene->add_component<SceneComponent>(camera);
+  camera->add_component<Camera>();
+  scene->add_component<Scene>(camera);
   scene->add_child(camera);
 
   auto behemoth = GLTFLoader{}.parse("behemoth_sane/scene.gltf");
