@@ -40,8 +40,7 @@ struct Rotation {
       auto cos_z_cos_y = mat[0][0];
       euler.z() = std::atan2(sin_z_cos_y, cos_z_cos_y);
     } else {
-      auto sin_x = mat[1][0] / sin_y;
-      euler.x() = std::asin(std::clamp(sin_x, -1.0f, +1.0f));
+      euler.x() = std::atan2(mat[1][0], mat[2][0]);
       euler.z() = 0;
     }
 
