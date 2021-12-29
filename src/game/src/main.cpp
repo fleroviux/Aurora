@@ -81,8 +81,8 @@ int main() {
     "Aurora",
     SDL_WINDOWPOS_CENTERED,
     SDL_WINDOWPOS_CENTERED,
-    1600,
-    900,
+    2560,
+    1440,
     SDL_WINDOW_OPENGL
   );
 
@@ -103,21 +103,13 @@ int main() {
   auto renderer = OpenGLRenderer{};
   auto scene = new GameObject{"Scene"};
   auto camera = new GameObject{"Camera"};
-  camera->transform().position() = Vector3{4.0, 4.0, -3.0};
+  //camera->transform().position() = Vector3{4.0, 4.0, -3.0};
   camera->add_component<Camera>();
   scene->add_component<Scene>(camera);
   scene->add_child(camera);
 
-  auto behemoth = GLTFLoader{}.parse("behemoth_sane/scene.gltf");
-  behemoth->transform().position().y() = 2.8;
-  behemoth->transform().position().x() = 10.0;
-  behemoth->transform().scale() = Vector3{1, 1, 1};
+  auto behemoth = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf");
   scene->add_child(behemoth);
-
-  auto valley = GLTFLoader{}.parse("death_valley/death_valley.gltf");
-  //valley->transform().position() = Vector3{};
-  valley->transform().scale() = Vector3{100.0, 100.0, 100.0};
-  scene->add_child(valley);
 
   auto event = SDL_Event{};
 

@@ -23,8 +23,8 @@ void OpenGLRenderer::render(GameObject* scene) {
   // TODO: validate that the scene component exists and the camera is valid.
   auto camera = scene->get_component<Scene>()->camera;
 
-  glViewport(0, 0, 1600, 900);
-  glClearColor(0.02, 0.02, 0.02, 1.00);
+  glViewport(0, 0, 2560, 1440);
+  glClearColor(0.02, 0.02, 1.0, 1.00);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   const std::function<void(GameObject*)> traverse = [&](GameObject* object) {

@@ -177,6 +177,13 @@ struct Vector4 : Vector<Vector4<T>, T, 4> {
     this->data[3] = w;
   }
 
+  Vector4(Vector3<T> const& xyz, T w) {
+    this->data[0] = xyz.x();
+    this->data[1] = xyz.y();
+    this->data[2] = xyz.z();
+    this->data[3] = w;
+  }
+
   Vector4(Vector3<T> const& other) {
     for (uint i = 0; i < 3; i++)
       this->data[i] = other[i];

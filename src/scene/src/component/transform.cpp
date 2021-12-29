@@ -8,11 +8,12 @@
 namespace Aura {
 
 void Transform::update_local() {
-  auto scale = Matrix4::scale(scale_);
-  auto rotation = rotation_.get_matrix();
-  auto translation = Matrix4::translation(position());
+  matrix_local_ = rotation_.get_matrix();
 
-  matrix_local_ = translation * rotation * scale;
+  matrix_local_.x() *= scale().x();
+  matrix_local_.y() *= scale().y();
+  matrix_local_.z() *= scale().z();
+  matrix_local_.w()  = Vector4{position(), 1.0};
 }
 
 void Transform::update_world(bool update_children) {
