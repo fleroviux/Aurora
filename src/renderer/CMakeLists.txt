@@ -11,6 +11,7 @@ set(SOURCES
 )
 
 set(HEADERS
+  src/pbr.glsl.hpp
 )
 
 set(HEADERS_PUBLIC
