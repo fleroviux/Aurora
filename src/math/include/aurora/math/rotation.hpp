@@ -5,6 +5,7 @@
 #pragma once
 
 #include <aurora/math/quaternion.hpp>
+#include <aurora/log.hpp>
 
 namespace Aura {
 
@@ -22,19 +23,29 @@ struct Rotation {
   }
 
   auto get_euler() const -> Vector3 {
+    constexpr float cos0_threshold = 1.0 - 1e-6;
+
+    auto euler = Vector3{};
     auto sin_y = -mat[0][2];
-    auto y = std::asin(std::clamp(sin_y, -1.0f, +1.0f));
-    auto cos_y = std::sqrt(1 - sin_y * sin_y);
 
-    auto sin_x = mat[1][2] / cos_y;
-    auto cos_x = mat[2][2] / cos_y;
-    auto x = std::atan2(sin_x, cos_x);
+    euler.y() = std::asin(std::clamp(sin_y, -1.0f, +1.0f));
 
-    auto sin_z = mat[0][1] / cos_y;
-    auto cos_z = mat[0][0] / cos_y;
-    auto z = std::atan2(sin_z, cos_z);
+    // Guard against gimbal lock when Y=-90°/+90° (X and Z rotate around the same axis).
+    if (std::abs(sin_y) <= cos0_threshold) {
+      auto sin_x_cos_y = mat[1][2];
+      auto cos_x_cos_y = mat[2][2];
+      euler.x() = std::atan2(sin_x_cos_y, cos_x_cos_y);
 
-    return Vector3{x, y, z};
+      auto sin_z_cos_y = mat[0][1];
+      auto cos_z_cos_y = mat[0][0];
+      euler.z() = std::atan2(sin_z_cos_y, cos_z_cos_y);
+    } else {
+      auto sin_x = mat[1][0] / sin_y;
+      euler.x() = std::asin(std::clamp(sin_x, -1.0f, +1.0f));
+      euler.z() = 0;
+    }
+
+    return euler;
   }
 
   void set_euler(Vector3 const& euler) {

@@ -147,6 +147,11 @@ int main() {
 
     camera->transform().rotation().set_euler(x, y, z);
 
+    auto euler = camera->transform().rotation().get_euler();
+
+    Log<Info>("camera rotation: {:.4f} {:.4f} {:.4f}",
+      euler.x(), euler.y(), euler.z());
+
     renderer.render(scene);
     SDL_GL_SwapWindow(window);
 
