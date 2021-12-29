@@ -2,7 +2,7 @@
  * Copyright (C) 2021 fleroviux
  */
 
-#include <aurora/math/rotator.hpp>
+#include <aurora/math/rotation.hpp>
 #include <aurora/renderer/renderer.hpp>
 #include <cstring>
 #include <SDL.h>

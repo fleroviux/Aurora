@@ -8,7 +8,7 @@ set(HEADERS_PUBLIC
   include/aurora/math/matrix4.hpp
   include/aurora/math/numeric_traits.hpp
   include/aurora/math/quaternion.hpp
-  include/aurora/math/rotator.hpp
+  include/aurora/math/rotation.hpp
   include/aurora/math/vector.hpp
 )
 

@@ -3,7 +3,7 @@
  */
 
 #include <aurora/math/matrix4.hpp>
-#include <aurora/math/rotator.hpp>
+#include <aurora/math/rotation.hpp>
 #include <aurora/scene/component.hpp>
 
 namespace Aura {
@@ -24,11 +24,11 @@ struct TransformComponent final : Component {
     return position_;
   }
 
-  auto rotation() -> Rotator& {
+  auto rotation() -> Rotation& {
     return rotation_;
   }
 
-  auto rotation() const -> Rotator const& {
+  auto rotation() const -> Rotation const& {
     return rotation_;
   }
 
@@ -61,8 +61,8 @@ struct TransformComponent final : Component {
 
 private:
   Vector3 position_ {0, 0, 0};
-  Rotator rotation_;
   Vector3 scale_ {1, 1, 1};
+  Rotation rotation_;
 
   bool auto_update_ = true;
   Matrix4 matrix_local_;

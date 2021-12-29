@@ -8,16 +8,16 @@
 
 namespace Aura {
 
-struct Rotator {
-  Rotator() {
+struct Rotation {
+  Rotation() {
     calculate_matrix();
   }
 
-  Rotator(float x, float y, float z) {
+  Rotation(float x, float y, float z) {
     set_euler(x, y, z);
   }
 
-  Rotator(Quaternion const& quat) {
+  Rotation(Quaternion const& quat) {
     set_quaternion(quat);
   }
 
