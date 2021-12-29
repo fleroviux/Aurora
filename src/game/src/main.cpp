@@ -111,11 +111,11 @@ int main() {
   auto behemoth = GLTFLoader{}.parse("behemoth_sane/scene.gltf");
   behemoth->transform().position().y() = 2.8;
   behemoth->transform().position().x() = 10.0;
-  behemoth->transform().rotation().set_euler(-3.141592*0.5, 0, 0);  
+  behemoth->transform().scale() = Vector3{1, 1, 1};
   scene->add_child(behemoth);
 
   auto valley = GLTFLoader{}.parse("death_valley/death_valley.gltf");
-  valley->transform().rotation().set_euler(-3.141592, 0, 0);
+  //valley->transform().position() = Vector3{};
   valley->transform().scale() = Vector3{100.0, 100.0, 100.0};
   scene->add_child(valley);
 

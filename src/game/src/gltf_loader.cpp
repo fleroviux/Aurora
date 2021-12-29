@@ -317,7 +317,39 @@ auto GLTFLoader::load_node(nlohmann::json const& nodes, size_t id) -> GameObject
 
   auto const& node = nodes[id];
 
-  // TODO: use transform and name information.
+  if (node.contains("name")) {
+    object->set_name(node["name"].get<std::string>());
+  }
+
+  if (node.contains("rotation")) {
+    auto x = node["rotation"][0].get<float>();
+    auto y = node["rotation"][1].get<float>();
+    auto z = node["rotation"][2].get<float>();
+    auto w = node["rotation"][3].get<float>();
+
+    object->transform().rotation().set_quaternion(w, x, y, z);
+  }
+
+  if (node.contains("scale")) {
+    auto x = node["scale"][0].get<float>();
+    auto y = node["scale"][1].get<float>();
+    auto z = node["scale"][2].get<float>();
+
+    object->transform().scale() = Vector3{x, y, z};
+  }
+
+  if (node.contains("translation")) {
+    auto x = node["translation"][0].get<float>();
+    auto y = node["translation"][1].get<float>();
+    auto z = node["translation"][2].get<float>();
+
+    object->transform().position() = Vector3{x, y, z};
+  }
+
+  if (node.contains("matrix")) {
+    Log<Warn>("GLTFLoader: node '{}' ({}) uses an unsupported matrix transform.",
+      object->get_name(), id);
+  }
 
   if (node.contains("mesh")) {
     auto const& mesh = meshes_[node["mesh"].get<int>()];
