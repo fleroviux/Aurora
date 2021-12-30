@@ -96,22 +96,22 @@ struct Quaternion {
      * ki =  j
      * kj = -i
      *
-     * (w0 + x0*i + y0*j + z0*k) * (w1 + x1*i + y1*j + w1*k) = 
+     * (w0 + x0*i + y0*j + z0*k) * (w1 + x1*i + y1*j + z1*k) = 
      *
-     * w0*w1   + w0*x1*i  + w0*y1*j  + w0*w1*k  + 
-     * x0*w1*i + x0*x1*ii + x0*y1*ij + x0*w1*ik +
-     * y0*w1*j + y0*x1*ji + y0*y1*jj + y0*w1*jk +
-     * z0*w1*k + z0*x1*ki + z0*y1*kj + z0*w1*kk =
+     * w0*w1   + w0*x1*i  + w0*y1*j  + w0*z1*k  + 
+     * x0*w1*i + x0*x1*ii + x0*y1*ij + x0*z1*ik +
+     * y0*w1*j + y0*x1*ji + y0*y1*jj + y0*z1*jk +
+     * z0*w1*k + z0*x1*ki + z0*y1*kj + z0*z1*kk =
      *
-     * w0*w1   + w0*x1*i  + w0*y1*j  + w0*w1*k  + 
-     * x0*w1*i - x0*x1    + x0*y1*k  - x0*w1*j  +
-     * y0*w1*j - y0*x1*k  - y0*y1    + y0*w1*i  +
-     * z0*w1*k + z0*x1*j  - z0*y1*i  - z0*w1   = 
+     * w0*w1   + w0*x1*i  + w0*y1*j  + w0*z1*k  + 
+     * x0*w1*i - x0*x1    + x0*y1*k  - x0*z1*j  +
+     * y0*w1*j - y0*x1*k  - y0*y1    + y0*z1*i  +
+     * z0*w1*k + z0*x1*j  - z0*y1*i  - z0*z1   = 
      *
-     * (w0*w1 - x0*x1 - y0*y1 - z0*w1) +
-     * (x0*w1 + w0*x1 - z0*y1 + y0*w1)*i +
-     * (y0*w1 + z0*x1 + w0*y1 - x0*w1)*j +
-     * (z0*w1 - y0*x1 + x0*y1 + w0*w1)*k 
+     * (w0*w1 - x0*x1 - y0*y1 - z0*z1) +
+     * (x0*w1 + w0*x1 - z0*y1 + y0*z1)*i +
+     * (y0*w1 + z0*x1 + w0*y1 - x0*z1)*j +
+     * (z0*w1 - y0*x1 + x0*y1 + w0*z1)*k 
      */
     return Derived{
       w() * rhs.w() - x() * rhs.x() - y() * rhs.y() - z() * rhs.z(),
