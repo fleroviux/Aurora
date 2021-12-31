@@ -4,6 +4,7 @@
 
 #include <aurora/math/rotation.hpp>
 #include <aurora/renderer/renderer.hpp>
+#include <aurora/renderer/uniform_block_layout.hpp>
 #include <cstring>
 #include <SDL.h>
 
@@ -74,6 +75,18 @@ auto create_example_scene() -> GameObject* {
   return scene;
 }
 
+void test_ubo() {
+  auto layout_a = UniformBlockLayout{};
+  layout_a.add<float>("roughness");
+  layout_a.add<float>("metalness");
+  layout_a.add<Vector3>("albedo");
+  layout_a.add<Vector2>("uv_offset");
+  layout_a.add<Matrix4>("some_matrix");
+  layout_a.add<float>("my_array", 6);
+
+  fmt::print("{}", layout_a.to_string());
+}
+
 int main() {
   SDL_Init(SDL_INIT_VIDEO);
 
@@ -110,6 +123,8 @@ int main() {
 
   auto behemoth = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf");
   scene->add_child(behemoth);
+
+  test_ubo();
 
   auto event = SDL_Event{};
 
@@ -149,8 +164,8 @@ int main() {
 
     auto euler = camera->transform().rotation().get_euler();
 
-    Log<Info>("camera rotation: {:.4f} {:.4f} {:.4f}",
-      euler.x(), euler.y(), euler.z());
+    //Log<Info>("camera rotation: {:.4f} {:.4f} {:.4f}",
+    //  euler.x(), euler.y(), euler.z());
 
     renderer.render(scene);
     SDL_GL_SwapWindow(window);
