@@ -85,6 +85,20 @@ void test_ubo() {
   layout_a.add<float>("my_array", 6);
 
   fmt::print("{}", layout_a.to_string());
+
+  auto block = UniformBlock{layout_a};
+
+  block.get<float>("roughness") = 0.1337;
+  block.get<float>("metalness") = 0.6969;
+  block.get<Matrix4>("some_matrix") = Matrix4::scale(0.1, 0.2, 0.3);
+
+  fmt::print("{}\n", block.get<float>("metalness"));
+  fmt::print("{}\n", block.get<float>("roughness"));
+  for (int r = 0; r < 4; r++) {
+    auto& m = block.get<Matrix4>("some_matrix");
+    fmt::print("{:.2f} {:.2f} {:.2f} {:.2f}\n",
+      m[0][r], m[1][r], m[2][r], m[3][r]);
+  }
 }
 
 int main() {

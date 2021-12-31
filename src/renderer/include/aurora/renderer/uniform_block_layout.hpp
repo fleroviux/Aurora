@@ -11,6 +11,7 @@
 #include <fmt/format.h>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -95,17 +96,6 @@ private:
 };
 
 struct UniformBlockLayout {
-  struct Member {
-    std::string name;
-    UniformTypeInfo type_info;
-    size_t position;
-    size_t count;
-
-    // TODO: this is mostly just for debugging, remove later.
-    size_t size;
-    size_t alignment;
-  };
-
   template<typename T>
   void add(std::string const& name, size_t count = 0) {
     auto type_info = UniformTypeInfo{};
@@ -206,6 +196,19 @@ struct UniformBlockLayout {
   }
 
 private:
+  friend struct UniformBlock;
+
+  struct Member {
+    std::string name;
+    UniformTypeInfo type_info;
+    size_t position;
+    size_t count;
+
+    // TODO: this is mostly just for debugging, remove later.
+    size_t size;
+    size_t alignment;
+  };
+
 //   template<typename T>
 //   struct TypeInfo {
 //   };
@@ -231,6 +234,42 @@ private:
 
   size_t position;
   std::vector<Member> members_;
+};
+
+struct UniformBlock {
+  using Member = UniformBlockLayout::Member;
+
+  UniformBlock(UniformBlockLayout const& layout) {
+    data_ = new u8[layout.position];
+
+    // TODO: check for duplicate member names.
+    for (auto& member : layout.members_) {
+      members_[member.name] = member;
+    }
+  }
+
+ ~UniformBlock() {
+    delete data_;
+  }
+
+  auto data() const -> u8 const* {
+    return data_;
+  }
+
+  template<typename T>
+  auto get(std::string const& name) -> T& {
+    /*
+     * TODO:
+     *  - validate that the member exists
+     *  - validate that the member has the requested size
+     *  - how to handle errors? would be nice if we can avoid exceptions.
+     */
+    return *reinterpret_cast<T*>(data_ + members_[name].position);
+  } 
+
+private:
+  u8* data_;
+  std::unordered_map<std::string, Member> members_;
 };
 
 } // namespace Aura
