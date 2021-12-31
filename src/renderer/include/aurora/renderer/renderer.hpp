@@ -5,6 +5,7 @@
 #include <aurora/renderer/component/camera.hpp>
 #include <aurora/renderer/component/mesh.hpp>
 #include <aurora/renderer/component/scene.hpp>
+#include <aurora/renderer/uniform_block_layout.hpp>
 #include <aurora/scene/game_object.hpp>
 #include <GL/glew.h>
 #include <optional>
@@ -44,6 +45,8 @@ private:
   static auto get_gl_attribute_type(VertexDataType data_type) -> GLenum;
 
   GLuint program;
+  GLuint ubo;
+  UniformBlock uniform_block;
 
   std::unique_ptr<Texture> default_texture_;
 

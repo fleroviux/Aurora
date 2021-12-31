@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <aurora/math/matrix4.hpp>
 #include <aurora/math/vector.hpp>
 #include <aurora/integer.hpp>
@@ -239,8 +240,12 @@ private:
 struct UniformBlock {
   using Member = UniformBlockLayout::Member;
 
+  // this mostly exists as a workaround - try to remove if possible
+  UniformBlock() {}
+
   UniformBlock(UniformBlockLayout const& layout) {
     data_ = new u8[layout.position];
+    size_ = layout.position;
 
     // TODO: check for duplicate member names.
     for (auto& member : layout.members_) {
@@ -249,11 +254,30 @@ struct UniformBlock {
   }
 
  ~UniformBlock() {
-    delete data_;
+    if (data_ != nullptr) {
+      delete data_;
+    }
+  }
+
+  UniformBlock(UniformBlock const& other) = delete;
+  void operator=(UniformBlock const& other) = delete;
+
+  UniformBlock(UniformBlock&& other) {
+    operator=(std::move(other));
+  }
+
+  void operator=(UniformBlock&& other) {
+    std::swap(data_, other.data_);
+    std::swap(size_, other.size_);
+    std::swap(members_, other.members_);
   }
 
   auto data() const -> u8 const* {
     return data_;
+  }
+
+  auto size() const -> size_t {
+    return size_;
   }
 
   template<typename T>
@@ -268,7 +292,8 @@ struct UniformBlock {
   } 
 
 private:
-  u8* data_;
+  u8* data_ = nullptr;
+  size_t size_;
   std::unordered_map<std::string, Member> members_;
 };
 

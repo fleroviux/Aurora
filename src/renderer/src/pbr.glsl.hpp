@@ -170,9 +170,13 @@ constexpr auto pbr_frag = R"(\
   in vec2 v_uv;
   in vec3 v_normal;
 
+  layout (std140) uniform Material {
+    float metalness;
+    float roughness;
+    mat4 projection;
+  } material;
+
   uniform mat4 u_view;
-  uniform float u_metalness;
-  uniform float u_roughness;
   uniform sampler2D u_diffuse_map;
   uniform sampler2D u_metalness_map;
   uniform sampler2D u_roughness_map;
@@ -246,8 +250,8 @@ constexpr auto pbr_frag = R"(\
 
     diffuse.rgb = sRGBToLinear(diffuse.rgb);
 
-    float metalness = u_metalness * texture(u_metalness_map, v_uv).b;
-    float roughness = u_roughness * texture(u_roughness_map, v_uv).g;
+    float metalness = material.metalness * texture(u_metalness_map, v_uv).b;
+    float roughness = material.roughness * texture(u_roughness_map, v_uv).g;
 
     vec3 view_dir = -normalize(v_view_position);
     view_dir = (vec4(view_dir, 0.0) * u_view).xyz;
@@ -265,10 +269,6 @@ constexpr auto pbr_frag = R"(\
     my_light.position = vec4(2.0, 2.0, 2.0, 0.0);
     my_light.color = vec3(10.0);
     result += ShadeDirectLight(geometry, my_light, view_dir);
-
-    //my_light.position = vec4(4.0, 10.0, -3.0, 1.0);
-    //my_light.color = vec3(0.0, 10.0, 8.0);
-    //result += ShadeDirectLight(geometry, my_light, view_dir);
 
     result += CalculateSH(SH, geometry.normal) * (1.0 - geometry.metalness) * geometry.albedo;
 
