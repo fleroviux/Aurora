@@ -6,10 +6,16 @@ constexpr auto pbr_vert = R"(\
   layout (location = 2) in vec2 a_uv;
   layout (location = 3) in vec3 a_color;
 
-  // TODO: pass a unified modelview matrix.
-  uniform mat4 u_projection;
-  uniform mat4 u_model;
-  uniform mat4 u_view;
+  layout (binding = 0, std140) uniform Camera {
+    mat4 u_view;
+    mat4 u_projection;
+  };
+
+  layout (binding = 1, std140) uniform Material {
+    mat4 u_model;
+    float u_metalness;
+    float u_roughness;
+  };
 
   out vec3 v_world_position;
   out vec3 v_world_normal;
@@ -170,13 +176,17 @@ constexpr auto pbr_frag = R"(\
   in vec2 v_uv;
   in vec3 v_normal;
 
-  layout (binding = 0, std140) uniform Material {
-    float metalness;
-    float roughness;
-    mat4 projection;
-  } material;
+  layout (binding = 0, std140) uniform Camera {
+    mat4 u_view;
+    mat4 u_projection;
+  };
 
-  uniform mat4 u_view;
+  layout (binding = 1, std140) uniform Material {
+    mat4 u_model;
+    float u_metalness;
+    float u_roughness;
+  };
+
   layout (binding = 0) uniform sampler2D u_diffuse_map;
   layout (binding = 1) uniform sampler2D u_metalness_map;
   layout (binding = 2) uniform sampler2D u_roughness_map;
@@ -250,8 +260,8 @@ constexpr auto pbr_frag = R"(\
 
     diffuse.rgb = sRGBToLinear(diffuse.rgb);
 
-    float metalness = material.metalness * texture(u_metalness_map, v_uv).b;
-    float roughness = material.roughness * texture(u_roughness_map, v_uv).g;
+    float metalness = u_metalness * texture(u_metalness_map, v_uv).b;
+    float roughness = u_roughness * texture(u_roughness_map, v_uv).g;
 
     vec3 view_dir = -normalize(v_view_position);
     view_dir = (vec4(view_dir, 0.0) * u_view).xyz;

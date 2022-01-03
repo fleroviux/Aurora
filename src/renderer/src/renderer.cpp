@@ -14,6 +14,11 @@ OpenGLRenderer::OpenGLRenderer() {
   glEnable(GL_TEXTURE_2D);
   glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl_max_anisotropy);
 
+  auto layout_camera = UniformBlockLayout{};
+  layout_camera.add<Matrix4>("view");
+  layout_camera.add<Matrix4>("projection");
+  uniform_camera = UniformBlock{layout_camera};
+
   create_default_program();
 }
 
@@ -21,12 +26,12 @@ OpenGLRenderer::~OpenGLRenderer() {
 }
 
 void OpenGLRenderer::render(GameObject* scene) {
-  // TODO: validate that the scene component exists and the camera is valid.
-  auto camera = scene->get_component<Scene>()->camera;
-
   glViewport(0, 0, 2560, 1440);
   glClearColor(0.02, 0.02, 1.0, 1.00);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  // TODO: validate that the scene component exists and the camera is valid.
+  update_camera_transform(scene->get_component<Scene>()->camera);
 
   const std::function<void(GameObject*)> traverse = [&](GameObject* object) {
     auto& transform = object->transform();
@@ -43,10 +48,7 @@ void OpenGLRenderer::render(GameObject* scene) {
       auto geometry = mesh->geometry.get();
       auto material = mesh->material.get();
 
-      // TODO: rework this to use uniform blocks.
-      upload_transform_uniforms(transform, camera);
-
-      bind_material(material);
+      bind_material(material, object);
       draw_geometry(geometry);
     }
 
@@ -54,6 +56,23 @@ void OpenGLRenderer::render(GameObject* scene) {
   };
 
   traverse(scene);
+}
+
+void OpenGLRenderer::update_camera_transform(GameObject* camera) {
+  // TODO: validate that the camera component exists.
+  auto camera_component = camera->get_component<Camera>();
+  
+  auto view = camera->transform().world().inverse();
+
+  auto projection = Matrix4::perspective_gl(
+    camera_component->field_of_view,
+    camera_component->aspect_ratio,
+    camera_component->near,
+    camera_component->far
+  );
+
+  uniform_camera.get<Matrix4>("view") = view;
+  uniform_camera.get<Matrix4>("projection") = projection;
 }
 
 auto OpenGLRenderer::upload_texture(Texture const* texture) -> GLuint {
@@ -159,9 +178,15 @@ void OpenGLRenderer::bind_texture(Texture const* texture, GLenum slot) {
   glBindTexture(GL_TEXTURE_2D, id);
 }
 
-void OpenGLRenderer::bind_material(Material const* material) {
+void OpenGLRenderer::bind_material(Material* material, GameObject* object) {
   glUseProgram(program);
-  bind_uniform_block(material->get_uniforms(), program, 0);
+
+  auto& uniforms = material->get_uniforms();
+
+  uniforms.get<Matrix4>("model") = object->transform().world();
+
+  bind_uniform_block(uniform_camera, program, 0);
+  bind_uniform_block(uniforms, program, 1);
 
   auto texture_slots = material->get_texture_slots();
   auto texture_slot_count = texture_slots.size();
@@ -199,35 +224,6 @@ void OpenGLRenderer::draw_geometry(Geometry const* geometry) {
       glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u32), GL_UNSIGNED_INT, 0);
       break;
     }
-  }
-}
-
-void OpenGLRenderer::upload_transform_uniforms(Transform const& transform, GameObject* camera) {
-  // TODO: validate that the camera component exists.
-  auto camera_component = camera->get_component<Camera>();
-  
-  auto projection = Matrix4::perspective_gl(
-    camera_component->field_of_view,
-    camera_component->aspect_ratio,
-    camera_component->near,
-    camera_component->far
-  );
-  
-  auto view = camera->transform().world().inverse();
-
-  auto u_projection = glGetUniformLocation(program, "u_projection");
-  if (u_projection != -1) {
-    glUniformMatrix4fv(u_projection, 1, GL_FALSE, (float*)&projection[0]);
-  }
-
-  auto u_model = glGetUniformLocation(program, "u_model");
-  if (u_model != -1) {
-    glUniformMatrix4fv(u_model, 1, GL_FALSE, (float*)&transform.world()[0]);
-  }
-
-  auto u_view = glGetUniformLocation(program, "u_view");
-  if (u_view != -1) {
-    glUniformMatrix4fv(u_view, 1, GL_FALSE, (float*)&view[0]); 
   }
 }
 

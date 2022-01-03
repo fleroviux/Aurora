@@ -25,6 +25,8 @@ private:
     std::vector<GLuint> vbos;
   };
 
+  void update_camera_transform(GameObject* camera);
+
   auto upload_texture(Texture const* texture) -> GLuint;
   void upload_geometry(Geometry const* geometry, GeometryCacheEntry& data);
 
@@ -35,10 +37,9 @@ private:
   );
   void bind_texture(Texture const* texture, GLenum slot);
 
-  void bind_material(Material const* material);
+  void bind_material(Material* material, GameObject* object);
   void draw_geometry(Geometry const* geometry);
 
-  void upload_transform_uniforms(Transform const& transform, GameObject* camera);
   void create_default_program();
 
   static auto compile_shader(
@@ -54,6 +55,8 @@ private:
   static auto get_gl_attribute_type(VertexDataType data_type) -> GLenum;
 
   GLuint program;
+
+  UniformBlock uniform_camera;
 
   std::unordered_map<Geometry const*, GeometryCacheEntry> geometry_cache_;
   std::unordered_map<UniformBlock const*, GLuint> uniform_block_cache_;

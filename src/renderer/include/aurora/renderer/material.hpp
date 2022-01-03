@@ -11,13 +11,14 @@
 namespace Aura {
 
 struct MaterialBase {
-  virtual auto get_uniforms() const -> UniformBlock const& = 0;
-  virtual auto get_texture_slots() const -> const ArrayView<const std::shared_ptr<Texture>> = 0;
+  virtual auto get_uniforms() -> UniformBlock& = 0;
+  virtual auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture>> = 0;
 };
 
 struct Material final : MaterialBase {
   Material() {
     auto layout = UniformBlockLayout{};
+    layout.add<Matrix4>("model");
     layout.add<float>("metalness");
     layout.add<float>("roughness");
     uniforms_ = UniformBlock{layout};
@@ -47,11 +48,11 @@ struct Material final : MaterialBase {
     return texture_slots_[3];
   }
 
-  auto get_uniforms() const -> UniformBlock const& override {
+  auto get_uniforms() -> UniformBlock& override {
     return uniforms_;
   }
 
-  auto get_texture_slots() const -> const ArrayView<const std::shared_ptr<Texture>> override {
+  auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture>> override {
     return ArrayView{texture_slots_, 4};
   }
 
