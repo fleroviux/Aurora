@@ -135,7 +135,7 @@ int main() {
   scene->add_component<Scene>(camera);
   scene->add_child(camera);
 
-  auto behemoth = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf");
+  auto behemoth = GLTFLoader{}.parse("Sponza/Sponza.gltf");
   scene->add_child(behemoth);
 
   test_ubo();

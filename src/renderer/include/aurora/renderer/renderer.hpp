@@ -35,6 +35,9 @@ private:
   );
   void bind_texture(Texture const* texture, GLenum slot);
 
+  void bind_material(Material const* material);
+  void draw_geometry(Geometry const* geometry);
+
   void upload_transform_uniforms(Transform const& transform, GameObject* camera);
   void create_default_program();
 
@@ -55,6 +58,8 @@ private:
   std::unordered_map<Geometry const*, GeometryCacheEntry> geometry_cache_;
   std::unordered_map<UniformBlock const*, GLuint> uniform_block_cache_;
   std::unordered_map<Texture const*, GLuint> texture_cache_;
+
+  float gl_max_anisotropy;
 };
 
 } // namespace Aura

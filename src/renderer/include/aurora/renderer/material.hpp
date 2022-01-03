@@ -12,7 +12,7 @@ namespace Aura {
 
 struct MaterialBase {
   virtual auto get_uniforms() const -> UniformBlock const& = 0;
-  virtual auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture>> = 0;
+  virtual auto get_texture_slots() const -> const ArrayView<const std::shared_ptr<Texture>> = 0;
 };
 
 struct Material final : MaterialBase {
@@ -51,7 +51,7 @@ struct Material final : MaterialBase {
     return uniforms_;
   }
 
-  auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture>> override {
+  auto get_texture_slots() const -> const ArrayView<const std::shared_ptr<Texture>> override {
     return ArrayView{texture_slots_, 4};
   }
 

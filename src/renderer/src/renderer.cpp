@@ -12,6 +12,7 @@ OpenGLRenderer::OpenGLRenderer() {
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
   glEnable(GL_TEXTURE_2D);
+  glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl_max_anisotropy);
 
   create_default_program();
 }
@@ -42,44 +43,11 @@ void OpenGLRenderer::render(GameObject* scene) {
       auto geometry = mesh->geometry.get();
       auto material = mesh->material.get();
 
-      auto data = GeometryCacheEntry{};
-      auto it = geometry_cache_.find(geometry);
-
-      if (it != geometry_cache_.end()) {
-        data = it->second;
-      } else {
-        upload_geometry(geometry, data);
-      }
-
-      // TODO: check GL_INVALID_OPERATION on first draw?
-      auto& index_buffer = geometry->index_buffer;
+      // TODO: rework this to use uniform blocks.
       upload_transform_uniforms(transform, camera);
-      glBindVertexArray(data.vao);
-      glUseProgram(program);
 
-      bind_uniform_block(material->get_uniforms(), program, 0);
-
-      auto texture_slots = material->get_texture_slots();
-      auto texture_slot_count = texture_slots.size();
-
-      for (size_t slot = 0; slot < texture_slot_count; slot++) {
-        auto& texture = texture_slots[slot];
-
-        if (texture) {
-          bind_texture(texture.get(), GL_TEXTURE0 + slot);
-        }
-      }
-
-      switch (index_buffer.data_type()) {
-        case IndexDataType::UInt16: {
-          glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u16), GL_UNSIGNED_SHORT, 0);
-          break;
-        }
-        case IndexDataType::UInt32: {
-          glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u32), GL_UNSIGNED_INT, 0);
-          break;
-        }
-      }
+      bind_material(material);
+      draw_geometry(geometry);
     }
 
     for (auto child : object->children()) traverse(child);
@@ -93,8 +61,9 @@ auto OpenGLRenderer::upload_texture(Texture const* texture) -> GLuint {
 
   glGenTextures(1, &id);
   glBindTexture(GL_TEXTURE_2D, id);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, gl_max_anisotropy);
 
   glTexImage2D(
     GL_TEXTURE_2D,
@@ -188,6 +157,49 @@ void OpenGLRenderer::bind_texture(Texture const* texture, GLenum slot) {
 
   glActiveTexture(slot);
   glBindTexture(GL_TEXTURE_2D, id);
+}
+
+void OpenGLRenderer::bind_material(Material const* material) {
+  glUseProgram(program);
+  bind_uniform_block(material->get_uniforms(), program, 0);
+
+  auto texture_slots = material->get_texture_slots();
+  auto texture_slot_count = texture_slots.size();
+
+  for (size_t slot = 0; slot < texture_slot_count; slot++) {
+    auto& texture = texture_slots[slot];
+
+    if (texture) {
+      bind_texture(texture.get(), GL_TEXTURE0 + slot);
+    }
+  }
+}
+
+void OpenGLRenderer::draw_geometry(Geometry const* geometry) {
+  auto data = GeometryCacheEntry{};
+  auto it = geometry_cache_.find(geometry);
+
+  if (it != geometry_cache_.end()) {
+    data = it->second;
+  } else {
+    upload_geometry(geometry, data);
+  }
+
+  auto& index_buffer = geometry->index_buffer;
+
+  glBindVertexArray(data.vao);
+
+  // TODO: check GL_INVALID_OPERATION on first draw?
+  switch (index_buffer.data_type()) {
+    case IndexDataType::UInt16: {
+      glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u16), GL_UNSIGNED_SHORT, 0);
+      break;
+    }
+    case IndexDataType::UInt32: {
+      glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u32), GL_UNSIGNED_INT, 0);
+      break;
+    }
+  }
 }
 
 void OpenGLRenderer::upload_transform_uniforms(Transform const& transform, GameObject* camera) {
