@@ -14,8 +14,6 @@ OpenGLRenderer::OpenGLRenderer() {
   glEnable(GL_TEXTURE_2D);
 
   create_default_program();
-
-  default_texture_ = Texture::load("cirno.jpg");
 }
 
 OpenGLRenderer::~OpenGLRenderer() {
@@ -58,14 +56,8 @@ void OpenGLRenderer::render(GameObject* scene) {
       upload_transform_uniforms(transform, camera);
       glBindVertexArray(data.vao);
       glUseProgram(program);
-      
-      uniform_block.get<float>("metalness") = material->metalness;
-      uniform_block.get<float>("roughness") = material->roughness;
 
-      glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-      glBufferData(GL_UNIFORM_BUFFER, uniform_block.size(), uniform_block.data(), GL_DYNAMIC_DRAW);
-      glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
-      glUniformBlockBinding(program, 0, 0);
+      bind_uniform_block(material->get_uniforms(), program, 0);
 
       auto texture_slots = material->get_texture_slots();
       auto texture_slot_count = texture_slots.size();
@@ -163,6 +155,27 @@ void OpenGLRenderer::upload_geometry(Geometry* geometry, GeometryData& data) {
   geometry_data_[geometry] = data;
 }
 
+void OpenGLRenderer::bind_uniform_block(
+  UniformBlock const& uniform_block,
+  GLuint program,
+  size_t index
+) {
+  auto match = uniform_data_.find(&uniform_block);
+  auto ubo = GLuint{};
+
+  if (match == uniform_data_.end()) {
+    glGenBuffers(1, &ubo);
+    uniform_data_[&uniform_block] = ubo;
+  } else {
+    ubo = match->second;
+  }
+
+  glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+  glBufferData(GL_UNIFORM_BUFFER, uniform_block.size(), uniform_block.data(), GL_DYNAMIC_DRAW);
+  glBindBufferBase(GL_UNIFORM_BUFFER, index, ubo);
+  glUniformBlockBinding(program, index, index);
+}
+
 void OpenGLRenderer::bind_texture(GLenum slot, Texture* texture) {
   auto match = texture_data_.find(texture);
   auto id = GLuint{};
@@ -212,13 +225,6 @@ void OpenGLRenderer::create_default_program() {
   Assert(prog.has_value(), "AuroraRender: failed to compile default shader");
 
   program = prog.value();
-
-  auto layout = UniformBlockLayout{};
-  layout.add<float>("metalness");
-  layout.add<float>("roughness");
-  uniform_block = UniformBlock{layout};
-
-  glGenBuffers(1, &ubo);
 }
 
 auto OpenGLRenderer::compile_shader(

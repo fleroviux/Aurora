@@ -27,6 +27,11 @@ struct OpenGLRenderer {
 private:
   auto upload_texture(Texture* texture) -> GLuint;
   void upload_geometry(Geometry* geometry, GeometryData& data);
+  void bind_uniform_block(
+    UniformBlock const& uniform_block,
+    GLuint program,
+    size_t index
+  );
   void bind_texture(GLenum slot, Texture* texture);
   void upload_transform_uniforms(Transform const& transform, GameObject* camera);
 
@@ -45,13 +50,10 @@ private:
   static auto get_gl_attribute_type(VertexDataType data_type) -> GLenum;
 
   GLuint program;
-  GLuint ubo;
-  UniformBlock uniform_block;
 
-  std::unique_ptr<Texture> default_texture_;
-
-  std::unordered_map<Texture*, GLuint> texture_data_;
-  std::unordered_map<Geometry*, GeometryData> geometry_data_;
+  std::unordered_map<Geometry const*, GeometryData> geometry_data_;
+  std::unordered_map<UniformBlock const*, GLuint> uniform_data_;
+  std::unordered_map<Texture const*, GLuint> texture_data_;
 };
 
 } // namespace Aura

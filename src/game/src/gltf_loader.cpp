@@ -278,15 +278,15 @@ void GLTFLoader::load_materials(nlohmann::json const& gltf) {
         auto const& pbr = material["pbrMetallicRoughness"];
 
         if (pbr.contains("metallicFactor")) {
-          material_out->metalness = pbr["metallicFactor"].get<float>();
+          material_out->metalness() = pbr["metallicFactor"].get<float>();
         } else {
-          material_out->metalness = 1.0;
+          material_out->metalness() = 1.0;
         }
 
         if (pbr.contains("roughnessFactor")) {
-          material_out->roughness = pbr["roughnessFactor"].get<float>();
+          material_out->roughness() = pbr["roughnessFactor"].get<float>();
         } else {
-          material_out->roughness = 1.0;
+          material_out->roughness() = 1.0;
         }
 
         if (pbr.contains("baseColorTexture")) {
