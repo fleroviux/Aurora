@@ -291,20 +291,20 @@ void GLTFLoader::load_materials(nlohmann::json const& gltf) {
 
         if (pbr.contains("baseColorTexture")) {
           auto tid = pbr["baseColorTexture"]["index"].get<int>();
-          material_out->albedo = images_[gltf["textures"][tid]["source"].get<int>()];
+          material_out->albedo_map() = images_[gltf["textures"][tid]["source"].get<int>()];
         }
 
         if (pbr.contains("metallicRoughnessTexture")) {
           auto tid = pbr["metallicRoughnessTexture"]["index"].get<int>();
-          material_out->metalness_map = images_[gltf["textures"][tid]["source"].get<int>()];
-          material_out->roughness_map = material_out->metalness_map;
+          material_out->metalness_map() = images_[gltf["textures"][tid]["source"].get<int>()];
+          material_out->roughness_map() = material_out->metalness_map();
         }
       }
 
       if (material.contains("normalTexture")) {
         // TODO: read out and use normal scale.
         auto tid = material["normalTexture"]["index"].get<int>();
-        material_out->normal_map = images_[gltf["textures"][tid]["source"].get<int>()];
+        material_out->normal_map() = images_[gltf["textures"][tid]["source"].get<int>()];
       }
 
       materials_.push_back(material_out);

@@ -67,33 +67,17 @@ void OpenGLRenderer::render(GameObject* scene) {
       glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
       glUniformBlockBinding(program, 0, 0);
 
-      // TODO: rewrite this... it is terrifying.
-      {
-        if (material->albedo) {
-          bind_texture(GL_TEXTURE0, material->albedo.get());
-        } else {
-          bind_texture(GL_TEXTURE0, default_texture_.get());
-        }
+      auto texture_slots = material->get_texture_slots();
+      auto texture_slot_count = texture_slots.size();
 
-        if (material->metalness_map) {
-          bind_texture(GL_TEXTURE1, material->metalness_map.get());
-        } else {
-          bind_texture(GL_TEXTURE1, default_texture_.get());
-        }
+      for (size_t i = 0; i < texture_slot_count; i++) {
+        auto& texture = texture_slots[i];
 
-        if (material->roughness_map) {
-          bind_texture(GL_TEXTURE2, material->roughness_map.get());
-        } else {
-          bind_texture(GL_TEXTURE2, default_texture_.get());
-        }
-
-        if (material->normal_map) {
-          bind_texture(GL_TEXTURE3, material->normal_map.get());
-        } else {
-          bind_texture(GL_TEXTURE3, default_texture_.get());
+        if (texture) {
+          bind_texture(GL_TEXTURE0 + i, texture.get());
         }
       }
-      
+
       switch (index_buffer.data_type()) {
         case IndexDataType::UInt16: {
           glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u16), GL_UNSIGNED_SHORT, 0);
