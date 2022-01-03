@@ -1,5 +1,5 @@
 constexpr auto pbr_vert = R"(\
-  #version 330 core
+  #version 420 core
 
   layout (location = 0) in vec3 a_position;
   layout (location = 1) in vec3 a_normal;
@@ -35,7 +35,7 @@ constexpr auto pbr_vert = R"(\
 )";
 
 constexpr auto pbr_frag = R"(\
-  #version 330 core
+  #version 420 core
 
   #define PI  3.14159265358
   #define TAU 6.28318530717
@@ -170,17 +170,17 @@ constexpr auto pbr_frag = R"(\
   in vec2 v_uv;
   in vec3 v_normal;
 
-  layout (std140) uniform Material {
+  layout (binding = 0, std140) uniform Material {
     float metalness;
     float roughness;
     mat4 projection;
   } material;
 
   uniform mat4 u_view;
-  uniform sampler2D u_diffuse_map;
-  uniform sampler2D u_metalness_map;
-  uniform sampler2D u_roughness_map;
-  uniform sampler2D u_normal_map;
+  layout (binding = 0) uniform sampler2D u_diffuse_map;
+  layout (binding = 1) uniform sampler2D u_metalness_map;
+  layout (binding = 2) uniform sampler2D u_roughness_map;
+  layout (binding = 3) uniform sampler2D u_normal_map;
 
   vec3 sRGBToLinear(vec3 color) {
     return pow(color, vec3(2.2));

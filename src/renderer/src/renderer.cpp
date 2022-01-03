@@ -62,36 +62,13 @@ void OpenGLRenderer::render(GameObject* scene) {
       uniform_block.get<float>("metalness") = material->metalness;
       uniform_block.get<float>("roughness") = material->roughness;
 
-      auto block_index = glGetUniformBlockIndex(program, "material");
       glBindBuffer(GL_UNIFORM_BUFFER, ubo);
       glBufferData(GL_UNIFORM_BUFFER, uniform_block.size(), uniform_block.data(), GL_DYNAMIC_DRAW);
       glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
-      glUniformBlockBinding(program, block_index, 0);
+      glUniformBlockBinding(program, 0, 0);
 
       // TODO: rewrite this... it is terrifying.
       {
-        // TODO: rename uniform to u_albedo_map or rename Material::albedo
-        auto u_diffuse_map = glGetUniformLocation(program, "u_diffuse_map");
-        auto u_metalness_map = glGetUniformLocation(program, "u_metalness_map");
-        auto u_roughness_map = glGetUniformLocation(program, "u_roughness_map");
-        auto u_normal_map = glGetUniformLocation(program, "u_normal_map");
-
-        if (u_diffuse_map != -1) {
-          glUniform1i(u_diffuse_map, 0);
-        }
-
-        if (u_metalness_map != -1) {
-          glUniform1i(u_metalness_map, 1);
-        }
-
-        if (u_roughness_map != -1) {
-          glUniform1i(u_roughness_map, 2);
-        }
-
-        if (u_roughness_map != -1) {
-          glUniform1i(u_normal_map, 3);
-        }
-
         if (material->albedo) {
           bind_texture(GL_TEXTURE0, material->albedo.get());
         } else {
