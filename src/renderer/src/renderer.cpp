@@ -42,10 +42,10 @@ void OpenGLRenderer::render(GameObject* scene) {
       auto geometry = mesh->geometry.get();
       auto material = mesh->material.get();
 
-      auto data = GeometryData{};
-      auto it = geometry_data_.find(geometry);
+      auto data = GeometryCacheEntry{};
+      auto it = geometry_cache_.find(geometry);
 
-      if (it != geometry_data_.end()) {
+      if (it != geometry_cache_.end()) {
         data = it->second;
       } else {
         upload_geometry(geometry, data);
@@ -62,11 +62,11 @@ void OpenGLRenderer::render(GameObject* scene) {
       auto texture_slots = material->get_texture_slots();
       auto texture_slot_count = texture_slots.size();
 
-      for (size_t i = 0; i < texture_slot_count; i++) {
-        auto& texture = texture_slots[i];
+      for (size_t slot = 0; slot < texture_slot_count; slot++) {
+        auto& texture = texture_slots[slot];
 
         if (texture) {
-          bind_texture(GL_TEXTURE0 + i, texture.get());
+          bind_texture(texture.get(), GL_TEXTURE0 + slot);
         }
       }
 
@@ -88,7 +88,7 @@ void OpenGLRenderer::render(GameObject* scene) {
   traverse(scene);
 }
 
-auto OpenGLRenderer::upload_texture(Texture* texture) -> GLuint {
+auto OpenGLRenderer::upload_texture(Texture const* texture) -> GLuint {
   GLuint id;
 
   glGenTextures(1, &id);
@@ -110,11 +110,11 @@ auto OpenGLRenderer::upload_texture(Texture* texture) -> GLuint {
 
   glGenerateMipmap(GL_TEXTURE_2D);
 
-  texture_data_[texture] = id;
+  texture_cache_[texture] = id;
   return id;
 }
 
-void OpenGLRenderer::upload_geometry(Geometry* geometry, GeometryData& data) {
+void OpenGLRenderer::upload_geometry(Geometry const* geometry, GeometryCacheEntry& data) {
   auto& index_buffer = geometry->index_buffer;
 
   glGenVertexArrays(1, &data.vao);
@@ -152,35 +152,35 @@ void OpenGLRenderer::upload_geometry(Geometry* geometry, GeometryData& data) {
     data.vbos.push_back(vbo);
   }
 
-  geometry_data_[geometry] = data;
+  geometry_cache_[geometry] = data;
 }
 
 void OpenGLRenderer::bind_uniform_block(
   UniformBlock const& uniform_block,
   GLuint program,
-  size_t index
+  size_t binding
 ) {
-  auto match = uniform_data_.find(&uniform_block);
+  auto match = uniform_block_cache_.find(&uniform_block);
   auto ubo = GLuint{};
 
-  if (match == uniform_data_.end()) {
+  if (match == uniform_block_cache_.end()) {
     glGenBuffers(1, &ubo);
-    uniform_data_[&uniform_block] = ubo;
+    uniform_block_cache_[&uniform_block] = ubo;
   } else {
     ubo = match->second;
   }
 
   glBindBuffer(GL_UNIFORM_BUFFER, ubo);
   glBufferData(GL_UNIFORM_BUFFER, uniform_block.size(), uniform_block.data(), GL_DYNAMIC_DRAW);
-  glBindBufferBase(GL_UNIFORM_BUFFER, index, ubo);
-  glUniformBlockBinding(program, index, index);
+  glBindBufferBase(GL_UNIFORM_BUFFER, binding, ubo);
+  glUniformBlockBinding(program, binding, binding);
 }
 
-void OpenGLRenderer::bind_texture(GLenum slot, Texture* texture) {
-  auto match = texture_data_.find(texture);
+void OpenGLRenderer::bind_texture(Texture const* texture, GLenum slot) {
+  auto match = texture_cache_.find(texture);
   auto id = GLuint{};
 
-  if (match == texture_data_.end()) {
+  if (match == texture_cache_.end()) {
     id = upload_texture(texture);
   } else {
     id = match->second;

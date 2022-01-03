@@ -13,28 +13,29 @@
 namespace Aura {
 
 struct OpenGLRenderer {
-  struct GeometryData {
-    GLuint vao;
-    GLuint ibo;
-    std::vector<GLuint> vbos;
-  };
-
   OpenGLRenderer();
  ~OpenGLRenderer();
 
   void render(GameObject* scene);
 
 private:
-  auto upload_texture(Texture* texture) -> GLuint;
-  void upload_geometry(Geometry* geometry, GeometryData& data);
+  struct GeometryCacheEntry {
+    GLuint vao;
+    GLuint ibo;
+    std::vector<GLuint> vbos;
+  };
+
+  auto upload_texture(Texture const* texture) -> GLuint;
+  void upload_geometry(Geometry const* geometry, GeometryCacheEntry& data);
+
   void bind_uniform_block(
     UniformBlock const& uniform_block,
     GLuint program,
-    size_t index
+    size_t binding
   );
-  void bind_texture(GLenum slot, Texture* texture);
-  void upload_transform_uniforms(Transform const& transform, GameObject* camera);
+  void bind_texture(Texture const* texture, GLenum slot);
 
+  void upload_transform_uniforms(Transform const& transform, GameObject* camera);
   void create_default_program();
 
   static auto compile_shader(
@@ -51,9 +52,9 @@ private:
 
   GLuint program;
 
-  std::unordered_map<Geometry const*, GeometryData> geometry_data_;
-  std::unordered_map<UniformBlock const*, GLuint> uniform_data_;
-  std::unordered_map<Texture const*, GLuint> texture_data_;
+  std::unordered_map<Geometry const*, GeometryCacheEntry> geometry_cache_;
+  std::unordered_map<UniformBlock const*, GLuint> uniform_block_cache_;
+  std::unordered_map<Texture const*, GLuint> texture_cache_;
 };
 
 } // namespace Aura
