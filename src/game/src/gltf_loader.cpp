@@ -50,7 +50,7 @@ void GLTFLoader::load_buffers(nlohmann::json const& gltf) {
   if (gltf.contains("buffers")) {
     for (auto const& buffer : gltf["buffers"]) {
       auto uri = buffer["uri"].get<std::string>();
-      auto byte_length = buffer["byteLength"].get<int>();
+      auto byte_length = buffer["byteLength"].get<size_t>();
 
       uri = base_path_ / uri;
 
@@ -76,21 +76,21 @@ void GLTFLoader::load_buffers(nlohmann::json const& gltf) {
 void GLTFLoader::load_buffer_views(nlohmann::json const& gltf) {
   if (gltf.contains("bufferViews")) {
     for (auto const& buffer_view : gltf["bufferViews"]) {
-      auto buffer_id = buffer_view["buffer"].get<int>();
+      auto buffer_id = buffer_view["buffer"].get<size_t>();
       auto const& buffer = buffers_[buffer_id];
 
       Assert(buffer_id < buffers_.size(), "GLTFLoader: buffer ID was out-of-range");
 
       auto byte_offset = size_t{};
       auto byte_stride = size_t{};
-      auto byte_length = buffer_view["byteLength"].get<int>();
+      auto byte_length = buffer_view["byteLength"].get<size_t>();
 
       if (buffer_view.contains("byteOffset")) {
-        byte_offset = buffer_view["byteOffset"].get<int>();
+        byte_offset = buffer_view["byteOffset"].get<size_t>();
       }
 
       if (buffer_view.contains("byteStride")) {
-        byte_stride = buffer_view["byteStride"].get<int>();
+        byte_stride = buffer_view["byteStride"].get<size_t>();
       }
 
       Assert((byte_length + byte_offset) <= buffer.size(),
@@ -116,15 +116,15 @@ void GLTFLoader::load_accessors(nlohmann::json const& gltf) {
       auto accessor_out = Accessor{};
 
       // TODO: bufferView is technically not required (only GLBs?)
-      accessor_out.buffer_view = accessor["bufferView"].get<int>();
+      accessor_out.buffer_view = accessor["bufferView"].get<size_t>();
 
       if (accessor.contains("byteOffset")) {
-        accessor_out.attribute.offset = accessor["byteOffset"].get<int>();
+        accessor_out.attribute.offset = accessor["byteOffset"].get<size_t>();
       }
 
       accessor_out.attribute.data_type = to_vertex_data_type(accessor["componentType"].get<int>());
       accessor_out.attribute.components = to_component_count(accessor["type"].get<std::string>());
-      accessor_out.count = accessor["count"].get<int>();
+      accessor_out.count = accessor["count"].get<size_t>();
 
       if (accessor.contains("normalized")) {
         accessor_out.attribute.normalized = accessor["normalized"].get<bool>();
@@ -154,7 +154,7 @@ void GLTFLoader::load_meshes(nlohmann::json const& gltf) {
             load_primitive_idx(primitive),
             load_primitive_vtx(primitive)
           ),
-          .material = materials_[primitive["material"].get<int>()]
+          .material = materials_[primitive["material"].get<size_t>()]
         });
       }
 
@@ -166,7 +166,7 @@ void GLTFLoader::load_meshes(nlohmann::json const& gltf) {
 auto GLTFLoader::load_primitive_idx(
   nlohmann::json const& primitive
 ) -> IndexBuffer {
-  auto const& accessor = accessors_[primitive["indices"].get<int>()];
+  auto const& accessor = accessors_[primitive["indices"].get<size_t>()];
   auto const& buffer_view = buffer_views_[accessor.buffer_view];
   auto const& attribute = accessor.attribute;
 
@@ -203,12 +203,12 @@ auto GLTFLoader::load_primitive_vtx(
 
   for (auto& v : layout_table) v = nullptr;
 
-  const auto add_attribute = [&](char const* name, int index) {
+  const auto add_attribute = [&](char const* name, size_t index) {
     if (!attributes.contains(name)) {
       return;
     }
 
-    auto const& accessor = accessors_[attributes[name].get<int>()];
+    auto const& accessor = accessors_[attributes[name].get<size_t>()];
     auto const& attribute = accessor.attribute;
 
     auto layout = layout_table[accessor.buffer_view];
@@ -290,21 +290,21 @@ void GLTFLoader::load_materials(nlohmann::json const& gltf) {
         }
 
         if (pbr.contains("baseColorTexture")) {
-          auto tid = pbr["baseColorTexture"]["index"].get<int>();
-          material_out->albedo_map() = images_[gltf["textures"][tid]["source"].get<int>()];
+          auto tid = pbr["baseColorTexture"]["index"].get<size_t>();
+          material_out->albedo_map() = images_[gltf["textures"][tid]["source"].get<size_t>()];
         }
 
         if (pbr.contains("metallicRoughnessTexture")) {
-          auto tid = pbr["metallicRoughnessTexture"]["index"].get<int>();
-          material_out->metalness_map() = images_[gltf["textures"][tid]["source"].get<int>()];
+          auto tid = pbr["metallicRoughnessTexture"]["index"].get<size_t>();
+          material_out->metalness_map() = images_[gltf["textures"][tid]["source"].get<size_t>()];
           material_out->roughness_map() = material_out->metalness_map();
         }
       }
 
       if (material.contains("normalTexture")) {
         // TODO: read out and use normal scale.
-        auto tid = material["normalTexture"]["index"].get<int>();
-        material_out->normal_map() = images_[gltf["textures"][tid]["source"].get<int>()];
+        auto tid = material["normalTexture"]["index"].get<size_t>();
+        material_out->normal_map() = images_[gltf["textures"][tid]["source"].get<size_t>()];
       }
 
       materials_.push_back(material_out);
@@ -352,7 +352,7 @@ auto GLTFLoader::load_node(nlohmann::json const& nodes, size_t id) -> GameObject
   }
 
   if (node.contains("mesh")) {
-    auto const& mesh = meshes_[node["mesh"].get<int>()];
+    auto const& mesh = meshes_[node["mesh"].get<size_t>()];
 
     if (mesh.primitives.size() == 1) {
       object->add_component<Aura::Mesh>(mesh.primitives[0].geometry, mesh.primitives[0].material);
@@ -367,7 +367,7 @@ auto GLTFLoader::load_node(nlohmann::json const& nodes, size_t id) -> GameObject
 
   if (node.contains("children")) {
     for (auto const& child : node["children"]) {
-      object->add_child(load_node(nodes, child.get<int>()));
+      object->add_child(load_node(nodes, child.get<size_t>()));
     }
   }
 
@@ -382,7 +382,7 @@ auto GLTFLoader::load_scene(nlohmann::json const& gltf, size_t id) -> GameObject
 
   if (scene.contains("nodes")) {
     for (auto const& node : scene["nodes"]) {
-      object->add_child(load_node(gltf["nodes"], node.get<int>()));
+      object->add_child(load_node(gltf["nodes"], node.get<size_t>()));
     }
   }
 

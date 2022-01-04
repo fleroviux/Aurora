@@ -27,8 +27,8 @@ private:
   };
 
   struct Accessor {
-    int buffer_view;
-    int count;
+    size_t buffer_view;
+    size_t count;
     VertexBufferLayout::Attribute attribute;
   };
 
