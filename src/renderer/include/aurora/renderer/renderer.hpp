@@ -27,7 +27,6 @@ private:
 
   void update_camera_transform(GameObject* camera);
 
-  auto upload_texture(Texture const* texture) -> GLuint;
   void upload_geometry(Geometry const* geometry, GeometryCacheEntry& data);
 
   void bind_uniform_block(
@@ -35,7 +34,7 @@ private:
     GLuint program,
     size_t binding
   );
-  void bind_texture(Texture const* texture, GLenum slot);
+  void bind_texture(Texture* texture, GLenum slot);
 
   void bind_material(Material* material, GameObject* object);
   void draw_geometry(Geometry const* geometry);

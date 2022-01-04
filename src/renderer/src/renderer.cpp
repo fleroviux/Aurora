@@ -75,33 +75,6 @@ void OpenGLRenderer::update_camera_transform(GameObject* camera) {
   uniform_camera.get<Matrix4>("projection") = projection;
 }
 
-auto OpenGLRenderer::upload_texture(Texture const* texture) -> GLuint {
-  GLuint id;
-
-  glGenTextures(1, &id);
-  glBindTexture(GL_TEXTURE_2D, id);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, gl_max_anisotropy);
-
-  glTexImage2D(
-    GL_TEXTURE_2D,
-    0,
-    GL_RGBA,
-    texture->width(),
-    texture->height(),
-    0,
-    GL_RGBA,
-    GL_UNSIGNED_BYTE,
-    texture->data()
-  );
-
-  glGenerateMipmap(GL_TEXTURE_2D);
-
-  texture_cache_[texture] = id;
-  return id;
-}
-
 void OpenGLRenderer::upload_geometry(Geometry const* geometry, GeometryCacheEntry& data) {
   auto& index_buffer = geometry->index_buffer;
 
@@ -164,14 +137,46 @@ void OpenGLRenderer::bind_uniform_block(
   glUniformBlockBinding(program, binding, binding);
 }
 
-void OpenGLRenderer::bind_texture(Texture const* texture, GLenum slot) {
+void OpenGLRenderer::bind_texture(Texture* texture, GLenum slot) {
   auto match = texture_cache_.find(texture);
   auto id = GLuint{};
+  bool force_update = false;
 
   if (match == texture_cache_.end()) {
-    id = upload_texture(texture);
+    glGenTextures(1, &id);
+    texture_cache_[texture] = id;
+    force_update = true;
+
+    texture->add_release_callback([=]() {
+      texture_cache_.erase(texture);
+      glDeleteTextures(1, &id);
+    });
   } else {
     id = match->second;
+  }
+
+  if (texture->needs_update() || force_update) {
+    // TODO: decouple texture configuration from texture data?
+    glBindTexture(GL_TEXTURE_2D, id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, gl_max_anisotropy);
+
+    glTexImage2D(
+      GL_TEXTURE_2D,
+      0,
+      GL_RGBA,
+      texture->width(),
+      texture->height(),
+      0,
+      GL_RGBA,
+      GL_UNSIGNED_BYTE,
+      texture->data()
+    );
+
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    texture->needs_update() = false;
   }
 
   glActiveTexture(slot);

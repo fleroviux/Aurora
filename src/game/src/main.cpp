@@ -146,12 +146,23 @@ int main() {
     if (state[SDL_SCANCODE_M])     z -= 0.01;
     if (state[SDL_SCANCODE_N])     z += 0.01;
 
+    if (state[SDL_SCANCODE_P]) {
+      const std::function<void(GameObject*)> traverse = [&](GameObject* object) {
+        if (object->has_component<Mesh>()) {
+          auto mesh = object->get_component<Mesh>();
+          auto pbr_material = (PbrMaterial*)mesh->material.get();
+          pbr_material->albedo_map() = {};
+        }
+
+        for (auto child : object->children()) traverse(child);
+      };
+
+      traverse(scene);
+    }
+
     camera->transform().rotation().set_euler(x, y, z);
 
     auto euler = camera->transform().rotation().get_euler();
-
-    //Log<Info>("camera rotation: {:.4f} {:.4f} {:.4f}",
-    //  euler.x(), euler.y(), euler.z());
 
     renderer.render(scene);
     SDL_GL_SwapWindow(window);

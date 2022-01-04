@@ -4,15 +4,19 @@
 
 #pragma once
 
+#include <aurora/renderer/gpu_resource.hpp>
 #include <aurora/integer.hpp>
 #include <aurora/log.hpp>
+#include <aurora/utility.hpp>
 #include <memory>
 #include <stb_image.h>
 #include <string>
 
 namespace Aura {
 
-struct Texture{
+struct Texture : GPUResource {
+  AURA_NO_COPY_NO_MOVE(Texture);
+
   Texture(uint width, uint height, u8* data)
       : width_(width)
       , height_(height)
@@ -24,6 +28,10 @@ struct Texture{
   }
 
   auto data() const -> u8 const* {
+    return data_;
+  }
+
+  auto data() -> u8* {
     return data_;
   }
 
