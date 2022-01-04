@@ -10,13 +10,15 @@
 
 namespace Aura {
 
-struct MaterialBase {
+struct Material {
+  virtual ~Material() = default;
+
   virtual auto get_uniforms() -> UniformBlock& = 0;
   virtual auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture>> = 0;
 };
 
-struct Material final : MaterialBase {
-  Material() {
+struct PbrMaterial final : Material {
+  PbrMaterial() {
     auto layout = UniformBlockLayout{};
     layout.add<Matrix4>("model");
     layout.add<float>("metalness");

@@ -61,7 +61,7 @@ auto create_example_scene() -> GameObject* {
   auto geometry = std::make_shared<Geometry>(index_buffer);
   geometry->buffers.push_back(std::move(vertex_buffer));
 
-  auto material = std::make_shared<Material>();
+  auto material = std::make_shared<PbrMaterial>();
 
   auto plane0 = new GameObject{"Plane0"};
   auto plane1 = new GameObject{"Plane1"};

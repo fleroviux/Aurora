@@ -272,7 +272,7 @@ void GLTFLoader::load_images(nlohmann::json const& gltf) {
 void GLTFLoader::load_materials(nlohmann::json const& gltf) {
   if (gltf.contains("materials")) {
     for (auto const& material : gltf["materials"]) {
-      auto material_out = std::make_shared<Material>();
+      auto material_out = std::make_shared<PbrMaterial>();
 
       if (material.contains("pbrMetallicRoughness")) {
         auto const& pbr = material["pbrMetallicRoughness"];
