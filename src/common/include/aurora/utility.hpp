@@ -15,3 +15,13 @@
 #define AURA_NO_COPY_NO_MOVE(T)\
   AURA_NO_COPY(T)\
   AURA_NO_MOVE(T)
+
+namespace Aura {
+
+template<bool flag = false>
+constexpr void static_no_match() {
+  static_assert(flag);
+}
+
+} // namespace Aura
+

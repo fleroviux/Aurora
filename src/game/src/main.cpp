@@ -4,6 +4,7 @@
 
 #include <aurora/math/rotation.hpp>
 #include <aurora/renderer/renderer.hpp>
+#include <aurora/renderer/uniform_block.hpp>
 #include <cstring>
 #include <SDL.h>
 
@@ -60,7 +61,7 @@ auto create_example_scene() -> GameObject* {
   auto geometry = std::make_shared<Geometry>(index_buffer);
   geometry->buffers.push_back(std::move(vertex_buffer));
 
-  auto material = std::make_shared<Material>();
+  auto material = std::make_shared<PbrMaterial>();
 
   auto plane0 = new GameObject{"Plane0"};
   auto plane1 = new GameObject{"Plane1"};
@@ -87,8 +88,8 @@ int main() {
   );
 
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
@@ -108,7 +109,7 @@ int main() {
   scene->add_component<Scene>(camera);
   scene->add_child(camera);
 
-  auto behemoth = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf");
+  auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
   scene->add_child(behemoth);
 
   auto event = SDL_Event{};
@@ -149,8 +150,8 @@ int main() {
 
     auto euler = camera->transform().rotation().get_euler();
 
-    Log<Info>("camera rotation: {:.4f} {:.4f} {:.4f}",
-      euler.x(), euler.y(), euler.z());
+    //Log<Info>("camera rotation: {:.4f} {:.4f} {:.4f}",
+    //  euler.x(), euler.y(), euler.z());
 
     renderer.render(scene);
     SDL_GL_SwapWindow(window);

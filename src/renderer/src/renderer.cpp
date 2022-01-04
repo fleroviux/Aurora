@@ -12,22 +12,26 @@ OpenGLRenderer::OpenGLRenderer() {
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
   glEnable(GL_TEXTURE_2D);
+  glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl_max_anisotropy);
+
+  auto layout_camera = UniformBlockLayout{};
+  layout_camera.add<Matrix4>("view");
+  layout_camera.add<Matrix4>("projection");
+  uniform_camera = UniformBlock{layout_camera};
 
   create_default_program();
-
-  default_texture_ = Texture::load("cirno.jpg");
 }
 
 OpenGLRenderer::~OpenGLRenderer() {
 }
 
 void OpenGLRenderer::render(GameObject* scene) {
-  // TODO: validate that the scene component exists and the camera is valid.
-  auto camera = scene->get_component<Scene>()->camera;
-
   glViewport(0, 0, 2560, 1440);
   glClearColor(0.02, 0.02, 1.0, 1.00);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  // TODO: validate that the scene component exists and the camera is valid.
+  update_camera_transform(scene->get_component<Scene>()->camera);
 
   const std::function<void(GameObject*)> traverse = [&](GameObject* object) {
     auto& transform = object->transform();
@@ -44,90 +48,8 @@ void OpenGLRenderer::render(GameObject* scene) {
       auto geometry = mesh->geometry.get();
       auto material = mesh->material.get();
 
-      auto data = GeometryData{};
-      auto it = geometry_data_.find(geometry);
-
-      if (it != geometry_data_.end()) {
-        data = it->second;
-      } else {
-        upload_geometry(geometry, data);
-      }
-
-      // TODO: check GL_INVALID_OPERATION on first draw?
-      auto& index_buffer = geometry->index_buffer;
-      upload_transform_uniforms(transform, camera);
-      glBindVertexArray(data.vao);
-      glUseProgram(program);
-      
-      // TODO: rewrite this... it is terrifying.
-      {
-        // TODO: rename uniform to u_albedo_map or rename Material::albedo
-        auto u_diffuse_map = glGetUniformLocation(program, "u_diffuse_map");
-        auto u_metalness_map = glGetUniformLocation(program, "u_metalness_map");
-        auto u_roughness_map = glGetUniformLocation(program, "u_roughness_map");
-        auto u_normal_map = glGetUniformLocation(program, "u_normal_map");
-        auto u_metalness = glGetUniformLocation(program, "u_metalness");
-        auto u_roughness = glGetUniformLocation(program, "u_roughness");
-
-        if (u_diffuse_map != -1) {
-          glUniform1i(u_diffuse_map, 0);
-        }
-
-        if (u_metalness_map != -1) {
-          glUniform1i(u_metalness_map, 1);
-        }
-
-        if (u_roughness_map != -1) {
-          glUniform1i(u_roughness_map, 2);
-        }
-
-        if (u_roughness_map != -1) {
-          glUniform1i(u_normal_map, 3);
-        }
-
-        if (u_metalness != -1) {
-          glUniform1f(u_metalness, material->metalness);
-        }
-
-        if (u_roughness != -1) {
-          glUniform1f(u_roughness, material->roughness);
-        }
-
-        if (material->albedo) {
-          bind_texture(GL_TEXTURE0, material->albedo.get());
-        } else {
-          bind_texture(GL_TEXTURE0, default_texture_.get());
-        }
-
-        if (material->metalness_map) {
-          bind_texture(GL_TEXTURE1, material->metalness_map.get());
-        } else {
-          bind_texture(GL_TEXTURE1, default_texture_.get());
-        }
-
-        if (material->roughness_map) {
-          bind_texture(GL_TEXTURE2, material->roughness_map.get());
-        } else {
-          bind_texture(GL_TEXTURE2, default_texture_.get());
-        }
-
-        if (material->normal_map) {
-          bind_texture(GL_TEXTURE3, material->normal_map.get());
-        } else {
-          bind_texture(GL_TEXTURE3, default_texture_.get());
-        }
-      }
-      
-      switch (index_buffer.data_type()) {
-        case IndexDataType::UInt16: {
-          glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u16), GL_UNSIGNED_SHORT, 0);
-          break;
-        }
-        case IndexDataType::UInt32: {
-          glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u32), GL_UNSIGNED_INT, 0);
-          break;
-        }
-      }
+      bind_material(material, object);
+      draw_geometry(geometry);
     }
 
     for (auto child : object->children()) traverse(child);
@@ -136,13 +58,31 @@ void OpenGLRenderer::render(GameObject* scene) {
   traverse(scene);
 }
 
-auto OpenGLRenderer::upload_texture(Texture* texture) -> GLuint {
+void OpenGLRenderer::update_camera_transform(GameObject* camera) {
+  // TODO: validate that the camera component exists.
+  auto camera_component = camera->get_component<Camera>();
+  
+  auto view = camera->transform().world().inverse();
+
+  auto projection = Matrix4::perspective_gl(
+    camera_component->field_of_view,
+    camera_component->aspect_ratio,
+    camera_component->near,
+    camera_component->far
+  );
+
+  uniform_camera.get<Matrix4>("view") = view;
+  uniform_camera.get<Matrix4>("projection") = projection;
+}
+
+auto OpenGLRenderer::upload_texture(Texture const* texture) -> GLuint {
   GLuint id;
 
   glGenTextures(1, &id);
   glBindTexture(GL_TEXTURE_2D, id);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, gl_max_anisotropy);
 
   glTexImage2D(
     GL_TEXTURE_2D,
@@ -158,11 +98,11 @@ auto OpenGLRenderer::upload_texture(Texture* texture) -> GLuint {
 
   glGenerateMipmap(GL_TEXTURE_2D);
 
-  texture_data_[texture] = id;
+  texture_cache_[texture] = id;
   return id;
 }
 
-void OpenGLRenderer::upload_geometry(Geometry* geometry, GeometryData& data) {
+void OpenGLRenderer::upload_geometry(Geometry const* geometry, GeometryCacheEntry& data) {
   auto& index_buffer = geometry->index_buffer;
 
   glGenVertexArrays(1, &data.vao);
@@ -200,14 +140,35 @@ void OpenGLRenderer::upload_geometry(Geometry* geometry, GeometryData& data) {
     data.vbos.push_back(vbo);
   }
 
-  geometry_data_[geometry] = data;
+  geometry_cache_[geometry] = data;
 }
 
-void OpenGLRenderer::bind_texture(GLenum slot, Texture* texture) {
-  auto match = texture_data_.find(texture);
+void OpenGLRenderer::bind_uniform_block(
+  UniformBlock const& uniform_block,
+  GLuint program,
+  size_t binding
+) {
+  auto match = uniform_block_cache_.find(&uniform_block);
+  auto ubo = GLuint{};
+
+  if (match == uniform_block_cache_.end()) {
+    glGenBuffers(1, &ubo);
+    uniform_block_cache_[&uniform_block] = ubo;
+  } else {
+    ubo = match->second;
+  }
+
+  glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+  glBufferData(GL_UNIFORM_BUFFER, uniform_block.size(), uniform_block.data(), GL_DYNAMIC_DRAW);
+  glBindBufferBase(GL_UNIFORM_BUFFER, binding, ubo);
+  glUniformBlockBinding(program, binding, binding);
+}
+
+void OpenGLRenderer::bind_texture(Texture const* texture, GLenum slot) {
+  auto match = texture_cache_.find(texture);
   auto id = GLuint{};
 
-  if (match == texture_data_.end()) {
+  if (match == texture_cache_.end()) {
     id = upload_texture(texture);
   } else {
     id = match->second;
@@ -217,32 +178,52 @@ void OpenGLRenderer::bind_texture(GLenum slot, Texture* texture) {
   glBindTexture(GL_TEXTURE_2D, id);
 }
 
-void OpenGLRenderer::upload_transform_uniforms(Transform const& transform, GameObject* camera) {
-  // TODO: validate that the camera component exists.
-  auto camera_component = camera->get_component<Camera>();
-  
-  auto projection = Matrix4::perspective_gl(
-    camera_component->field_of_view,
-    camera_component->aspect_ratio,
-    camera_component->near,
-    camera_component->far
-  );
-  
-  auto view = camera->transform().world().inverse();
+void OpenGLRenderer::bind_material(Material* material, GameObject* object) {
+  glUseProgram(program);
 
-  auto u_projection = glGetUniformLocation(program, "u_projection");
-  if (u_projection != -1) {
-    glUniformMatrix4fv(u_projection, 1, GL_FALSE, (float*)&projection[0]);
+  auto& uniforms = material->get_uniforms();
+
+  uniforms.get<Matrix4>("model") = object->transform().world();
+
+  bind_uniform_block(uniform_camera, program, 0);
+  bind_uniform_block(uniforms, program, 1);
+
+  auto texture_slots = material->get_texture_slots();
+  auto texture_slot_count = texture_slots.size();
+
+  for (size_t slot = 0; slot < texture_slot_count; slot++) {
+    auto& texture = texture_slots[slot];
+
+    if (texture) {
+      bind_texture(texture.get(), GL_TEXTURE0 + slot);
+    }
+  }
+}
+
+void OpenGLRenderer::draw_geometry(Geometry const* geometry) {
+  auto data = GeometryCacheEntry{};
+  auto it = geometry_cache_.find(geometry);
+
+  if (it != geometry_cache_.end()) {
+    data = it->second;
+  } else {
+    upload_geometry(geometry, data);
   }
 
-  auto u_model = glGetUniformLocation(program, "u_model");
-  if (u_model != -1) {
-    glUniformMatrix4fv(u_model, 1, GL_FALSE, (float*)&transform.world()[0]);
-  }
+  auto& index_buffer = geometry->index_buffer;
 
-  auto u_view = glGetUniformLocation(program, "u_view");
-  if (u_view != -1) {
-    glUniformMatrix4fv(u_view, 1, GL_FALSE, (float*)&view[0]); 
+  glBindVertexArray(data.vao);
+
+  // TODO: check GL_INVALID_OPERATION on first draw?
+  switch (index_buffer.data_type()) {
+    case IndexDataType::UInt16: {
+      glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u16), GL_UNSIGNED_SHORT, 0);
+      break;
+    }
+    case IndexDataType::UInt32: {
+      glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u32), GL_UNSIGNED_INT, 0);
+      break;
+    }
   }
 }
 

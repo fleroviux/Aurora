@@ -43,7 +43,7 @@ struct IndexBuffer : Updatable {
     buffer_.resize(buffer_size);
   }
 
-  auto data_type() -> IndexDataType {
+  auto data_type() const -> IndexDataType {
     return data_type_;
   }
 

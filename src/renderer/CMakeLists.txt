@@ -23,6 +23,8 @@ set(HEADERS_PUBLIC
   include/aurora/renderer/geometry/vertex_buffer.hpp
   include/aurora/renderer/material.hpp
   include/aurora/renderer/renderer.hpp
+  include/aurora/renderer/texture.hpp
+  include/aurora/renderer/uniform_block.hpp
 )
 
 find_package(OpenGL REQUIRED)

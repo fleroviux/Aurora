@@ -5,6 +5,7 @@
 #include <aurora/renderer/component/camera.hpp>
 #include <aurora/renderer/component/mesh.hpp>
 #include <aurora/renderer/component/scene.hpp>
+#include <aurora/renderer/uniform_block.hpp>
 #include <aurora/scene/game_object.hpp>
 #include <GL/glew.h>
 #include <optional>
@@ -12,22 +13,32 @@
 namespace Aura {
 
 struct OpenGLRenderer {
-  struct GeometryData {
-    GLuint vao;
-    GLuint ibo;
-    std::vector<GLuint> vbos;
-  };
-
   OpenGLRenderer();
  ~OpenGLRenderer();
 
   void render(GameObject* scene);
 
 private:
-  auto upload_texture(Texture* texture) -> GLuint;
-  void upload_geometry(Geometry* geometry, GeometryData& data);
-  void bind_texture(GLenum slot, Texture* texture);
-  void upload_transform_uniforms(Transform const& transform, GameObject* camera);
+  struct GeometryCacheEntry {
+    GLuint vao;
+    GLuint ibo;
+    std::vector<GLuint> vbos;
+  };
+
+  void update_camera_transform(GameObject* camera);
+
+  auto upload_texture(Texture const* texture) -> GLuint;
+  void upload_geometry(Geometry const* geometry, GeometryCacheEntry& data);
+
+  void bind_uniform_block(
+    UniformBlock const& uniform_block,
+    GLuint program,
+    size_t binding
+  );
+  void bind_texture(Texture const* texture, GLenum slot);
+
+  void bind_material(Material* material, GameObject* object);
+  void draw_geometry(Geometry const* geometry);
 
   void create_default_program();
 
@@ -45,10 +56,13 @@ private:
 
   GLuint program;
 
-  std::unique_ptr<Texture> default_texture_;
+  UniformBlock uniform_camera;
 
-  std::unordered_map<Texture*, GLuint> texture_data_;
-  std::unordered_map<Geometry*, GeometryData> geometry_data_;
+  std::unordered_map<Geometry const*, GeometryCacheEntry> geometry_cache_;
+  std::unordered_map<UniformBlock const*, GLuint> uniform_block_cache_;
+  std::unordered_map<Texture const*, GLuint> texture_cache_;
+
+  float gl_max_anisotropy;
 };
 
 } // namespace Aura

@@ -1,15 +1,21 @@
 constexpr auto pbr_vert = R"(\
-  #version 330 core
+  #version 420 core
 
   layout (location = 0) in vec3 a_position;
   layout (location = 1) in vec3 a_normal;
   layout (location = 2) in vec2 a_uv;
   layout (location = 3) in vec3 a_color;
 
-  // TODO: pass a unified modelview matrix.
-  uniform mat4 u_projection;
-  uniform mat4 u_model;
-  uniform mat4 u_view;
+  layout (binding = 0, std140) uniform Camera {
+    mat4 u_view;
+    mat4 u_projection;
+  };
+
+  layout (binding = 1, std140) uniform Material {
+    mat4 u_model;
+    float u_metalness;
+    float u_roughness;
+  };
 
   out vec3 v_world_position;
   out vec3 v_world_normal;
@@ -35,7 +41,7 @@ constexpr auto pbr_vert = R"(\
 )";
 
 constexpr auto pbr_frag = R"(\
-  #version 330 core
+  #version 420 core
 
   #define PI  3.14159265358
   #define TAU 6.28318530717
@@ -170,13 +176,21 @@ constexpr auto pbr_frag = R"(\
   in vec2 v_uv;
   in vec3 v_normal;
 
-  uniform mat4 u_view;
-  uniform float u_metalness;
-  uniform float u_roughness;
-  uniform sampler2D u_diffuse_map;
-  uniform sampler2D u_metalness_map;
-  uniform sampler2D u_roughness_map;
-  uniform sampler2D u_normal_map;
+  layout (binding = 0, std140) uniform Camera {
+    mat4 u_view;
+    mat4 u_projection;
+  };
+
+  layout (binding = 1, std140) uniform Material {
+    mat4 u_model;
+    float u_metalness;
+    float u_roughness;
+  };
+
+  layout (binding = 0) uniform sampler2D u_diffuse_map;
+  layout (binding = 1) uniform sampler2D u_metalness_map;
+  layout (binding = 2) uniform sampler2D u_roughness_map;
+  layout (binding = 3) uniform sampler2D u_normal_map;
 
   vec3 sRGBToLinear(vec3 color) {
     return pow(color, vec3(2.2));
@@ -265,10 +279,6 @@ constexpr auto pbr_frag = R"(\
     my_light.position = vec4(2.0, 2.0, 2.0, 0.0);
     my_light.color = vec3(10.0);
     result += ShadeDirectLight(geometry, my_light, view_dir);
-
-    //my_light.position = vec4(4.0, 10.0, -3.0, 1.0);
-    //my_light.color = vec3(0.0, 10.0, 8.0);
-    //result += ShadeDirectLight(geometry, my_light, view_dir);
 
     result += CalculateSH(SH, geometry.normal) * (1.0 - geometry.metalness) * geometry.albedo;
 
