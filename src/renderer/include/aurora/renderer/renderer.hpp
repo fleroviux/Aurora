@@ -30,7 +30,7 @@ private:
   void upload_geometry(Geometry const* geometry, GeometryCacheEntry& data);
 
   void bind_uniform_block(
-    UniformBlock const& uniform_block,
+    UniformBlock& uniform_block,
     GLuint program,
     size_t binding
   );

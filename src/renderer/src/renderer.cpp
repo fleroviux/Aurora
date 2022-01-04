@@ -73,6 +73,7 @@ void OpenGLRenderer::update_camera_transform(GameObject* camera) {
 
   uniform_camera.get<Matrix4>("view") = view;
   uniform_camera.get<Matrix4>("projection") = projection;
+  uniform_camera.needs_update() = true;
 }
 
 void OpenGLRenderer::upload_geometry(Geometry const* geometry, GeometryCacheEntry& data) {
@@ -117,22 +118,33 @@ void OpenGLRenderer::upload_geometry(Geometry const* geometry, GeometryCacheEntr
 }
 
 void OpenGLRenderer::bind_uniform_block(
-  UniformBlock const& uniform_block,
+  UniformBlock& uniform_block,
   GLuint program,
   size_t binding
 ) {
   auto match = uniform_block_cache_.find(&uniform_block);
   auto ubo = GLuint{};
+  bool force_update = false;
 
   if (match == uniform_block_cache_.end()) {
     glGenBuffers(1, &ubo);
     uniform_block_cache_[&uniform_block] = ubo;
+    force_update = true;
+
+    uniform_block.add_release_callback([this, uniform_block = &uniform_block, ubo]() {
+      glDeleteBuffers(1, &ubo);
+      uniform_block_cache_.erase(uniform_block);
+    });
   } else {
     ubo = match->second;
   }
 
-  glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-  glBufferData(GL_UNIFORM_BUFFER, uniform_block.size(), uniform_block.data(), GL_DYNAMIC_DRAW);
+  if (uniform_block.needs_update() || force_update) {
+    glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+    glBufferData(GL_UNIFORM_BUFFER, uniform_block.size(), uniform_block.data(), GL_DYNAMIC_DRAW);
+    uniform_block.needs_update() = false;
+  }
+
   glBindBufferBase(GL_UNIFORM_BUFFER, binding, ubo);
   glUniformBlockBinding(program, binding, binding);
 }
@@ -189,6 +201,7 @@ void OpenGLRenderer::bind_material(Material* material, GameObject* object) {
   auto& uniforms = material->get_uniforms();
 
   uniforms.get<Matrix4>("model") = object->transform().world();
+  uniforms.needs_update() = true;
 
   bind_uniform_block(uniform_camera, program, 0);
   bind_uniform_block(uniforms, program, 1);

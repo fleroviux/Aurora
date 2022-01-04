@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <aurora/math/matrix4.hpp>
 #include <aurora/math/vector.hpp>
+#include <aurora/renderer/gpu_resource.hpp>
 #include <aurora/integer.hpp>
 #include <aurora/log.hpp>
 #include <aurora/utility.hpp>
@@ -192,7 +193,7 @@ private:
   std::vector<Member> members_;
 };
 
-struct UniformBlock {
+struct UniformBlock final : GPUResource {
   using Member = UniformBlockLayout::Member;
 
   UniformBlock() {}
@@ -206,7 +207,7 @@ struct UniformBlock {
     }
   }
 
- ~UniformBlock() {
+ ~UniformBlock() override {
     if (data_ != nullptr) {
       delete data_;
     }

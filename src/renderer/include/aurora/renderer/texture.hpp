@@ -14,7 +14,7 @@
 
 namespace Aura {
 
-struct Texture : GPUResource {
+struct Texture final : GPUResource {
   AURA_NO_COPY_NO_MOVE(Texture);
 
   Texture(uint width, uint height, u8* data)
@@ -23,7 +23,7 @@ struct Texture : GPUResource {
       , data_(data) {
   }
 
- ~Texture() {
+ ~Texture() override {
     delete data();
   }
 
