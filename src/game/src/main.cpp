@@ -4,7 +4,7 @@
 
 #include <aurora/math/rotation.hpp>
 #include <aurora/renderer/renderer.hpp>
-#include <aurora/renderer/uniform_block_layout.hpp>
+#include <aurora/renderer/uniform_block.hpp>
 #include <cstring>
 #include <SDL.h>
 
@@ -75,32 +75,6 @@ auto create_example_scene() -> GameObject* {
   return scene;
 }
 
-void test_ubo() {
-  auto layout_a = UniformBlockLayout{};
-  layout_a.add<float>("roughness");
-  layout_a.add<float>("metalness");
-  layout_a.add<Vector3>("albedo");
-  layout_a.add<Vector2>("uv_offset");
-  layout_a.add<Matrix4>("some_matrix");
-  layout_a.add<float>("my_array", 6);
-
-  fmt::print("{}", layout_a.to_string());
-
-  auto block = UniformBlock{layout_a};
-
-  block.get<float>("roughness") = 0.1337;
-  block.get<float>("metalness") = 0.6969;
-  block.get<Matrix4>("some_matrix") = Matrix4::scale(0.1, 0.2, 0.3);
-
-  fmt::print("{}\n", block.get<float>("metalness"));
-  fmt::print("{}\n", block.get<float>("roughness"));
-  for (int r = 0; r < 4; r++) {
-    auto& m = block.get<Matrix4>("some_matrix");
-    fmt::print("{:.2f} {:.2f} {:.2f} {:.2f}\n",
-      m[0][r], m[1][r], m[2][r], m[3][r]);
-  }
-}
-
 int main() {
   SDL_Init(SDL_INIT_VIDEO);
 
@@ -137,8 +111,6 @@ int main() {
 
   auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
   scene->add_child(behemoth);
-
-  test_ubo();
 
   auto event = SDL_Event{};
 

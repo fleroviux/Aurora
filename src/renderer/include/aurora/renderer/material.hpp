@@ -5,7 +5,7 @@
 #pragma once
 
 #include <aurora/renderer/texture.hpp>
-#include <aurora/renderer/uniform_block_layout.hpp>
+#include <aurora/renderer/uniform_block.hpp>
 #include <aurora/array_view.hpp>
 
 namespace Aura {

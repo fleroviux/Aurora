@@ -5,7 +5,7 @@
 #include <aurora/renderer/component/camera.hpp>
 #include <aurora/renderer/component/mesh.hpp>
 #include <aurora/renderer/component/scene.hpp>
-#include <aurora/renderer/uniform_block_layout.hpp>
+#include <aurora/renderer/uniform_block.hpp>
 #include <aurora/scene/game_object.hpp>
 #include <GL/glew.h>
 #include <optional>

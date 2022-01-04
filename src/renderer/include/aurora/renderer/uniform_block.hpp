@@ -9,6 +9,7 @@
 #include <aurora/math/vector.hpp>
 #include <aurora/integer.hpp>
 #include <aurora/log.hpp>
+#include <aurora/utility.hpp>
 #include <fmt/format.h>
 #include <string>
 #include <type_traits>
@@ -35,7 +36,7 @@ struct UniformTypeInfo {
     Mat4
   } grade;
 
-  bool operator==(UniformTypeInfo const& rhs) {
+  bool operator==(UniformTypeInfo const& rhs) const {
     return type == rhs.type && grade == rhs.grade;
   }
 
@@ -48,6 +49,38 @@ struct UniformTypeInfo {
       return unit() * 4;
     }
     return size();
+  }
+
+  template<typename T>
+  static constexpr auto get() -> UniformTypeInfo {
+    if constexpr (std::is_same_v<T, float>) {
+      return UniformTypeInfo{
+        .type = UniformTypeInfo::Type::F32,
+        .grade = UniformTypeInfo::Grade::Scalar
+      };
+    } else if constexpr (std::is_same_v<T, Vector2>) {
+      return UniformTypeInfo{
+        .type = UniformTypeInfo::Type::F32,
+        .grade = UniformTypeInfo::Grade::Vec2
+      };
+    } else if constexpr (std::is_same_v<T, Vector3>) {
+      return UniformTypeInfo{
+        .type = UniformTypeInfo::Type::F32,
+        .grade = UniformTypeInfo::Grade::Vec3
+      };
+    } else if constexpr (std::is_same_v<T, Vector4>) {
+      return UniformTypeInfo{
+        .type = UniformTypeInfo::Type::F32,
+        .grade = UniformTypeInfo::Grade::Vec4
+      };
+    } else if constexpr (std::is_same_v<T, Matrix4>) {
+      return UniformTypeInfo{
+        .type = UniformTypeInfo::Type::F32,
+        .grade = UniformTypeInfo::Grade::Mat4
+      };
+    } else {
+      static_no_match();
+    }
   }
 
   auto to_string() const -> std::string {
@@ -99,74 +132,23 @@ private:
 struct UniformBlockLayout {
   template<typename T>
   void add(std::string const& name, size_t count = 0) {
-    auto type_info = UniformTypeInfo{};
-
-    // TODO: improve on this type decoding mechanism.
-    if constexpr (std::is_same_v<T, float>) {
-      type_info = UniformTypeInfo{
-        .type = UniformTypeInfo::Type::F32,
-        .grade = UniformTypeInfo::Grade::Scalar
-      };
-    }
-    if constexpr (std::is_same_v<T, Vector2>) {
-      type_info = UniformTypeInfo{
-        .type = UniformTypeInfo::Type::F32,
-        .grade = UniformTypeInfo::Grade::Vec2
-      };
-    }
-    if constexpr (std::is_same_v<T, Vector3>) {
-      type_info = UniformTypeInfo{
-        .type = UniformTypeInfo::Type::F32,
-        .grade = UniformTypeInfo::Grade::Vec3
-      };
-    }
-    if constexpr (std::is_same_v<T, Vector4>) {
-      type_info = UniformTypeInfo{
-        .type = UniformTypeInfo::Type::F32,
-        .grade = UniformTypeInfo::Grade::Vec4
-      };
-    }
-    if constexpr (std::is_same_v<T, Matrix4>) {
-      type_info = UniformTypeInfo{
-        .type = UniformTypeInfo::Type::F32,
-        .grade = UniformTypeInfo::Grade::Mat4
-      };
-    }
+    auto type_info = UniformTypeInfo::get<T>();
 
     auto [size, alignment] = get_size_and_alignment(type_info, count);
 
-    auto remainder = position % alignment;
+    auto remainder = position_ % alignment;
     if (remainder != 0) {
-      position += alignment - remainder;
+      position_ += alignment - remainder;
     }
 
     members_.push_back(Member{
       .name = name,
       .type_info = type_info,
-      .position = position,
-      .count = count,
-      .size = size,
-      .alignment = alignment
+      .position = position_,
+      .count = count
     });
 
-    position += size;
-  }
-
-  auto to_string() const -> std::string {
-    std::string text;
-
-    for (auto& member : members_) {
-      text += fmt::format("{}{} {} (position: {}, size: {}, alignment: {})\n",
-        member.type_info.to_string(),
-        member.count > 1 ? fmt::format("[{}]", member.count) : "",
-        member.name,
-        member.position,
-        member.size,
-        member.alignment
-      );
-    }
-
-    return text;
+    position_ += size;
   }
 
   static auto get_size_and_alignment(
@@ -204,36 +186,9 @@ private:
     UniformTypeInfo type_info;
     size_t position;
     size_t count;
-
-    // TODO: this is mostly just for debugging, remove later.
-    size_t size;
-    size_t alignment;
   };
 
-//   template<typename T>
-//   struct TypeInfo {
-//   };
-
-// #define DECLARE_TYPE_INFO(T, type_, grade_) \
-//   template<>\
-//   struct TypeInfo<T> {\
-//     static constexpr Type type = type_;\
-//     static constexpr Grade grade = grade_;\
-//   };
-
-//   DECLARE_TYPE_INFO(bool, Type::Bool, Grade::Scalar);
-//   DECLARE_TYPE_INFO(int, Type::SInt, Grade::Scalar);
-//   DECLARE_TYPE_INFO(uint, Type::UInt, Grade::Scalar);
-//   DECLARE_TYPE_INFO(float, Type::F32, Grade::Scalar);
-//   DECLARE_TYPE_INFO(double, Type::F64, Grade::Scalar);
-//   DECLARE_TYPE_INFO(Vector2, Type::F32, Grade::Vec2);
-//   DECLARE_TYPE_INFO(Vector3, Type::F32, Grade::Vec3);
-//   DECLARE_TYPE_INFO(Vector4, Type::F32, Grade::Vec4);
-//   DECLARE_TYPE_INFO(Matrix4, Type::F32, Grade::Mat4);
-
-// #undef DECLARE_TYPE_INFO
-
-  size_t position;
+  size_t position_;
   std::vector<Member> members_;
 };
 
@@ -244,10 +199,9 @@ struct UniformBlock {
   UniformBlock() {}
 
   UniformBlock(UniformBlockLayout const& layout) {
-    data_ = new u8[layout.position];
-    size_ = layout.position;
+    size_ = layout.position_;
+    data_ = new u8[size_];
 
-    // TODO: check for duplicate member names.
     for (auto& member : layout.members_) {
       members_[member.name] = member;
     }
@@ -260,11 +214,12 @@ struct UniformBlock {
   }
 
   UniformBlock(UniformBlock const& other) = delete;
-  void operator=(UniformBlock const& other) = delete;
 
   UniformBlock(UniformBlock&& other) {
     operator=(std::move(other));
   }
+
+  void operator=(UniformBlock const& other) = delete;
 
   void operator=(UniformBlock&& other) {
     std::swap(data_, other.data_);
@@ -282,13 +237,19 @@ struct UniformBlock {
 
   template<typename T>
   auto get(std::string const& name) -> T& {
-    /*
-     * TODO:
-     *  - validate that the member exists
-     *  - validate that the member has the requested size
-     *  - how to handle errors? would be nice if we can avoid exceptions.
-     */
-    return *reinterpret_cast<T*>(data_ + members_[name].position);
+    auto match = members_.find(name);
+
+    Assert(match != members_.end(),
+      "UniformBlock: uniform '{}' does not exist", name);
+
+    auto const& member = match->second;
+
+    auto type_info = UniformTypeInfo::get<T>();
+    Assert(member.type_info == type_info,
+      "UniformBlock: uniform '{}' has type {} but was accessed as {}",
+      name, member.type_info.to_string(), type_info.to_string());
+
+    return *reinterpret_cast<T*>(data_ + member.position);
   } 
 
 private:
