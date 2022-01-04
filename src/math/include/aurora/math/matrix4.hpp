@@ -198,7 +198,7 @@ struct Matrix4 : detail::Matrix4<Matrix4, float> {
     float far
   ) -> Matrix4 {
     // cot(fov_y/2) = tan((pi - fov_y)/2)
-    auto y = std::tan((M_PI - fov_y) * 0.5);
+    auto y = std::tan(((float)M_PI - fov_y) * 0.5f);
     auto x = y / aspect_ratio;
 
     auto a = 1 / (near - far);
@@ -220,7 +220,7 @@ struct Matrix4 : detail::Matrix4<Matrix4, float> {
     float far
   ) -> Matrix4 {
     // cot(fov_y/2) = tan((pi - fov_y)/2)
-    auto y = std::tan((M_PI - fov_y) * 0.5);
+    auto y = std::tan(((float)M_PI - fov_y) * 0.5f);
     auto x = y / aspect_ratio;
     
     float a = 1.0 / (far - near);

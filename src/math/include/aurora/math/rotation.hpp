@@ -52,15 +52,15 @@ struct Rotation {
   }
 
   void set_euler(float x, float y, float z) {
-    auto half_x = x * 0.5;
+    auto half_x = x * 0.5f;
     auto cos_x = std::cos(half_x);
     auto sin_x = std::sin(half_x);
     
-    auto half_y = y * 0.5;
+    auto half_y = y * 0.5f;
     auto cos_y = std::cos(half_y);
     auto sin_y = std::sin(half_y);
     
-    auto half_z = z * 0.5;
+    auto half_z = z * 0.5f;
     auto cos_z = std::cos(half_z);
     auto sin_z = std::sin(half_z);
     
