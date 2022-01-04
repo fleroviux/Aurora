@@ -244,7 +244,7 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
       auto s = std::sqrt(trace + 1) * 2;
       auto s_inv = 1 / s;
       return Quaternion{
-        0.25 * s,
+        0.25f * s,
         (mat[1][2] - mat[2][1]) * s_inv,
         (mat[2][0] - mat[0][2]) * s_inv,
         (mat[0][1] - mat[1][0]) * s_inv
@@ -254,7 +254,7 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
       auto s_inv = 1 / s;
       return Quaternion{
         (mat[1][2] - mat[2][1]) * s_inv,
-        0.25 * s,
+        0.25f * s,
         (mat[1][0] + mat[0][1]) * s_inv,
         (mat[2][0] + mat[0][2]) * s_inv
       };
@@ -264,7 +264,7 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
       return Quaternion{
         (mat[2][0] - mat[0][2]) * s_inv,
         (mat[1][0] + mat[0][1]) * s_inv,
-        0.25 * s,
+        0.25f * s,
         (mat[2][1] + mat[1][2]) * s_inv
       };
     } else {
@@ -274,13 +274,13 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
         (mat[0][1] - mat[1][0]) * s_inv,
         (mat[2][0] + mat[0][2]) * s_inv,
         (mat[2][1] + mat[1][2]) * s_inv,
-        0.25 * s
+        0.25f * s
       };
     }
   }
 
   static auto from_axis_angle(Vector3 const& axis, float angle) -> Quaternion {
-    auto a = angle * 0.5;
+    auto a = angle * 0.5f;
     auto c = std::cos(a);
     auto s = std::sin(a);
 

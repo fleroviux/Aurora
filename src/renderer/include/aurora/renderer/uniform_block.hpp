@@ -195,7 +195,6 @@ private:
 struct UniformBlock {
   using Member = UniformBlockLayout::Member;
 
-  // this mostly exists as a workaround - try to remove if possible
   UniformBlock() {}
 
   UniformBlock(UniformBlockLayout const& layout) {
