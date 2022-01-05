@@ -13,7 +13,6 @@ set(HEADERS_PUBLIC
   include/aurora/array_view.hpp
   include/aurora/integer.hpp
   include/aurora/log.hpp
-  include/aurora/updatable.hpp
   include/aurora/utility.hpp
 )
 

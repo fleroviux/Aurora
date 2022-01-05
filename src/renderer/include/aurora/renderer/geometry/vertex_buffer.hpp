@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include <aurora/renderer/gpu_resource.hpp>
 #include <aurora/integer.hpp>
-#include <aurora/updatable.hpp>
 #include <vector>
 
 namespace Aura {
@@ -33,13 +33,11 @@ struct VertexBufferLayout {
   std::vector<Attribute> attributes;
 };
 
-struct VertexBuffer : Updatable {
+struct VertexBuffer final : GPUResource {
   VertexBuffer(
     VertexBufferLayout layout,
     std::vector<u8>&& buffer
-  )   : layout_(layout)
-      , buffer_(std::move(buffer)) {
-  }
+  ) : layout_(layout), buffer_(std::move(buffer)) {}
 
   VertexBuffer(
     VertexBufferLayout layout,

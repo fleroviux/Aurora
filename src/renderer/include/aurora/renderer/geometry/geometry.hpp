@@ -10,28 +10,20 @@
 
 namespace Aura {
 
-struct Geometry {
-  Geometry(IndexBuffer const& index_buffer)
-      : index_buffer(index_buffer) {
-  }
+struct Geometry final : GPUResource {
+  Geometry(IndexBuffer const& index_buffer) : index_buffer(index_buffer) {}
 
   Geometry(
     IndexBuffer const& index_buffer,
     std::vector<VertexBuffer> const& buffers
-  )   : index_buffer(index_buffer)
-      , buffers(buffers) {
-  }
+  ) : index_buffer(index_buffer), buffers(buffers) {}
 
-  Geometry(IndexBuffer&& index_buffer)
-      : index_buffer(std::move(index_buffer)) {
-  }
+  Geometry(IndexBuffer&& index_buffer) : index_buffer(std::move(index_buffer)) {}
 
   Geometry(
     IndexBuffer&& index_buffer,
     std::vector<VertexBuffer>&& buffers
-  )   : index_buffer(std::move(index_buffer))
-      , buffers(std::move(buffers)) {
-  }
+  ) : index_buffer(std::move(index_buffer)), buffers(std::move(buffers)) {}
 
   enum class Topology {
     Triangles

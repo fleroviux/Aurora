@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include <aurora/renderer/gpu_resource.hpp>
 #include <aurora/integer.hpp>
-#include <aurora/updatable.hpp>
 #include <vector>
 
 namespace Aura {
@@ -15,13 +15,11 @@ enum class IndexDataType {
   UInt32
 };
 
-struct IndexBuffer : Updatable {
+struct IndexBuffer final : GPUResource {
   IndexBuffer(
     IndexDataType data_type,
     std::vector<u8>&& buffer
-  )   : data_type_(data_type)
-      , buffer_(std::move(buffer)) {
-  }
+  ) : data_type_(data_type), buffer_(std::move(buffer)) {}
 
   IndexBuffer(
     IndexDataType data_type,

@@ -112,6 +112,9 @@ int main() {
   auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
   scene->add_child(behemoth);
 
+  auto sponza = GLTFLoader{}.parse("Sponza/Sponza.gltf");
+  scene->add_child(sponza);
+
   auto event = SDL_Event{};
 
   float x = 0;
@@ -158,6 +161,12 @@ int main() {
       };
 
       traverse(scene);
+    }
+
+    if (state[SDL_SCANCODE_O]) {
+      // TODO: this somehow cause some kind of corruption.
+      scene->remove_child(behemoth);
+      delete behemoth;
     }
 
     camera->transform().rotation().set_euler(x, y, z);

@@ -27,7 +27,7 @@ private:
 
   void update_camera_transform(GameObject* camera);
 
-  void upload_geometry(Geometry const* geometry, GeometryCacheEntry& data);
+  void upload_geometry(Geometry* geometry, GeometryCacheEntry& data);
 
   void bind_uniform_block(
     UniformBlock& uniform_block,
@@ -37,7 +37,21 @@ private:
   void bind_texture(Texture* texture, GLenum slot);
 
   void bind_material(Material* material, GameObject* object);
-  void draw_geometry(Geometry const* geometry);
+  void draw_geometry(Geometry* geometry);
+
+  void create_geometry(Geometry* geometry);
+
+  void update_geometry_ibo(
+    Geometry* geometry,
+    GeometryCacheEntry& data,
+    bool force_update
+  );
+
+  void update_geometry_vbo(
+    Geometry* geometry,
+    GeometryCacheEntry& data,
+    bool force_update
+  );
 
   void create_default_program();
 

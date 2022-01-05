@@ -76,7 +76,7 @@ void OpenGLRenderer::update_camera_transform(GameObject* camera) {
   uniform_camera.needs_update() = true;
 }
 
-void OpenGLRenderer::upload_geometry(Geometry const* geometry, GeometryCacheEntry& data) {
+void OpenGLRenderer::upload_geometry(Geometry* geometry, GeometryCacheEntry& data) {
   auto& index_buffer = geometry->index_buffer;
 
   glGenVertexArrays(1, &data.vao);
@@ -218,21 +218,22 @@ void OpenGLRenderer::bind_material(Material* material, GameObject* object) {
   }
 }
 
-void OpenGLRenderer::draw_geometry(Geometry const* geometry) {
-  auto data = GeometryCacheEntry{};
-  auto it = geometry_cache_.find(geometry);
+void OpenGLRenderer::draw_geometry(Geometry* geometry) {
+  auto match = geometry_cache_.find(geometry);
 
-  if (it != geometry_cache_.end()) {
-    data = it->second;
-  } else {
-    upload_geometry(geometry, data);
+  if (match == geometry_cache_.end()) {
+    create_geometry(geometry);    
+    match = geometry_cache_.find(geometry);
   }
 
-  auto& index_buffer = geometry->index_buffer;
+  auto& data = match->second;
+  update_geometry_ibo(geometry, data, false);
+  update_geometry_vbo(geometry, data, false);
 
+  auto& index_buffer = geometry->index_buffer;
+  
   glBindVertexArray(data.vao);
 
-  // TODO: check GL_INVALID_OPERATION on first draw?
   switch (index_buffer.data_type()) {
     case IndexDataType::UInt16: {
       glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u16), GL_UNSIGNED_SHORT, 0);
@@ -241,6 +242,84 @@ void OpenGLRenderer::draw_geometry(Geometry const* geometry) {
     case IndexDataType::UInt32: {
       glDrawElements(GL_TRIANGLES, index_buffer.size() / sizeof(u32), GL_UNSIGNED_INT, 0);
       break;
+    }
+  }
+}
+
+void OpenGLRenderer::create_geometry(Geometry* geometry) {
+  auto& data = geometry_cache_[geometry];
+
+  glGenVertexArrays(1, &data.vao);
+  glBindVertexArray(data.vao);
+  glGenBuffers(1, &data.ibo);
+
+  for (auto& buffer : geometry->buffers) {
+    auto vbo = GLuint{};
+    auto& layout = buffer.layout();
+    
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    for (size_t i = 0; i < layout.attributes.size(); i++) {
+      auto& attribute = layout.attributes[i];
+      auto normalized = attribute.normalized ? GL_TRUE : GL_FALSE;
+      auto type = get_gl_attribute_type(attribute.data_type);
+
+      glVertexAttribPointer(
+        attribute.index,
+        attribute.components,
+        type,
+        normalized,
+        layout.stride,
+        (const void*)attribute.offset);
+
+      glEnableVertexAttribArray(attribute.index);
+    }
+
+    data.vbos.push_back(vbo);
+  }
+
+  update_geometry_ibo(geometry, data, true);
+  update_geometry_vbo(geometry, data, true);
+
+  geometry->add_release_callback([this, geometry, data]() {
+    glDeleteVertexArrays(1, &data.vao);
+    glDeleteBuffers(1, &data.ibo);
+    glDeleteBuffers(data.vbos.size(), data.vbos.data());
+    geometry_cache_.erase(geometry);
+  });
+}
+
+void OpenGLRenderer::update_geometry_ibo(
+  Geometry* geometry,
+  GeometryCacheEntry& data,
+  bool force_update
+) {
+  auto& index_buffer = geometry->index_buffer;
+
+  if (index_buffer.needs_update() || force_update) {
+    glBindVertexArray(data.vao);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data.ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer.size(), index_buffer.data(), GL_STATIC_DRAW);
+    index_buffer.needs_update() = false;
+  }
+}
+
+void OpenGLRenderer::update_geometry_vbo(
+  Geometry* geometry,
+  GeometryCacheEntry& data,
+  bool force_update
+) {
+  auto buffer_count = geometry->buffers.size();
+
+  for (size_t i = 0; i < buffer_count; i++) {
+    auto& buffer = geometry->buffers[i];
+
+    if (buffer.needs_update() || force_update) {
+      glBindVertexArray(data.vao);
+      glBindBuffer(GL_ARRAY_BUFFER, data.vbos[i]);
+      glBufferData(GL_ARRAY_BUFFER, buffer.size(), buffer.data(), GL_STATIC_DRAW);
+      buffer.needs_update() = false;
     }
   }
 }
