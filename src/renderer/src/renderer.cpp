@@ -76,47 +76,6 @@ void OpenGLRenderer::update_camera_transform(GameObject* camera) {
   uniform_camera.needs_update() = true;
 }
 
-void OpenGLRenderer::upload_geometry(Geometry* geometry, GeometryCacheEntry& data) {
-  auto& index_buffer = geometry->index_buffer;
-
-  glGenVertexArrays(1, &data.vao);
-  glBindVertexArray(data.vao);
-
-  glGenBuffers(1, &data.ibo);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data.ibo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer.size(), index_buffer.data(), GL_STATIC_DRAW);
-
-  for (auto& buffer : geometry->buffers) {
-    GLuint vbo;
-
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, buffer.size(), buffer.data(), GL_STATIC_DRAW);
-
-    auto& layout = buffer.layout();
-
-    for (size_t i = 0; i < layout.attributes.size(); i++) {
-      auto& attribute = layout.attributes[i];
-      auto normalized = attribute.normalized ? GL_TRUE : GL_FALSE;
-      auto type = get_gl_attribute_type(attribute.data_type);
-
-      glVertexAttribPointer(
-        attribute.index,
-        attribute.components,
-        type,
-        normalized,
-        layout.stride,
-        (const void*)attribute.offset);
-
-      glEnableVertexAttribArray(attribute.index);
-    }
-
-    data.vbos.push_back(vbo);
-  }
-
-  geometry_cache_[geometry] = data;
-}
-
 void OpenGLRenderer::bind_uniform_block(
   UniformBlock& uniform_block,
   GLuint program,

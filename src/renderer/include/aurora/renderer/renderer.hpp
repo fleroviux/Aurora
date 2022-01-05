@@ -27,8 +27,6 @@ private:
 
   void update_camera_transform(GameObject* camera);
 
-  void upload_geometry(Geometry* geometry, GeometryCacheEntry& data);
-
   void bind_uniform_block(
     UniformBlock& uniform_block,
     GLuint program,
