@@ -163,10 +163,10 @@ int main() {
       traverse(scene);
     }
 
-    if (state[SDL_SCANCODE_O]) {
-      // TODO: this somehow cause some kind of corruption.
+    if (state[SDL_SCANCODE_O] && behemoth != nullptr) {
       scene->remove_child(behemoth);
       delete behemoth;
+      behemoth = nullptr;
     }
 
     camera->transform().rotation().set_euler(x, y, z);
