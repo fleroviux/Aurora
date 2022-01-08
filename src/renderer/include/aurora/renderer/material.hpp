@@ -18,7 +18,8 @@
 namespace Aura {
 
 struct Material {
-  Material(std::vector<std::string> const& compile_options = {}) {
+  Material(std::vector<std::string> const& compile_options = {})
+      : compile_option_names_(compile_options) {
     // TODO: validate that there aren't more than 24 compile options.
     for (size_t i = 0; i < compile_options.size(); i++) {
       compile_options_map_[compile_options[i]] = i;
@@ -34,6 +35,10 @@ struct Material {
 
   auto get_compile_options() const -> u32 {
     return compile_options_;
+  }
+
+  auto get_compile_option_names() const -> std::vector<std::string> const& {
+    return compile_option_names_;
   }
 
   void set_compile_option(std::string const& name, bool enable) {
@@ -53,6 +58,7 @@ struct Material {
 private:
   u32 compile_options_ = 0;
   std::unordered_map<std::string, size_t> compile_options_map_;
+  std::vector<std::string> compile_option_names_;
 };
 
 struct PbrMaterial final : Material {
@@ -60,7 +66,7 @@ struct PbrMaterial final : Material {
     "ENABLE_ALBEDO_MAP",
     "ENABLE_METALNESS_MAP",
     "ENABLE_ROUGHNESS_MAP",
-    "ENABLE_CLEARCOAT"
+    "ENABLE_NORMAL_MAP"
   }) {
     auto layout = UniformBlockLayout{};
     layout.add<Matrix4>("model");
@@ -77,20 +83,40 @@ struct PbrMaterial final : Material {
     return uniforms_.get<float>("roughness");
   }
 
-  auto albedo_map() -> std::shared_ptr<Texture>& {
+  auto get_albedo_map() -> std::shared_ptr<Texture> {
     return texture_slots_[0];
   }
 
-  auto metalness_map() -> std::shared_ptr<Texture>& {
+  void set_albedo_map(std::shared_ptr<Texture> texture) {
+    texture_slots_[0] = texture;
+    set_compile_option("ENABLE_ALBEDO_MAP", (bool)texture);
+  }
+
+  auto get_metalness_map() -> std::shared_ptr<Texture> {
     return texture_slots_[1];
   }
 
-  auto roughness_map() -> std::shared_ptr<Texture>& {
+  void set_metalness_map(std::shared_ptr<Texture> texture) {
+    texture_slots_[1] = texture;
+    set_compile_option("ENABLE_METALNESS_MAP", (bool)texture);
+  }
+
+  auto get_roughness_map() -> std::shared_ptr<Texture> {
     return texture_slots_[2];
   }
 
-  auto normal_map() -> std::shared_ptr<Texture>& {
+  void set_roughness_map(std::shared_ptr<Texture> texture) {
+    texture_slots_[2] = texture;
+    set_compile_option("ENABLE_ROUGHNESS_MAP", (bool)texture);
+  }
+
+  auto get_normal_map() -> std::shared_ptr<Texture> {
     return texture_slots_[3];
+  }
+
+  void set_normal_map(std::shared_ptr<Texture> texture) {
+    texture_slots_[3] = texture;
+    set_compile_option("ENABLE_NORMAL_MAP", (bool)texture);
   }
 
   auto get_vert_shader() -> char const* override {

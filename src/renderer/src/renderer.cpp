@@ -153,27 +153,38 @@ void OpenGLRenderer::bind_texture(Texture* texture, GLenum slot) {
   glBindTexture(GL_TEXTURE_2D, id);
 }
 
-auto OpenGLRenderer::get_material_program(Material* material) -> GLuint {
-  auto key = std::type_index{typeid(material)};
+auto OpenGLRenderer::get_program(Material* material) -> GLuint {
+  auto compile_options = material->get_compile_options();
+  auto key = ProgramCacheKey{
+    std::type_index{typeid(material)}, compile_options};
   auto match = program_cache_.find(key);
 
-  if (match == program_cache_.end()) {
-    auto program = compile_program(
-      material->get_vert_shader(),
-      material->get_frag_shader());
-
-    Assert(program.has_value(), "AuroraRender: failed to compile program");
-
-    program_cache_[key] = program.value();
-    Log<Error>("Compiled one material");
-    return program.value();
+  if (match != program_cache_.end()) {
+    return match->second;
   }
 
-  return match->second;
+  auto prologue = std::string{"#version 420 core\n\n"};
+  auto& compile_option_names = material->get_compile_option_names();
+
+  for (size_t i = 0; i< compile_option_names.size(); i++) {
+    if (compile_options & (1 << i)) {
+      prologue += fmt::format("#define {}\n", compile_option_names[i]);
+    }
+  }
+
+  auto vert_shader = fmt::format("{}\n{}", prologue, material->get_vert_shader());
+  auto frag_shader = fmt::format("{}\n{}", prologue, material->get_frag_shader());
+
+  auto program = compile_program(vert_shader.c_str(), frag_shader.c_str());
+
+  Assert(program.has_value(), "AuroraRender: failed to compile program");
+
+  program_cache_[key] = program.value();
+  return program.value();
 }
 
 void OpenGLRenderer::bind_material(Material* material, GameObject* object) {
-  auto program = get_material_program(material);
+  auto program = get_program(material);
   auto& uniforms = material->get_uniforms();
 
   glUseProgram(program);

@@ -52,7 +52,7 @@ void GLTFLoader::load_buffers(nlohmann::json const& gltf) {
       auto uri = buffer["uri"].get<std::string>();
       auto byte_length = buffer["byteLength"].get<size_t>();
 
-      uri = base_path_ / uri;
+      uri = (base_path_ / uri).string();
 
       std::ifstream file{uri, std::ios::binary};
 
@@ -262,7 +262,7 @@ void GLTFLoader::load_images(nlohmann::json const& gltf) {
       auto uri = image["uri"].get<std::string>();
 
       // TODO: URI can be a data-URI but we assume a file path right now
-      images_.push_back(Texture::load(base_path_ / uri));
+      images_.push_back(Texture::load((base_path_ / uri).string()));
 
       Log<Info>("GLTFLoader: loaded image: {}", uri);
     }
@@ -291,20 +291,20 @@ void GLTFLoader::load_materials(nlohmann::json const& gltf) {
 
         if (pbr.contains("baseColorTexture")) {
           auto tid = pbr["baseColorTexture"]["index"].get<size_t>();
-          material_out->albedo_map() = images_[gltf["textures"][tid]["source"].get<size_t>()];
+          material_out->set_albedo_map(images_[gltf["textures"][tid]["source"].get<size_t>()]);
         }
 
         if (pbr.contains("metallicRoughnessTexture")) {
           auto tid = pbr["metallicRoughnessTexture"]["index"].get<size_t>();
-          material_out->metalness_map() = images_[gltf["textures"][tid]["source"].get<size_t>()];
-          material_out->roughness_map() = material_out->metalness_map();
+          material_out->set_metalness_map(images_[gltf["textures"][tid]["source"].get<size_t>()]);
+          material_out->set_roughness_map(material_out->get_metalness_map());
         }
       }
 
       if (material.contains("normalTexture")) {
         // TODO: read out and use normal scale.
         auto tid = material["normalTexture"]["index"].get<size_t>();
-        material_out->normal_map() = images_[gltf["textures"][tid]["source"].get<size_t>()];
+        material_out->set_normal_map(images_[gltf["textures"][tid]["source"].get<size_t>()]);
       }
 
       materials_.push_back(material_out);

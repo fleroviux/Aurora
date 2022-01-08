@@ -8,6 +8,10 @@
 #include <cstring>
 #include <SDL.h>
 
+#ifdef main
+  #undef main
+#endif
+
 #include "gltf_loader.hpp"
 
 using namespace Aura;
@@ -154,7 +158,7 @@ int main() {
         if (object->has_component<Mesh>()) {
           auto mesh = object->get_component<Mesh>();
           auto pbr_material = (PbrMaterial*)mesh->material.get();
-          pbr_material->albedo_map() = {};
+          pbr_material->set_albedo_map({});
         }
 
         for (auto child : object->children()) traverse(child);
