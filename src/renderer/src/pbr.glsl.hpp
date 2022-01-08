@@ -1,3 +1,9 @@
+/*
+ * Copyright (C) 2021 fleroviux
+ */
+
+#pragma once
+
 constexpr auto pbr_vert = R"(\
   #version 420 core
 

@@ -4,7 +4,7 @@
 
 #include <aurora/renderer/renderer.hpp>
 
-#include "pbr.glsl.hpp"
+//#include "pbr.glsl.hpp"
 
 namespace Aura {
 
@@ -19,8 +19,6 @@ OpenGLRenderer::OpenGLRenderer() {
   layout_camera.add<Matrix4>("view");
   layout_camera.add<Matrix4>("projection");
   uniform_camera = UniformBlock{layout_camera};
-
-  create_default_program();
 }
 
 OpenGLRenderer::~OpenGLRenderer() {
@@ -155,10 +153,30 @@ void OpenGLRenderer::bind_texture(Texture* texture, GLenum slot) {
   glBindTexture(GL_TEXTURE_2D, id);
 }
 
-void OpenGLRenderer::bind_material(Material* material, GameObject* object) {
-  glUseProgram(program);
+auto OpenGLRenderer::get_material_program(Material* material) -> GLuint {
+  auto key = std::type_index{typeid(material)};
+  auto match = program_cache_.find(key);
 
+  if (match == program_cache_.end()) {
+    auto program = compile_program(
+      material->get_vert_shader(),
+      material->get_frag_shader());
+
+    Assert(program.has_value(), "AuroraRender: failed to compile program");
+
+    program_cache_[key] = program.value();
+    Log<Error>("Compiled one material");
+    return program.value();
+  }
+
+  return match->second;
+}
+
+void OpenGLRenderer::bind_material(Material* material, GameObject* object) {
+  auto program = get_material_program(material);
   auto& uniforms = material->get_uniforms();
+
+  glUseProgram(program);
 
   uniforms.get<Matrix4>("model") = object->transform().world();
   uniforms.needs_update() = true;
@@ -284,14 +302,6 @@ void OpenGLRenderer::update_geometry_vbo(
       buffer.needs_update() = false;
     }
   }
-}
-
-void OpenGLRenderer::create_default_program() {
-  auto prog = compile_program(pbr_vert, pbr_frag);
-
-  Assert(prog.has_value(), "AuroraRender: failed to compile default shader");
-
-  program = prog.value();
 }
 
 auto OpenGLRenderer::compile_shader(
