@@ -23,6 +23,8 @@ struct Mesh final : Component {
 
   std::shared_ptr<Geometry> geometry;
   std::shared_ptr<Material> material;
+
+  bool visible = true;
 };
 
 } // namespace Aura

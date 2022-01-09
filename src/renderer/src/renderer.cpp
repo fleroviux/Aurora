@@ -33,25 +33,27 @@ void OpenGLRenderer::render(GameObject* scene) {
   update_camera_transform(scene->get_component<Scene>()->camera);
 
   const std::function<void(GameObject*)> traverse = [&](GameObject* object) {
-    auto& transform = object->transform();
+    if (object->visible()) {
+      auto& transform = object->transform();
 
-    // TODO: this algorithm breaks with the camera at least.
-    if (transform.auto_update()) {
-      transform.update_local();
+      // TODO: this algorithm breaks with the camera at least.
+      if (transform.auto_update()) {
+        transform.update_local();
+      }
+      transform.update_world(false);
+
+      auto mesh = object->get_component<Mesh>();
+
+      if (mesh != nullptr && mesh->visible) {
+        auto geometry = mesh->geometry.get();
+        auto material = mesh->material.get();
+
+        bind_material(material, object);
+        draw_geometry(geometry);
+      }
+
+      for (auto child : object->children()) traverse(child);
     }
-    transform.update_world(false);
-
-    auto mesh = object->get_component<Mesh>();
-
-    if (mesh != nullptr) {
-      auto geometry = mesh->geometry.get();
-      auto material = mesh->material.get();
-
-      bind_material(material, object);
-      draw_geometry(geometry);
-    }
-
-    for (auto child : object->children()) traverse(child);
   };
 
   traverse(scene);

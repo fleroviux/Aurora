@@ -20,7 +20,9 @@ namespace Aura {
 struct Material {
   Material(std::vector<std::string> const& compile_options = {})
       : compile_option_names_(compile_options) {
-    // TODO: validate that there aren't more than 24 compile options.
+    Assert(compile_options.size() <= 24,
+      "Material: number of compile options is limited to 24");
+
     for (size_t i = 0; i < compile_options.size(); i++) {
       compile_options_map_[compile_options[i]] = i;
     }
@@ -41,6 +43,7 @@ struct Material {
     return compile_option_names_;
   }
 
+protected:
   void set_compile_option(std::string const& name, bool enable) {
     auto match = compile_options_map_.find(name);
 

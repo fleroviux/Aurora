@@ -63,6 +63,14 @@ struct GameObject final {
     name_ = name;
   }
 
+  bool visible() const {
+    return visible_;
+  }
+
+  bool& visible() {
+    return visible_;
+  }
+
   void add_child(GameObject* child) {
     if (child->parent_ != nullptr) {
       if (child->parent_ == this) {
@@ -134,6 +142,7 @@ private:
   GameObject* parent_ = nullptr;
   std::vector<GameObject*> children_;
   std::string name_ = "GameObject";
+  bool visible_ = true;
   std::unordered_map<std::type_index, Component*> components_;
   Transform* transform_;
 };
