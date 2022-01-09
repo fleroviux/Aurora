@@ -18,6 +18,12 @@
 namespace Aura {
 
 struct Material {
+  enum class Side {
+    Front,
+    Back,
+    Both
+  };
+
   Material(std::vector<std::string> const& compile_options = {})
       : compile_option_names_(compile_options) {
     Assert(compile_options.size() <= 24,
@@ -34,6 +40,14 @@ struct Material {
   virtual auto get_frag_shader() -> char const* = 0;
   virtual auto get_uniforms() -> UniformBlock& = 0;
   virtual auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture>> = 0;
+
+  auto side() const -> Side {
+    return side_;
+  }
+
+  auto side() -> Side& {
+    return side_;
+  }
 
   auto get_compile_options() const -> u32 {
     return compile_options_;
@@ -59,6 +73,7 @@ protected:
   }
 
 private:
+  Side side_ = Side::Both;
   u32 compile_options_ = 0;
   std::unordered_map<std::string, size_t> compile_options_map_;
   std::vector<std::string> compile_option_names_;

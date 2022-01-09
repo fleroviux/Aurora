@@ -13,7 +13,6 @@ OpenGLRenderer::OpenGLRenderer() {
   glDepthFunc(GL_LESS);
   glEnable(GL_TEXTURE_2D);
   glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl_max_anisotropy);
-  glEnable(GL_CULL_FACE);
 
   auto layout_camera = UniformBlockLayout{};
   layout_camera.add<Matrix4>("view");
@@ -208,7 +207,19 @@ void OpenGLRenderer::bind_material(Material* material, GameObject* object) {
     }
   }
 
-  glCullFace(GL_BACK);
+  switch (material->side()) {
+    case Material::Side::Front:
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_BACK);
+      break;
+    case Material::Side::Back:
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_FRONT);
+      break;
+    case Material::Side::Both:
+      glDisable(GL_CULL_FACE);
+      break;
+  }
 }
 
 void OpenGLRenderer::draw_geometry(Geometry* geometry) {
