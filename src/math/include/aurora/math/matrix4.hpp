@@ -234,6 +234,34 @@ struct Matrix4 : detail::Matrix4<Matrix4, float> {
       0, 0, 1, 0
     }};
   }
+
+  static auto orthographic_gl(
+    float left,
+    float right,
+    float bottom,
+    float top,
+    float near,
+    float far
+  ) -> Matrix4 {
+    auto w = right - left;
+    auto h = top - bottom;
+    auto d = far - near;
+
+    auto tx = -(right + left) / w;
+    auto ty = -(top + bottom) / h;
+    auto tz = -(far + near) / d;
+
+    auto x =  2.0f / w;
+    auto y =  2.0f / h;
+    auto z = -2.0f / d;
+
+    return Matrix4{{
+      x, 0, 0, tx,
+      0, y, 0, ty,
+      0, 0, z, tz,
+      0, 0, 0, 1
+    }};
+  }
 };
 
 } // namespace Aura

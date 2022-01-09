@@ -59,20 +59,23 @@ void OpenGLRenderer::render(GameObject* scene) {
 }
 
 void OpenGLRenderer::update_camera_transform(GameObject* camera) {
-  // TODO: validate that the camera component exists.
-  auto camera_component = camera->get_component<Camera>();
-  
   auto view = camera->transform().world().inverse();
 
-  auto projection = Matrix4::perspective_gl(
-    camera_component->field_of_view,
-    camera_component->aspect_ratio,
-    camera_component->near,
-    camera_component->far
-  );
+  auto& projection = uniform_camera.get<Matrix4>("projection");
+
+  if (camera->has_component<PerspectiveCamera>()) {
+    auto cam = camera->get_component<PerspectiveCamera>();
+
+    projection = Matrix4::perspective_gl(
+      cam->field_of_view, cam->aspect_ratio, cam->near, cam->far);
+  } else if (camera->has_component<OrthographicCamera>()) {
+    auto cam = camera->get_component<OrthographicCamera>();
+
+    projection = Matrix4::orthographic_gl(
+      cam->left, cam->right, cam->bottom, cam->top, cam->near, cam->far);
+  }
 
   uniform_camera.get<Matrix4>("view") = view;
-  uniform_camera.get<Matrix4>("projection") = projection;
   uniform_camera.needs_update() = true;
 }
 

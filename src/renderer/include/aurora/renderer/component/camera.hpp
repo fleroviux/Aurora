@@ -8,15 +8,15 @@
 
 namespace Aura {
 
-struct Camera final : Component {
+struct PerspectiveCamera final : Component {
   using Component::Component;
 
-  Camera(
+  PerspectiveCamera(
     GameObject* owner,
-    double field_of_view,
-    double aspect_ratio,
-    double near,
-    double far 
+    float field_of_view,
+    float aspect_ratio,
+    float near,
+    float far 
   )   : Component(owner)
       , field_of_view(field_of_view)
       , aspect_ratio(aspect_ratio)
@@ -24,17 +24,38 @@ struct Camera final : Component {
       , far(far) {
   }
 
-  // Vertical field of view
-  double field_of_view = 45.0;
+  float field_of_view = 45.0;
+  float aspect_ratio = 16 / 9.0;
+  float near = 0.01;
+  float far = 500.0;
+};
 
-  // Ratio of width to height (width divided by height)
-  double aspect_ratio = 16 / 9.0;
+struct OrthographicCamera final : Component {
+  using Component::Component;
 
-  // Near camera clipping plane
-  double near = 0.01;
+  OrthographicCamera(
+    GameObject* owner,
+    float left,
+    float right,
+    float bottom,
+    float top,
+    float near,
+    float far
+  )   : Component(owner)
+      , left(left)
+      , right(right)
+      , bottom(bottom)
+      , top(top)
+      , near(near)
+      , far(far) {
+  }
 
-  // Far camera clipping plane
-  double far = 500.0;
+  float left = -1.0;
+  float right = 1.0;
+  float bottom = -1.0;
+  float top = 1.0;
+  float near = 0.01;
+  float far = 500.0;
 };
 
 } // namespace Aura

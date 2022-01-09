@@ -73,7 +73,7 @@ protected:
   }
 
 private:
-  Side side_ = Side::Both;
+  Side side_ = Side::Front;
   u32 compile_options_ = 0;
   std::unordered_map<std::string, size_t> compile_options_map_;
   std::vector<std::string> compile_option_names_;

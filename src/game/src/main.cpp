@@ -109,7 +109,7 @@ int main() {
   auto scene = new GameObject{"Scene"};
   auto camera = new GameObject{"Camera"};
   //camera->transform().position() = Vector3{4.0, 4.0, -3.0};
-  camera->add_component<Camera>();
+  camera->add_component<PerspectiveCamera>();
   scene->add_component<Scene>(camera);
   scene->add_child(camera);
 
