@@ -9,7 +9,6 @@
 #include <aurora/log.hpp>
 #include <aurora/utility.hpp>
 #include <memory>
-#include <stb_image.h>
 #include <string>
 
 namespace Aura {

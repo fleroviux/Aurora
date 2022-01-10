@@ -1,3 +1,181 @@
+
+/*
+ * Copyright (C) 2022 fleroviux
+ */
+
+#include <aurora/renderer/component/mesh.hpp>
+#include <aurora/scene/game_object.hpp>
+
+using namespace Aura;
+
+auto create_example_scene() -> GameObject* {
+  auto scene = new GameObject{};
+
+  const u16 plane_indices[] = {
+    0, 1, 2,
+    2, 3, 0
+  };
+
+  const float plane_vertices[] = {
+  // POSITION   UV         COLOR
+    -1, +1, 2,  0.0, 0.0,  1.0, 0.0, 0.0,
+    +1, +1, 2,  1.0, 0.0,  0.0, 1.0, 0.0,
+    +1, -1, 2,  1.0, 1.0,  0.0, 0.0, 1.0,
+    -1, -1, 2,  0.0, 1.0,  1.0, 0.0, 1.0
+  };
+
+  auto index_buffer = IndexBuffer{IndexDataType::UInt16, 6};
+  std::memcpy(
+    index_buffer.data(), plane_indices, sizeof(plane_indices));
+
+  auto vertex_buffer_layout = VertexBufferLayout{
+    .stride = sizeof(float) * 8,
+    .attributes = {{
+      .index = 0,
+      .data_type = VertexDataType::Float32,
+      .components = 3,
+      .normalized = false,
+      .offset = 0
+    }, {
+      .index = 2,
+      .data_type = VertexDataType::Float32,
+      .components = 2,
+      .normalized = false,
+      .offset = sizeof(float) * 3
+    }, {
+      .index = 3,
+      .data_type = VertexDataType::Float32,
+      .components = 3,
+      .normalized = false,
+      .offset = sizeof(float) * 5
+    }}
+  };
+  auto vertex_buffer = VertexBuffer{vertex_buffer_layout, 4};
+  std::memcpy(
+    vertex_buffer.data(), plane_vertices, sizeof(plane_vertices));
+
+  auto geometry = std::make_shared<Geometry>(index_buffer);
+  geometry->buffers.push_back(std::move(vertex_buffer));
+
+  auto material = std::make_shared<PbrMaterial>();
+
+  auto plane = new GameObject{"Plane0"};
+  plane->add_component<Mesh>(geometry, material);
+  scene->add_child(plane);
+  return scene;
+}
+
+// ---------------------------------------------------
+// legacy level one 
+
+#include <aurora/array_view.hpp>
+#include <aurora/integer.hpp>
+#include <vulkan/vulkan.h>
+
+auto find_memory_type_index(
+  VkPhysicalDevice physical_device,
+  u32 memory_type_bits,
+  VkMemoryPropertyFlags property_flags
+) -> u32 {
+  auto memory_properties = VkPhysicalDeviceMemoryProperties{};
+
+  // TODO: this should only be read out once during device creation.
+  vkGetPhysicalDeviceMemoryProperties(physical_device, &memory_properties);
+
+  for (u32 i = 0; i < memory_properties.memoryTypeCount; i++) {
+    if (memory_type_bits & (1 << i)) {
+      auto property_flags_have = memory_properties.memoryTypes[i].propertyFlags;
+      if ((property_flags_have & property_flags) == property_flags) {
+        return i;
+      }
+    }
+  }
+
+  Assert(false, "Vulkan: find_memory_type_index() failed to find suitable memory type.");
+}
+
+auto create_buffer_with_data(
+  VkPhysicalDevice physical_device,
+  VkDevice device,
+  ArrayView<u8> const& data,
+  bool index
+) -> VkBuffer {
+  auto buffer = VkBuffer{};
+  auto memory = VkDeviceMemory{};
+  auto memory_requirements = VkMemoryRequirements{};
+
+  auto usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+  if (index) {
+    usage = (VkBufferUsageFlagBits)(usage | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+  } else {
+    usage = (VkBufferUsageFlagBits)(usage | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+  }
+
+  auto buffer_info = VkBufferCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = 0,
+    .size = data.size(),
+    .usage = usage,
+    // Hmm check this, we might use this buffer with multiple queues
+    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    .queueFamilyIndexCount = 0,
+    .pQueueFamilyIndices = nullptr
+  };
+
+  if (vkCreateBuffer(device, &buffer_info, nullptr, &buffer) != VK_SUCCESS) {
+    Assert(false, "Vulkan: failed to create a buffer :(");
+  }
+
+  vkGetBufferMemoryRequirements(device, buffer, &memory_requirements);
+
+  auto allocate_info = VkMemoryAllocateInfo{
+    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .pNext = nullptr,
+    .allocationSize = memory_requirements.size,
+    .memoryTypeIndex = find_memory_type_index(
+      physical_device,
+      memory_requirements.memoryTypeBits,
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+    )
+  };
+
+  if (vkAllocateMemory(device, &allocate_info, nullptr, &memory) != VK_SUCCESS) {
+    Assert(false, "Vulkan: failed to allocate buffer memory :(");
+  }
+
+  if (vkBindBufferMemory(device, buffer, memory, 0) != VK_SUCCESS) {
+    Assert(false, "Vulkan: failed to bind memory to buffer :(");
+  }
+
+  void* host_buffer;
+
+  if (vkMapMemory(device, memory, 0, VK_WHOLE_SIZE, 0, &host_buffer) != VK_SUCCESS) {
+    Assert(false, "Vulkan: failed to map buffer to host memory :(");
+  }
+
+  std::memcpy(host_buffer, data.data(), data.size());
+
+  auto mapped_memory_range = VkMappedMemoryRange{
+    .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+    .pNext = nullptr,
+    .memory = memory,
+    .offset = 0,
+    .size = VK_WHOLE_SIZE
+  };
+
+  if (vkFlushMappedMemoryRanges(device, 1, &mapped_memory_range) != VK_SUCCESS) {
+    Assert(false, "Vulkan: failed to flush mapped memory range :(");
+  }
+
+  vkUnmapMemory(device, memory);
+  return buffer;
+}
+
+// ---------------------------------------------------
+// legacy level two 
+
 #include <algorithm>
 #include <cstdio>
 #include <cstdint>
@@ -5,7 +183,6 @@
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
-#include <vulkan/vulkan.h>
 #include <vector>
 
 #ifdef main
@@ -327,30 +504,6 @@ auto sdl_create_surface(
   return VK_NULL_HANDLE;
 }
 
-auto find_memory_type_index(
-  VkPhysicalDevice physical_device,
-  u32 memory_type_bits,
-  VkMemoryPropertyFlags property_flags
-) -> u32 {
-  auto memory_properties = VkPhysicalDeviceMemoryProperties{};
-
-  // TODO: this should only be read out once during device creation.
-  vkGetPhysicalDeviceMemoryProperties(physical_device, &memory_properties);
-
-  for (u32 i = 0; i < memory_properties.memoryTypeCount; i++) {
-    if (memory_type_bits & (1 << i)) {
-      auto property_flags_have = memory_properties.memoryTypes[i].propertyFlags;
-      if ((property_flags_have & property_flags) == property_flags) {
-        return i;
-      }
-    }
-  }
-
-  // TODO: better handle the error
-  std::puts("find_memory_type_index failed :(");
-  return 0xFFFFFFFF;
-}
-
 int main(int argc, char** argv) {
   (void)argc;
   (void)argv;
@@ -587,76 +740,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  auto buffer_vtx = VkBuffer{};
-
-  {
-    auto memory_vtx = VkDeviceMemory{};
-    auto memory_requirements = VkMemoryRequirements{};
-
-    auto buffer_info_vtx = VkBufferCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .size = sizeof(vertices),
-      .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-      // Hmm check this, we might use this buffer with multiple queues
-      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-      .queueFamilyIndexCount = 0,
-      .pQueueFamilyIndices = nullptr
-    };
-
-    if (vkCreateBuffer(device, &buffer_info_vtx, nullptr, &buffer_vtx) != VK_SUCCESS) {
-      std::puts("Failed to create the vertex buffer :(");
-      return -1;
-    }
-
-    vkGetBufferMemoryRequirements(device, buffer_vtx, &memory_requirements);
-
-    auto allocate_info_vtx = VkMemoryAllocateInfo{
-      .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-      .pNext = nullptr,
-      .allocationSize = memory_requirements.size,
-      .memoryTypeIndex = find_memory_type_index(
-        physical_device,
-        memory_requirements.memoryTypeBits,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-      )
-    };
-
-    if (vkAllocateMemory(device, &allocate_info_vtx, nullptr, &memory_vtx) != VK_SUCCESS) {
-      std::puts("Failed to allocate vertex buffer memory :(");
-      return -1;
-    }
-
-    if (vkBindBufferMemory(device, buffer_vtx, memory_vtx, 0) != VK_SUCCESS) {
-      std::puts("Failed to bind memory to vertex buffer :(");
-      return -1;
-    }
-
-    void* host_buffer;
-
-    if (vkMapMemory(device, memory_vtx, 0, VK_WHOLE_SIZE, 0, &host_buffer) != VK_SUCCESS) {
-      std::puts("Failed to map vertex buffer memory to host memory :(");
-      return -1;
-    }
-
-    std::memcpy(host_buffer, vertices, sizeof(vertices));
-
-    auto mapped_memory_range = VkMappedMemoryRange{
-      .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-      .pNext = nullptr,
-      .memory = memory_vtx,
-      .offset = 0,
-      .size = VK_WHOLE_SIZE
-    };
-
-    if (vkFlushMappedMemoryRanges(device, 1, &mapped_memory_range) != VK_SUCCESS) {
-      std::puts("Failed to flush mapped memory range :(");
-      return -1;
-    }
-
-    vkUnmapMemory(device, memory_vtx);
-  }
+  auto buffer_vtx = create_buffer_with_data(
+    physical_device, device, ArrayView{(u8*)vertices, sizeof(vertices)}, false);
 
   auto shader_vert = VkShaderModule{};
   auto shader_frag = VkShaderModule{};
