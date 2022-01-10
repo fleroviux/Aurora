@@ -173,6 +173,135 @@ auto create_buffer_with_data(
   return buffer;
 }
 
+auto get_vk_format_from_attribute(
+  VertexBufferLayout::Attribute const& attribute
+) -> VkFormat {
+  const auto components = attribute.components;
+  const bool normalized = attribute.normalized;
+
+  switch (attribute.data_type) {
+    case VertexDataType::SInt8: {
+      if (normalized) {
+        if (components == 1) return VK_FORMAT_R8_SNORM;
+        if (components == 2) return VK_FORMAT_R8G8_SNORM;
+        if (components == 3) return VK_FORMAT_R8G8B8_SNORM;
+        if (components == 4) return VK_FORMAT_R8G8B8A8_SNORM;
+      } else {
+        if (components == 1) return VK_FORMAT_R8_SINT;
+        if (components == 2) return VK_FORMAT_R8G8_SINT;
+        if (components == 3) return VK_FORMAT_R8G8B8_SINT;
+        if (components == 4) return VK_FORMAT_R8G8B8A8_SINT;
+      } 
+      break;
+    }
+    case VertexDataType::UInt8: {
+      if (normalized) {
+        if (components == 1) return VK_FORMAT_R8_UNORM;
+        if (components == 2) return VK_FORMAT_R8G8_UNORM;
+        if (components == 3) return VK_FORMAT_R8G8B8_UNORM;
+        if (components == 4) return VK_FORMAT_R8G8B8A8_UNORM;
+      } else {
+        if (components == 1) return VK_FORMAT_R8_UINT;
+        if (components == 2) return VK_FORMAT_R8G8_UINT;
+        if (components == 3) return VK_FORMAT_R8G8B8_UINT;
+        if (components == 4) return VK_FORMAT_R8G8B8A8_UINT;
+      }
+      break;
+    }
+    case VertexDataType::SInt16: {
+      if (normalized) {
+        if (components == 1) return VK_FORMAT_R16_SNORM;
+        if (components == 2) return VK_FORMAT_R16G16_SNORM;
+        if (components == 3) return VK_FORMAT_R16G16B16_SNORM;
+        if (components == 4) return VK_FORMAT_R16G16B16A16_SNORM;
+      } else {
+        if (components == 1) return VK_FORMAT_R16_SINT;
+        if (components == 2) return VK_FORMAT_R16G16_SINT;
+        if (components == 3) return VK_FORMAT_R16G16B16_SINT;
+        if (components == 4) return VK_FORMAT_R16G16B16A16_SINT;
+      }
+      break;
+    }
+    case VertexDataType::UInt16: {
+      if (normalized) {
+        if (components == 1) return VK_FORMAT_R16_UNORM;
+        if (components == 2) return VK_FORMAT_R16G16_UNORM;
+        if (components == 3) return VK_FORMAT_R16G16B16_UNORM;
+        if (components == 4) return VK_FORMAT_R16G16B16A16_UNORM;
+      } else {
+        if (components == 1) return VK_FORMAT_R16_UINT;
+        if (components == 2) return VK_FORMAT_R16G16_UINT;
+        if (components == 3) return VK_FORMAT_R16G16B16_UINT;
+        if (components == 4) return VK_FORMAT_R16G16B16A16_UINT;
+      }
+      break;
+    }
+    case VertexDataType::Float16: {
+      if (components == 1) return VK_FORMAT_R16_SFLOAT;
+      if (components == 2) return VK_FORMAT_R16G16_SFLOAT;
+      if (components == 3) return VK_FORMAT_R16G16B16_SFLOAT;
+      if (components == 4) return VK_FORMAT_R16G16B16A16_SFLOAT;
+      break;
+    }
+    case VertexDataType::Float32: {
+      if (components == 1) return VK_FORMAT_R32_SFLOAT;
+      if (components == 2) return VK_FORMAT_R32G32_SFLOAT;
+      if (components == 3) return VK_FORMAT_R32G32B32_SFLOAT;
+      if (components == 4) return VK_FORMAT_R32G32B32A32_SFLOAT;
+      break;
+    }
+  }
+
+  Assert(false, "Vulkan: failed to map vertex attribute to VkFormat");
+}
+
+void configure_pipeline_geometry(
+  VkGraphicsPipelineCreateInfo& pipeline,
+  Geometry const* geometry
+) {
+  // TODO: find a way to not leak memory while also keeping the code sane.
+  auto bindings = new std::vector<VkVertexInputBindingDescription>{};
+  auto attributes = new std::vector<VkVertexInputAttributeDescription>{};
+
+  for (auto& buffer : geometry->buffers) {
+    auto& layout = buffer.layout();
+    auto binding = u32(bindings->size());
+
+    bindings->push_back(VkVertexInputBindingDescription{
+      .binding = binding,
+      .stride = u32(layout.stride),
+      .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+    });
+
+    for (auto& attribute : layout.attributes) {
+      attributes->push_back(VkVertexInputAttributeDescription{
+        .location = u32(attribute.index),
+        .binding = binding,
+        .format = get_vk_format_from_attribute(attribute),
+        .offset = u32(attribute.offset)
+      });
+    }
+  }
+
+  pipeline.pVertexInputState = new VkPipelineVertexInputStateCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = 0,
+    .vertexBindingDescriptionCount = u32(bindings->size()),
+    .pVertexBindingDescriptions = bindings->data(),
+    .vertexAttributeDescriptionCount = u32(attributes->size()),
+    .pVertexAttributeDescriptions = attributes->data()
+  };
+
+  pipeline.pInputAssemblyState = new VkPipelineInputAssemblyStateCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = 0,
+    .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+    .primitiveRestartEnable = VK_FALSE
+  };
+}
+
 // ---------------------------------------------------
 // legacy level two 
 
@@ -200,6 +329,41 @@ float vertices[] = {
 
 u16 indices[] = {
   0, 1, 2
+};
+
+const auto triangle = Geometry{
+  IndexBuffer{
+    IndexDataType::UInt32,
+    std::vector<u8>{
+      (u8*)indices,
+      (u8*)indices + sizeof(indices)
+    }
+  },
+  std::vector<VertexBuffer>{VertexBuffer{
+    VertexBufferLayout{
+      .stride = sizeof(float) * 6,
+      .attributes = std::vector<VertexBufferLayout::Attribute>{
+        {
+          .index = 0,
+          .data_type = VertexDataType::Float32,
+          .components = 3,
+          .normalized = false,
+          .offset = 0
+        },
+        {
+          .index = 1,
+          .data_type = VertexDataType::Float32,
+          .components = 3,
+          .normalized = false,
+          .offset = sizeof(float) * 3
+        }
+      }
+    },
+    std::vector<u8>{
+      (u8*)vertices,
+      (u8*)vertices + sizeof(vertices)
+    }
+  }}
 };
 
 // glslangValidator -S vert -V100 --vn triangle_vert -o triangle.vert.h triangle.vert.glsl
@@ -744,11 +908,14 @@ int main(int argc, char** argv) {
     }
   }
 
-  auto buffer_vtx = create_buffer_with_data(
-    physical_device, device, ArrayView{(u8*)vertices, sizeof(vertices)}, false);
+  // TODO: write ArrayBuffer constructor (and maybe a cast operator) which accepts a std::vector
+  // Also maybe support an ArrayView that doesn't allow modification to the underlying data.
 
   auto buffer_idx = create_buffer_with_data(
-    physical_device, device, ArrayView{(u8*)indices, sizeof(indices)}, true);
+    physical_device, device, ArrayView{(u8*)triangle.index_buffer.data(), triangle.index_buffer.size()}, true);
+
+  auto buffer_vtx = create_buffer_with_data(
+    physical_device, device, ArrayView{(u8*)triangle.buffers[0].data(), triangle.buffers[0].size()}, false);
 
   auto shader_vert = VkShaderModule{};
   auto shader_frag = VkShaderModule{};
@@ -848,24 +1015,6 @@ int main(int argc, char** argv) {
       }
     };
 
-    auto vertex_input_info = VkPipelineVertexInputStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .vertexBindingDescriptionCount = 1,
-      .pVertexBindingDescriptions = &vertex_binding_info,
-      .vertexAttributeDescriptionCount = 2,
-      .pVertexAttributeDescriptions = vertex_attribute_infos
-    };
-
-    auto input_assembly_info = VkPipelineInputAssemblyStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-      .primitiveRestartEnable = VK_FALSE
-    };
-
     auto viewport = VkViewport{
       .x = 0,
       .y = 0,
@@ -948,8 +1097,6 @@ int main(int argc, char** argv) {
       .flags = 0,
       .stageCount = 2,
       .pStages = pipeline_stages,
-      .pVertexInputState = &vertex_input_info,
-      .pInputAssemblyState = &input_assembly_info,
       .pTessellationState = nullptr,
       .pViewportState = &viewport_info,
       .pRasterizationState = &rasterization_info,
@@ -964,6 +1111,8 @@ int main(int argc, char** argv) {
       .basePipelineHandle = VK_NULL_HANDLE,
       .basePipelineIndex = 0
     };
+
+    configure_pipeline_geometry(pipeline_info, &triangle);
 
     if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
       std::puts("Failed to create graphics pipeline :(");
