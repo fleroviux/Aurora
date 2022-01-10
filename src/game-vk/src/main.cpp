@@ -198,6 +198,10 @@ float vertices[] = {
    0,  1,  0,   0, 0, 1
 };
 
+u16 indices[] = {
+  0, 1, 2
+};
+
 // glslangValidator -S vert -V100 --vn triangle_vert -o triangle.vert.h triangle.vert.glsl
 // glslangValidator -S frag -V100 --vn triangle_frag -o triangle.frag.h triangle.frag.glsl
 #include "triangle.vert.h"
@@ -743,6 +747,9 @@ int main(int argc, char** argv) {
   auto buffer_vtx = create_buffer_with_data(
     physical_device, device, ArrayView{(u8*)vertices, sizeof(vertices)}, false);
 
+  auto buffer_idx = create_buffer_with_data(
+    physical_device, device, ArrayView{(u8*)indices, sizeof(indices)}, true);
+
   auto shader_vert = VkShaderModule{};
   auto shader_frag = VkShaderModule{};
 
@@ -1006,8 +1013,9 @@ int main(int argc, char** argv) {
     {
       auto offset = VkDeviceSize(0);
       vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+      vkCmdBindIndexBuffer(command_buffer, buffer_idx, 0, VK_INDEX_TYPE_UINT16);
       vkCmdBindVertexBuffers(command_buffer, 0, 1, &buffer_vtx, &offset);
-      vkCmdDraw(command_buffer, 3, 1, 0, 0);
+      vkCmdDrawIndexed(command_buffer, 3, 1, 0, 0, 0);
     }
     vkCmdEndRenderPass(command_buffer);
     vkEndCommandBuffer(command_buffer);
