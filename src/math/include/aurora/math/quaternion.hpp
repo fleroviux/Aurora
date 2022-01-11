@@ -189,37 +189,39 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
      * mat[1] = Im(q * (0 0 1 0) * ~q)
      * mat[2] = Im(q * (0 0 0 1) * ~q)
      */
+    auto wx = w() * x();
+    auto wy = w() * y();
+    auto wz = w() * z();
     auto ww = w() * w();
-    auto xx = x() * x();
-    auto yy = y() * y();
-    auto zz = z() * z();
 
-    auto two_wx = 2 * w() * x();
-    auto two_wy = 2 * w() * y();
-    auto two_wz = 2 * w() * z();
-    auto two_xy = 2 * x() * y();
-    auto two_xz = 2 * x() * z();
-    auto two_yz = 2 * y() * z();
+    auto xx = x() * x();
+    auto xy = x() * y();
+    auto xz = x() * z();
+
+    auto yy = y() * y();
+    auto yz = y() * z();
+
+    auto zz = z() * z();
 
     auto mat = Matrix4{};
 
     mat.x() = Vector4{
       xx + ww - zz - yy,
-      two_xy + two_wz,
-      two_xz - two_wy,
+      2 * (xy + wz),
+      2 * (xz - wy),
       0
     };
 
     mat.y() = Vector4{
-      two_xy - two_wz,
+      2 * (xy - wz),
       yy - zz + ww - xx,
-      two_yz + two_wx,
+      2 * (yz + wx),
       0
     };
 
     mat.z() = Vector4{
-      two_xz + two_wy,
-      two_yz - two_wx,
+      2 * (xz + wy),
+      2 * (yz - wx),
       zz - yy - xx + ww,
       0
     };
