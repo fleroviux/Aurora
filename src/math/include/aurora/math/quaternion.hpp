@@ -192,7 +192,6 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
     auto wx = w() * x();
     auto wy = w() * y();
     auto wz = w() * z();
-    auto ww = w() * w();
 
     auto xx = x() * x();
     auto xy = x() * y();
@@ -206,7 +205,7 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
     auto mat = Matrix4{};
 
     mat.x() = Vector4{
-      xx + ww - zz - yy,
+      1 - 2 * (zz + yy),
       2 * (xy + wz),
       2 * (xz - wy),
       0
@@ -214,7 +213,7 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
 
     mat.y() = Vector4{
       2 * (xy - wz),
-      yy - zz + ww - xx,
+      1 - 2 * (xx + zz),
       2 * (yz + wx),
       0
     };
@@ -222,7 +221,7 @@ struct Quaternion : detail::Quaternion<Quaternion, float> {
     mat.z() = Vector4{
       2 * (xz + wy),
       2 * (yz - wx),
-      zz - yy - xx + ww,
+      1 - 2 * (xx + yy),
       0
     };
 
