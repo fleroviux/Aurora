@@ -480,11 +480,77 @@ struct GeometryCacheEntry {
   VkPipeline pipeline;
   VkBuffer ibo;
   std::vector<VkBuffer> vbos;
+  std::vector<VkDeviceSize> vbo_offsets;
 };
 
-std::unordered_map<Geometry*, GeometryCacheEntry> geometry_cache;
+std::unordered_map<Geometry const*, GeometryCacheEntry> geometry_cache;
 
-//void bind_geometry(Geometry* geometry);
+void upload_geometry(
+  VkPhysicalDevice physical_device,
+  VkDevice device,
+  VkShaderModule shader_vert,
+  VkShaderModule shader_frag,
+  VkRenderPass render_pass,
+  Geometry const* geometry
+) {
+  auto match = geometry_cache.find(geometry);
+
+  if (match == geometry_cache.end()) {
+    auto entry = GeometryCacheEntry{};
+
+    entry.pipeline = create_pipeline(device, shader_vert, shader_frag, render_pass, geometry);
+
+    // TODO: write ArrayBuffer constructor (and maybe a cast operator) which accepts a std::vector
+    // Also maybe support an ArrayView that doesn't allow modification to the underlying data.
+
+    entry.ibo = create_buffer_with_data(
+      physical_device,
+      device,
+      ArrayView{
+        (u8*)geometry->index_buffer.data(),
+        geometry->index_buffer.size()
+      },
+      true
+    );
+
+    for (auto& buffer : geometry->buffers) {
+      auto vbo = create_buffer_with_data(
+        physical_device,
+        device,
+        ArrayView{(u8*)buffer.data(), buffer.size()},
+        false
+      );
+
+      entry.vbos.push_back(vbo);
+      entry.vbo_offsets.push_back(0);
+    }
+
+    geometry_cache[geometry] = entry;
+  }
+}
+
+void draw_geometry(
+  VkCommandBuffer command_buffer,
+  Geometry const* geometry
+) {
+  auto const& entry = geometry_cache[geometry];
+  auto const& index_buffer = geometry->index_buffer;
+
+  vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entry.pipeline);
+
+  vkCmdBindVertexBuffers(command_buffer, 0, entry.vbos.size(), entry.vbos.data(), entry.vbo_offsets.data());
+
+  switch (index_buffer.data_type()) {
+    case IndexDataType::UInt16:
+      vkCmdBindIndexBuffer(command_buffer, entry.ibo, 0, VK_INDEX_TYPE_UINT16);
+      vkCmdDrawIndexed(command_buffer, index_buffer.size()/sizeof(u16), 1, 0, 0, 0);
+      break;
+    case IndexDataType::UInt32:
+      vkCmdBindIndexBuffer(command_buffer, entry.ibo, 0, VK_INDEX_TYPE_UINT32);
+      vkCmdDrawIndexed(command_buffer, index_buffer.size()/sizeof(u32), 1, 0, 0, 0);
+      break;
+  }
+}
 
 // ---------------------------------------------------
 // legacy level two 
@@ -517,7 +583,7 @@ u16 indices[] = {
 
 const auto triangle = Geometry{
   IndexBuffer{
-    IndexDataType::UInt32,
+    IndexDataType::UInt16,
     std::vector<u8>{
       (u8*)indices,
       (u8*)indices + sizeof(indices)
@@ -1092,15 +1158,6 @@ int main(int argc, char** argv) {
     }
   }
 
-  // TODO: write ArrayBuffer constructor (and maybe a cast operator) which accepts a std::vector
-  // Also maybe support an ArrayView that doesn't allow modification to the underlying data.
-
-  auto buffer_idx = create_buffer_with_data(
-    physical_device, device, ArrayView{(u8*)triangle.index_buffer.data(), triangle.index_buffer.size()}, true);
-
-  auto buffer_vtx = create_buffer_with_data(
-    physical_device, device, ArrayView{(u8*)triangle.buffers[0].data(), triangle.buffers[0].size()}, false);
-
   auto shader_vert = VkShaderModule{};
   auto shader_frag = VkShaderModule{};
 
@@ -1132,8 +1189,6 @@ int main(int argc, char** argv) {
       return -1;
     }
   }
-
-  auto pipeline = create_pipeline(device, shader_vert, shader_frag, render_pass, &triangle);
 
   auto event = SDL_Event{};
 
@@ -1175,11 +1230,9 @@ int main(int argc, char** argv) {
     vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
     vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
     {
-      auto offset = VkDeviceSize(0);
-      vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-      vkCmdBindIndexBuffer(command_buffer, buffer_idx, 0, VK_INDEX_TYPE_UINT16);
-      vkCmdBindVertexBuffers(command_buffer, 0, 1, &buffer_vtx, &offset);
-      vkCmdDrawIndexed(command_buffer, 3, 1, 0, 0, 0);
+      // TODO: is it a good idea to upload the geometry while recording the command buffer?
+      upload_geometry(physical_device, device, shader_vert, shader_frag, render_pass, &triangle);
+      draw_geometry(command_buffer, &triangle);
     }
     vkCmdEndRenderPass(command_buffer);
     vkEndCommandBuffer(command_buffer);
