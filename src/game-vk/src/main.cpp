@@ -302,6 +302,190 @@ void configure_pipeline_geometry(
   };
 }
 
+auto create_pipeline(
+  VkDevice device,
+  VkShaderModule shader_vert,
+  VkShaderModule shader_frag,
+  VkRenderPass render_pass,
+  Geometry const* geometry
+) -> VkPipeline {
+  auto pipeline_layout = VkPipelineLayout{};
+
+  auto pipeline_layout_info = VkPipelineLayoutCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = 0,
+    .setLayoutCount = 0,
+    .pSetLayouts = nullptr,
+    .pushConstantRangeCount = 0,
+    .pPushConstantRanges = nullptr
+  };
+
+  if (vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout) != VK_SUCCESS) {
+    Assert(false, "Vulkan: failed to create pipeline layout :(");
+  }
+
+  auto pipeline = VkPipeline{};
+
+  VkPipelineShaderStageCreateInfo pipeline_stages[] = {
+    {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .stage = VK_SHADER_STAGE_VERTEX_BIT,
+      .module = shader_vert,
+      .pName = "main",
+      .pSpecializationInfo = nullptr
+    },
+    {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+      .module = shader_frag,
+      .pName = "main",
+      .pSpecializationInfo = nullptr
+    }
+  };
+
+  auto vertex_binding_info = VkVertexInputBindingDescription{
+    .binding = 0,
+    .stride = sizeof(float) * 6,
+    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+  };
+
+  VkVertexInputAttributeDescription vertex_attribute_infos[] {
+    {
+      .location = 0,
+      .binding = 0,
+      .format = VK_FORMAT_R32G32B32_SFLOAT,
+      .offset = 0
+    },
+    {
+      .location = 1,
+      .binding = 0,
+      .format = VK_FORMAT_R32G32B32_SFLOAT,
+      .offset = sizeof(float) * 3
+    }
+  };
+
+  auto viewport = VkViewport{
+    .x = 0,
+    .y = 0,
+    .width = 1600,
+    .height = 900,
+    .minDepth = 0,
+    .maxDepth = 1
+  };
+
+  auto scissor = VkRect2D{
+    .offset = VkOffset2D{
+      .x = 0,
+      .y = 0
+    },
+    .extent = VkExtent2D{
+      .width = 1600,
+      .height = 900
+    }
+  };
+
+  auto viewport_info = VkPipelineViewportStateCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = 0,
+    // TODO: viewports and scissors are ignored if viewport or scissor state is dynarmic.
+    // We probably actually want to have it dynamic because fuck recreating pipelines when the resolution changes.
+    .viewportCount = 1,
+    .pViewports = &viewport,
+    .scissorCount = 1,
+    .pScissors = &scissor
+  };
+
+  auto rasterization_info = VkPipelineRasterizationStateCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = 0,
+    .depthClampEnable = VK_FALSE,
+    .rasterizerDiscardEnable = VK_FALSE, // the fuck does this do????
+    .polygonMode = VK_POLYGON_MODE_FILL,
+    .cullMode = VK_CULL_MODE_NONE,
+    .depthBiasEnable = VK_FALSE,
+    // probably don't need to set this if depth bias is disabled.
+    .depthBiasConstantFactor = 0,
+    .depthBiasClamp = 0,
+    .depthBiasSlopeFactor = 0,
+    .lineWidth = 1
+  };
+
+  auto multisample_info = VkPipelineMultisampleStateCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = 0,
+    .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+    .sampleShadingEnable = VK_FALSE,
+    .minSampleShading = 0,
+    .pSampleMask = nullptr,
+    .alphaToCoverageEnable = VK_FALSE,
+    .alphaToOneEnable = VK_FALSE
+  };
+
+  auto color_blend_attachment_info = VkPipelineColorBlendAttachmentState{
+    .blendEnable = VK_FALSE,
+    .colorWriteMask = 0xF // ?
+  };
+
+  auto color_blend_info = VkPipelineColorBlendStateCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = 0,
+    .logicOpEnable = VK_FALSE,
+    .logicOp = VK_LOGIC_OP_NO_OP,
+    .attachmentCount = 1,
+    .pAttachments = &color_blend_attachment_info,
+    .blendConstants = {0, 0, 0, 0} // probably don't need to set this unless needed.
+  };
+
+  auto pipeline_info = VkGraphicsPipelineCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = 0,
+    .stageCount = 2,
+    .pStages = pipeline_stages,
+    .pTessellationState = nullptr,
+    .pViewportState = &viewport_info,
+    .pRasterizationState = &rasterization_info,
+    .pMultisampleState = &multisample_info,
+    .pDepthStencilState = nullptr,
+    .pColorBlendState = &color_blend_info,
+    // TODO: set this to make e.g. the viewport and scissor test dynamic.
+    .pDynamicState = nullptr,
+    .layout = pipeline_layout,
+    .renderPass = render_pass,
+    .subpass = 0,
+    .basePipelineHandle = VK_NULL_HANDLE,
+    .basePipelineIndex = 0
+  };
+
+  configure_pipeline_geometry(pipeline_info, geometry);
+
+  if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
+    Assert(false, "Vulkan: failed to create graphics pipeline :(");
+  }
+
+  return pipeline;
+}
+
+
+struct GeometryCacheEntry {
+  VkPipeline pipeline;
+  VkBuffer ibo;
+  std::vector<VkBuffer> vbos;
+};
+
+std::unordered_map<Geometry*, GeometryCacheEntry> geometry_cache;
+
+//void bind_geometry(Geometry* geometry);
+
 // ---------------------------------------------------
 // legacy level two 
 
@@ -949,176 +1133,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  auto pipeline_layout = VkPipelineLayout{};
-
-  // Create pipeline layout
-  {
-    auto pipeline_layout_info = VkPipelineLayoutCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .setLayoutCount = 0,
-      .pSetLayouts = nullptr,
-      .pushConstantRangeCount = 0,
-      .pPushConstantRanges = nullptr
-    };
-
-    if (vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout) != VK_SUCCESS) {
-      std::puts("Failed to create pipeline layout :(");
-      return -1;
-    }
-  }
-
-  auto pipeline = VkPipeline{};
-
-  // Create pipeline
-  {
-    VkPipelineShaderStageCreateInfo pipeline_stages[] = {
-      {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .stage = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = shader_vert,
-        .pName = "main",
-        .pSpecializationInfo = nullptr
-      },
-      {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = shader_frag,
-        .pName = "main",
-        .pSpecializationInfo = nullptr
-      }
-    };
-
-    auto vertex_binding_info = VkVertexInputBindingDescription{
-      .binding = 0,
-      .stride = sizeof(float) * 6,
-      .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-    };
-
-    VkVertexInputAttributeDescription vertex_attribute_infos[] {
-      {
-        .location = 0,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = 0
-      },
-      {
-        .location = 1,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = sizeof(float) * 3
-      }
-    };
-
-    auto viewport = VkViewport{
-      .x = 0,
-      .y = 0,
-      .width = 1600,
-      .height = 900,
-      .minDepth = 0,
-      .maxDepth = 1
-    };
-
-    auto scissor = VkRect2D{
-      .offset = VkOffset2D{
-        .x = 0,
-        .y = 0
-      },
-      .extent = VkExtent2D{
-        .width = 1600,
-        .height = 900
-      }
-    };
-
-    auto viewport_info = VkPipelineViewportStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      // TODO: viewports and scissors are ignored if viewport or scissor state is dynarmic.
-      // We probably actually want to have it dynamic because fuck recreating pipelines when the resolution changes.
-      .viewportCount = 1,
-      .pViewports = &viewport,
-      .scissorCount = 1,
-      .pScissors = &scissor
-    };
-
-    auto rasterization_info = VkPipelineRasterizationStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .depthClampEnable = VK_FALSE,
-      .rasterizerDiscardEnable = VK_FALSE, // the fuck does this do????
-      .polygonMode = VK_POLYGON_MODE_FILL,
-      .cullMode = VK_CULL_MODE_NONE,
-      .depthBiasEnable = VK_FALSE,
-      // probably don't need to set this if depth bias is disabled.
-      .depthBiasConstantFactor = 0,
-      .depthBiasClamp = 0,
-      .depthBiasSlopeFactor = 0,
-      .lineWidth = 1
-    };
-
-    auto multisample_info = VkPipelineMultisampleStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-      .sampleShadingEnable = VK_FALSE,
-      .minSampleShading = 0,
-      .pSampleMask = nullptr,
-      .alphaToCoverageEnable = VK_FALSE,
-      .alphaToOneEnable = VK_FALSE
-    };
-
-    auto color_blend_attachment_info = VkPipelineColorBlendAttachmentState{
-      .blendEnable = VK_FALSE,
-      .colorWriteMask = 0xF // ?
-    };
-
-    auto color_blend_info = VkPipelineColorBlendStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .logicOpEnable = VK_FALSE,
-      .logicOp = VK_LOGIC_OP_NO_OP,
-      .attachmentCount = 1,
-      .pAttachments = &color_blend_attachment_info,
-      .blendConstants = {0, 0, 0, 0} // probably don't need to set this unless needed.
-    };
-
-    auto pipeline_info = VkGraphicsPipelineCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .stageCount = 2,
-      .pStages = pipeline_stages,
-      .pTessellationState = nullptr,
-      .pViewportState = &viewport_info,
-      .pRasterizationState = &rasterization_info,
-      .pMultisampleState = &multisample_info,
-      .pDepthStencilState = nullptr,
-      .pColorBlendState = &color_blend_info,
-      // TODO: set this to make e.g. the viewport and scissor test dynamic.
-      .pDynamicState = nullptr,
-      .layout = pipeline_layout,
-      .renderPass = render_pass,
-      .subpass = 0,
-      .basePipelineHandle = VK_NULL_HANDLE,
-      .basePipelineIndex = 0
-    };
-
-    configure_pipeline_geometry(pipeline_info, &triangle);
-
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
-      std::puts("Failed to create graphics pipeline :(");
-      return -1;
-    }
-  }
+  auto pipeline = create_pipeline(device, shader_vert, shader_frag, render_pass, &triangle);
 
   auto event = SDL_Event{};
 
