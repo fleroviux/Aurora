@@ -3,6 +3,7 @@
  * Copyright (C) 2022 fleroviux
  */
 
+#include <aurora/gal/backend/vulkan.hpp>
 #include <aurora/renderer/component/mesh.hpp>
 #include <aurora/scene/game_object.hpp>
 
@@ -478,9 +479,11 @@ auto create_pipeline(
 
 struct GeometryCacheEntry {
   VkPipeline pipeline;
-  VkBuffer ibo;
-  std::vector<VkBuffer> vbos;
-  std::vector<VkDeviceSize> vbo_offsets;
+  std::unique_ptr<Buffer> ibo;
+  std::vector<std::unique_ptr<Buffer>> vbos;
+
+  std::vector<VkBuffer> vk_vbos;
+  std::vector<VkDeviceSize> vk_vbo_offs;
 };
 
 std::unordered_map<Geometry const*, GeometryCacheEntry> geometry_cache;
@@ -488,6 +491,7 @@ std::unordered_map<Geometry const*, GeometryCacheEntry> geometry_cache;
 void upload_geometry(
   VkPhysicalDevice physical_device,
   VkDevice device,
+  std::unique_ptr<RenderDevice>& render_device,
   VkShaderModule shader_vert,
   VkShaderModule shader_frag,
   VkRenderPass render_pass,
@@ -503,29 +507,19 @@ void upload_geometry(
     // TODO: write ArrayBuffer constructor (and maybe a cast operator) which accepts a std::vector
     // Also maybe support an ArrayView that doesn't allow modification to the underlying data.
 
-    entry.ibo = create_buffer_with_data(
-      physical_device,
-      device,
-      ArrayView{
-        (u8*)geometry->index_buffer.data(),
-        geometry->index_buffer.size()
-      },
-      true
-    );
+    auto& index_buffer = geometry->index_buffer;
+
+    entry.ibo = render_device->CreateBufferWithData(BufferUsage::IndexBuffer, index_buffer.view<u8>());
 
     for (auto& buffer : geometry->buffers) {
-      auto vbo = create_buffer_with_data(
-        physical_device,
-        device,
-        ArrayView{(u8*)buffer.data(), buffer.size()},
-        false
-      );
+      auto vbo = render_device->CreateBufferWithData(BufferUsage::VertexBuffer, buffer.view<u8>());
 
-      entry.vbos.push_back(vbo);
-      entry.vbo_offsets.push_back(0);
+      entry.vk_vbos.push_back((VkBuffer)vbo->Handle());
+      entry.vbos.push_back(std::move(vbo));
+      entry.vk_vbo_offs.push_back(0);
     }
 
-    geometry_cache[geometry] = entry;
+    geometry_cache[geometry] = std::move(entry);
   }
 }
 
@@ -538,15 +532,15 @@ void draw_geometry(
 
   vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entry.pipeline);
 
-  vkCmdBindVertexBuffers(command_buffer, 0, entry.vbos.size(), entry.vbos.data(), entry.vbo_offsets.data());
+  vkCmdBindVertexBuffers(command_buffer, 0, entry.vk_vbos.size(), entry.vk_vbos.data(), entry.vk_vbo_offs.data());
 
   switch (index_buffer.data_type()) {
     case IndexDataType::UInt16:
-      vkCmdBindIndexBuffer(command_buffer, entry.ibo, 0, VK_INDEX_TYPE_UINT16);
+      vkCmdBindIndexBuffer(command_buffer, (VkBuffer)entry.ibo->Handle(), 0, VK_INDEX_TYPE_UINT16);
       vkCmdDrawIndexed(command_buffer, index_buffer.size()/sizeof(u16), 1, 0, 0, 0);
       break;
     case IndexDataType::UInt32:
-      vkCmdBindIndexBuffer(command_buffer, entry.ibo, 0, VK_INDEX_TYPE_UINT32);
+      vkCmdBindIndexBuffer(command_buffer, (VkBuffer)entry.ibo->Handle(), 0, VK_INDEX_TYPE_UINT32);
       vkCmdDrawIndexed(command_buffer, index_buffer.size()/sizeof(u32), 1, 0, 0, 0);
       break;
   }
@@ -972,6 +966,12 @@ int main(int argc, char** argv) {
     return -1;
   }
 
+  auto render_device = CreateVulkanRenderDevice({
+    .instance = instance,
+    .physical_device = physical_device,
+    .device = device
+  });
+
   VkRenderPass render_pass;
   
   {
@@ -1231,7 +1231,7 @@ int main(int argc, char** argv) {
     vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
     {
       // TODO: is it a good idea to upload the geometry while recording the command buffer?
-      upload_geometry(physical_device, device, shader_vert, shader_frag, render_pass, &triangle);
+      upload_geometry(physical_device, device, render_device, shader_vert, shader_frag, render_pass, &triangle);
       draw_geometry(command_buffer, &triangle);
     }
     vkCmdEndRenderPass(command_buffer);

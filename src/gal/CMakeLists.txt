@@ -1,0 +1,28 @@
+cmake_minimum_required(VERSION 3.2)
+project(Aurora-GAL CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(SOURCES
+  src/vulkan/render_device.cpp
+)
+
+set(HEADERS
+)
+
+set(HEADERS_PUBLIC
+  include/aurora/gal/backend/vulkan.hpp
+  include/aurora/gal/buffer.hpp
+  include/aurora/gal/render_device.hpp
+)
+
+find_package(Vulkan REQUIRED)
+
+add_library(Aurora-GAL ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
+
+target_link_libraries(Aurora-GAL PUBLIC Aurora-Common)
+target_link_libraries(Aurora-GAL PRIVATE Vulkan::Vulkan)
+
+target_include_directories(Aurora-GAL PUBLIC include)
+target_include_directories(Aurora-GAL PRIVATE src)
