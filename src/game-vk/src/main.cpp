@@ -1079,37 +1079,10 @@ int main(int argc, char** argv) {
     }
   }
 
-  auto shader_vert = VkShaderModule{};
-  auto shader_frag = VkShaderModule{};
-
-  // Shader compilation
-  {
-    auto shader_module_info_vert = VkShaderModuleCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .codeSize = sizeof(triangle_vert),
-      .pCode = triangle_vert
-    };
-
-    if (vkCreateShaderModule(device, &shader_module_info_vert, nullptr, &shader_vert) != VK_SUCCESS) {
-      std::puts("Failed to compile vertex shader :(");
-      return -1;
-    }
-
-    auto shader_module_info_frag = VkShaderModuleCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .codeSize = sizeof(triangle_frag),
-      .pCode = triangle_frag
-    };
-
-    if (vkCreateShaderModule(device, &shader_module_info_frag, nullptr, &shader_frag) != VK_SUCCESS) {
-      std::puts("Failed to compile fragment shader :(");
-      return -1;
-    }
-  }
+  auto shader_vert_ = render_device->CreateShaderModule(triangle_vert, sizeof(triangle_vert));
+  auto shader_frag_ = render_device->CreateShaderModule(triangle_frag, sizeof(triangle_frag));
+  auto shader_vert = (VkShaderModule)shader_vert_->Handle();
+  auto shader_frag = (VkShaderModule)shader_frag_->Handle();
 
   auto event = SDL_Event{};
 

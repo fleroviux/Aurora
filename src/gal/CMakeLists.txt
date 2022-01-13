@@ -9,12 +9,15 @@ set(SOURCES
 )
 
 set(HEADERS
+  src/vulkan/buffer.hpp
+  src/vulkan/shader_module.hpp
 )
 
 set(HEADERS_PUBLIC
   include/aurora/gal/backend/vulkan.hpp
   include/aurora/gal/buffer.hpp
   include/aurora/gal/render_device.hpp
+  include/aurora/gal/shader_module.hpp
 )
 
 find_package(Vulkan REQUIRED)

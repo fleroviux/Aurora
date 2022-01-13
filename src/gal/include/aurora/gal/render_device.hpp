@@ -5,7 +5,9 @@
 #pragma once
 
 #include <aurora/gal/buffer.hpp>
+#include <aurora/gal/shader_module.hpp>
 #include <aurora/array_view.hpp>
+#include <aurora/integer.hpp>
 #include <cstring>
 #include <memory>
 #include <vector>
@@ -60,6 +62,11 @@ struct RenderDevice {
   ) -> std::unique_ptr<Buffer> {
     return CreateBufferWithData(usage, data.data(), data.size() * sizeof(T), unmap);
   }
+
+  virtual auto CreateShaderModule(
+    u32 const* spirv,
+    size_t size
+  ) -> std::unique_ptr<ShaderModule> = 0;
 };
 
 } // namespace Aura

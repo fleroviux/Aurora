@@ -5,6 +5,7 @@
 #include <aurora/gal/backend/vulkan.hpp>
 
 #include "buffer.hpp"
+#include "shader_module.hpp"
 
 namespace Aura {
 
@@ -33,6 +34,13 @@ struct VulkanRenderDevice final : RenderDevice {
       host_visible,
       map
     );
+  }
+
+  auto CreateShaderModule(
+    u32 const* spirv,
+    size_t size
+  ) -> std::unique_ptr<ShaderModule> override {
+    return std::make_unique<VulkanShaderModule>(device, spirv, size);
   }
 
 private:
