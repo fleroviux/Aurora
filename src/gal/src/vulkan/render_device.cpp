@@ -6,6 +6,7 @@
 
 #include "buffer.hpp"
 #include "shader_module.hpp"
+#include "texture.hpp"
 
 namespace Aura {
 
@@ -41,6 +42,15 @@ struct VulkanRenderDevice final : RenderDevice {
     size_t size
   ) -> std::unique_ptr<ShaderModule> override {
     return std::make_unique<VulkanShaderModule>(device, spirv, size);
+  }
+
+  auto CreateTexture2DFromSwapchainImage(
+    u32 width,
+    u32 height,
+    GPUTexture::Format format,
+    void* image_handle
+  ) -> std::unique_ptr<GPUTexture> override {
+    return VulkanTexture::from_swapchain_image(device, width, height, format, (VkImage)image_handle);
   }
 
 private:

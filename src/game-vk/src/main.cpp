@@ -923,6 +923,7 @@ int main(int argc, char** argv) {
   }
 
   auto swapchain_frame_buffers = std::vector<VkFramebuffer>{};
+  auto textures = std::vector<std::unique_ptr<GPUTexture>>{};
 
   {
     u32 swapchain_image_count;
@@ -931,27 +932,6 @@ int main(int argc, char** argv) {
     auto swapchain_images = std::vector<VkImage>{};
     swapchain_images.resize(swapchain_image_count);
     vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, swapchain_images.data());
-
-    auto image_view_info = VkImageViewCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .viewType = VK_IMAGE_VIEW_TYPE_2D,
-      .format = VK_FORMAT_B8G8R8A8_SRGB, // same as specified in swapchain
-      .components = VkComponentMapping{
-        .r = VK_COMPONENT_SWIZZLE_R,
-        .g = VK_COMPONENT_SWIZZLE_G,
-        .b = VK_COMPONENT_SWIZZLE_B,
-        .a = VK_COMPONENT_SWIZZLE_A
-      },
-      .subresourceRange = VkImageSubresourceRange{
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .baseMipLevel = 0,
-        .levelCount = 1,
-        .baseArrayLayer = 0,
-        .layerCount = 1
-      }
-    };
 
     auto frame_buffer_info = VkFramebufferCreateInfo{
       .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -965,17 +945,18 @@ int main(int argc, char** argv) {
     };
 
     for (auto swapchain_image : swapchain_images) {
-      VkImageView image_view;
       VkFramebuffer frame_buffer;
 
-      image_view_info.image = swapchain_image;
+      auto texture = render_device->CreateTexture2DFromSwapchainImage(
+        1600,
+        900,
+        GPUTexture::Format::B8G8R8B8_SRGB,
+        (void*)swapchain_image
+      );
+      auto texture_handle = (VkImageView)texture->handle();
+      textures.push_back(std::move(texture)); // keep texture alive
 
-      if (vkCreateImageView(device, &image_view_info, nullptr, &image_view) != VK_SUCCESS) {
-        std::puts("Failed to create an image view for the swapchain :(");
-        return -1;
-      }
-
-      frame_buffer_info.pAttachments = &image_view;
+      frame_buffer_info.pAttachments = &texture_handle;
 
       if (vkCreateFramebuffer(device, &frame_buffer_info, nullptr, &frame_buffer) != VK_SUCCESS) {
         std::puts("Failed to create a frame buffer for the swapchain :(");

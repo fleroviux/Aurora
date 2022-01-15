@@ -4,10 +4,18 @@
 
 #pragma once
 
+#include <aurora/integer.hpp>
+
 namespace Aura {
 
 // TODO: make naming scheme consistent.
 struct GPUTexture {
+  enum class Grade {
+    _1D,
+    _2D,
+    _3D
+  };
+
   // subset of VkFormat:
   // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkFormat
   // TODO: find a subset of formats that work on all targeted platforms.
@@ -27,6 +35,15 @@ struct GPUTexture {
   };
 
   virtual ~GPUTexture() = default;
+
+  virtual auto handle() -> void* = 0;
+  virtual auto grade() const -> Grade = 0;
+  virtual auto format() const -> Format = 0;
+  virtual auto usage() const -> Usage = 0;
+  virtual auto width() const -> u32 = 0;
+  virtual auto height() const -> u32 = 0;
+  virtual auto depth() const -> u32 = 0;
+
 };
 
 constexpr auto operator|(

@@ -69,9 +69,12 @@ struct RenderDevice {
     size_t size
   ) -> std::unique_ptr<ShaderModule> = 0;
 
-  //virtual auto CreateTexture2D(
-  //  uint width, uint height, 
-  //) -> std::unique_ptr<GPUTexture> = 0;
+  virtual auto CreateTexture2DFromSwapchainImage(
+    u32 width,
+    u32 height,
+    GPUTexture::Format format,
+    void* image_handle
+  ) -> std::unique_ptr<GPUTexture> = 0;
 };
 
 } // namespace Aura

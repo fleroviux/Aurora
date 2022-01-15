@@ -11,6 +11,7 @@ set(SOURCES
 set(HEADERS
   src/vulkan/buffer.hpp
   src/vulkan/shader_module.hpp
+  src/vulkan/texture.hpp
 )
 
 set(HEADERS_PUBLIC
