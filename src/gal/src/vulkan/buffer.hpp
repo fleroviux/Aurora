@@ -23,7 +23,7 @@ struct VulkanBuffer final : Buffer {
       .pNext = nullptr,
       .flags = 0,
       .size = size,
-      .usage = (VkBufferUsageFlagBits)usage,
+      .usage = (VkBufferUsageFlags)usage,
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
       .queueFamilyIndexCount = 0,
       .pQueueFamilyIndices = nullptr
