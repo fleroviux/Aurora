@@ -10,6 +10,7 @@ set(SOURCES
 
 set(HEADERS
   src/vulkan/buffer.hpp
+  src/vulkan/render_target.hpp
   src/vulkan/shader_module.hpp
   src/vulkan/texture.hpp
 )
@@ -18,6 +19,7 @@ set(HEADERS_PUBLIC
   include/aurora/gal/backend/vulkan.hpp
   include/aurora/gal/buffer.hpp
   include/aurora/gal/render_device.hpp
+  include/aurora/gal/render_target.hpp
   include/aurora/gal/shader_module.hpp
   include/aurora/gal/texture.hpp
 )

@@ -922,8 +922,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  auto swapchain_frame_buffers = std::vector<VkFramebuffer>{};
   auto textures = std::vector<std::unique_ptr<GPUTexture>>{};
+  auto render_targets = std::vector<std::unique_ptr<RenderTarget>>{};
 
   {
     u32 swapchain_image_count;
@@ -933,37 +933,18 @@ int main(int argc, char** argv) {
     swapchain_images.resize(swapchain_image_count);
     vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, swapchain_images.data());
 
-    auto frame_buffer_info = VkFramebufferCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .renderPass = render_pass,
-      .attachmentCount = 1,
-      .width = 1600,
-      .height = 900,
-      .layers = 1
-    };
-
     for (auto swapchain_image : swapchain_images) {
-      VkFramebuffer frame_buffer;
-
       auto texture = render_device->CreateTexture2DFromSwapchainImage(
         1600,
         900,
         GPUTexture::Format::B8G8R8B8_SRGB,
         (void*)swapchain_image
       );
-      auto texture_handle = (VkImageView)texture->handle();
+
+      auto render_target = render_device->CreateRenderTarget({ texture.get() }, nullptr);
+  
+      render_targets.push_back(std::move(render_target));
       textures.push_back(std::move(texture)); // keep texture alive
-
-      frame_buffer_info.pAttachments = &texture_handle;
-
-      if (vkCreateFramebuffer(device, &frame_buffer_info, nullptr, &frame_buffer) != VK_SUCCESS) {
-        std::puts("Failed to create a frame buffer for the swapchain :(");
-        return -1;
-      }
-
-      swapchain_frame_buffers.push_back(frame_buffer);
     }
   }
 
@@ -1053,7 +1034,7 @@ int main(int argc, char** argv) {
     vkAcquireNextImageKHR(device, swapchain, u64(-1), VK_NULL_HANDLE, fence, &swapchain_image_id);
     vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
 
-    auto frame_buffer = swapchain_frame_buffers[swapchain_image_id];
+    auto& render_target = render_targets[swapchain_image_id];
 
     auto clear_value = VkClearValue{
       .color = VkClearColorValue{
@@ -1065,7 +1046,7 @@ int main(int argc, char** argv) {
       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
       .pNext = nullptr,
       .renderPass = render_pass,
-      .framebuffer = frame_buffer,
+      .framebuffer = (VkFramebuffer)render_target->handle(),
       .renderArea = VkRect2D{
         .offset = VkOffset2D{
           .x = 0,

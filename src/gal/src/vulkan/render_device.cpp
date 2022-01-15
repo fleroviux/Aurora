@@ -5,6 +5,7 @@
 #include <aurora/gal/backend/vulkan.hpp>
 
 #include "buffer.hpp"
+#include "render_target.hpp"
 #include "shader_module.hpp"
 #include "texture.hpp"
 
@@ -51,6 +52,13 @@ struct VulkanRenderDevice final : RenderDevice {
     void* image_handle
   ) -> std::unique_ptr<GPUTexture> override {
     return VulkanTexture::from_swapchain_image(device, width, height, format, (VkImage)image_handle);
+  }
+
+  auto CreateRenderTarget(
+    std::vector<GPUTexture*> const& color_attachments,
+    GPUTexture* depth_stencil_attachment = nullptr
+  ) -> std::unique_ptr<RenderTarget> override {
+    return std::make_unique<VulkanRenderTarget>(device, color_attachments, depth_stencil_attachment);
   }
 
 private:

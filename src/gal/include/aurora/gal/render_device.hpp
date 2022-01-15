@@ -5,6 +5,7 @@
 #pragma once
 
 #include <aurora/gal/buffer.hpp>
+#include <aurora/gal/render_target.hpp>
 #include <aurora/gal/shader_module.hpp>
 #include <aurora/gal/texture.hpp>
 #include <aurora/array_view.hpp>
@@ -75,6 +76,11 @@ struct RenderDevice {
     GPUTexture::Format format,
     void* image_handle
   ) -> std::unique_ptr<GPUTexture> = 0;
+
+  virtual auto CreateRenderTarget(
+    std::vector<GPUTexture*> const& color_attachments,
+    GPUTexture* depth_stencil_attachment = nullptr
+  ) -> std::unique_ptr<RenderTarget> = 0;
 };
 
 } // namespace Aura
