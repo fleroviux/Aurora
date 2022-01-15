@@ -6,6 +6,7 @@
 
 #include <aurora/gal/buffer.hpp>
 #include <aurora/gal/shader_module.hpp>
+#include <aurora/gal/texture.hpp>
 #include <aurora/array_view.hpp>
 #include <aurora/integer.hpp>
 #include <cstring>
@@ -20,7 +21,7 @@ struct RenderDevice {
   virtual auto Handle() -> void* = 0;
   
   virtual auto CreateBuffer(
-    BufferUsage usage,
+    Buffer::Usage usage,
     size_t size,
     bool host_visible = true,
     bool map = true
@@ -28,12 +29,12 @@ struct RenderDevice {
 
   template<typename T>
   auto CreateBufferWithData(
-    BufferUsage usage,
+    Buffer::Usage usage,
     T const* data,
     size_t size,
     bool unmap = true
   ) -> std::unique_ptr<Buffer> {
-    auto buffer = CreateBuffer(usage | BufferUsage::TransferDst, size);
+    auto buffer = CreateBuffer(usage | Buffer::Usage::CopyDst, size);
 
     std::memcpy(buffer->Data(), data, size);
     buffer->Flush();
@@ -47,7 +48,7 @@ struct RenderDevice {
 
   template<typename T>
   auto CreateBufferWithData(
-    BufferUsage usage,
+    Buffer::Usage usage,
     ArrayView<T> const& data,
     bool unmap = true
   ) -> std::unique_ptr<Buffer> {
@@ -56,7 +57,7 @@ struct RenderDevice {
 
   template<typename T>
   auto CreateBufferWithData(
-    BufferUsage usage,
+    Buffer::Usage usage,
     std::vector<T> const& data,
     bool unmap = true
   ) -> std::unique_ptr<Buffer> {
@@ -67,6 +68,10 @@ struct RenderDevice {
     u32 const* spirv,
     size_t size
   ) -> std::unique_ptr<ShaderModule> = 0;
+
+  //virtual auto CreateTexture2D(
+  //  uint width, uint height, 
+  //) -> std::unique_ptr<GPUTexture> = 0;
 };
 
 } // namespace Aura

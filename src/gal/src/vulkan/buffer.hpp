@@ -13,7 +13,7 @@ struct VulkanBuffer final : Buffer {
   VulkanBuffer(
     VkPhysicalDevice physical_device,
     VkDevice device,
-    BufferUsage usage,
+    Buffer::Usage usage,
     size_t size,
     bool host_visible,
     bool map

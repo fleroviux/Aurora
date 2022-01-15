@@ -21,7 +21,7 @@ struct VulkanRenderDevice final : RenderDevice {
   }
 
   auto CreateBuffer(
-    BufferUsage usage, 
+    Buffer::Usage usage, 
     size_t size,
     bool host_visible = true,
     bool map = true

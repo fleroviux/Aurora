@@ -9,22 +9,18 @@
 
 namespace Aura {
 
-// subset of VkBufferUsageFlagBits:
-// https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkBufferUsageFlagBits  
-enum class BufferUsage : u32 {
-  TransferSrc = 0x00000001,
-  TransferDst = 0x00000002,
-  UniformBuffer = 0x00000010,
-  StorageBuffer = 0x00000020,
-  IndexBuffer = 0x00000040,
-  VertexBuffer = 0x00000080
-};
-
-constexpr auto operator|(BufferUsage lhs, BufferUsage rhs) -> BufferUsage {
-  return (BufferUsage)((u32)lhs | (u32)rhs);
-}
-
 struct Buffer {
+  // subset of VkBufferUsageFlagBits:
+  // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkBufferUsageFlagBits  
+  enum class Usage : u32 {
+    CopySrc = 0x00000001,
+    CopyDst = 0x00000002,
+    UniformBuffer = 0x00000010,
+    StorageBuffer = 0x00000020,
+    IndexBuffer = 0x00000040,
+    VertexBuffer = 0x00000080
+  };
+
   virtual ~Buffer() = default;
 
   virtual auto Handle() -> void* = 0;
@@ -50,5 +46,12 @@ struct Buffer {
     Flush(offset, size);
   }
 };
+
+constexpr auto operator|(
+  Buffer::Usage lhs,
+  Buffer::Usage rhs
+) -> Buffer::Usage {
+  return (Buffer::Usage)((u32)lhs | (u32)rhs);
+}
 
 } // namespace Aura

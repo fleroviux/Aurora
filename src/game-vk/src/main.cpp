@@ -408,10 +408,10 @@ void upload_geometry(
 
     auto& index_buffer = geometry->index_buffer;
 
-    entry.ibo = render_device->CreateBufferWithData(BufferUsage::IndexBuffer, index_buffer.view<u8>());
+    entry.ibo = render_device->CreateBufferWithData(Buffer::Usage::IndexBuffer, index_buffer.view<u8>());
 
     for (auto& buffer : geometry->buffers) {
-      auto vbo = render_device->CreateBufferWithData(BufferUsage::VertexBuffer, buffer.view<u8>());
+      auto vbo = render_device->CreateBufferWithData(Buffer::Usage::VertexBuffer, buffer.view<u8>());
 
       entry.vk_vbos.push_back((VkBuffer)vbo->Handle());
       entry.vbos.push_back(std::move(vbo));

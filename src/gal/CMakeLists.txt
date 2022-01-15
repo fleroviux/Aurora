@@ -18,6 +18,7 @@ set(HEADERS_PUBLIC
   include/aurora/gal/buffer.hpp
   include/aurora/gal/render_device.hpp
   include/aurora/gal/shader_module.hpp
+  include/aurora/gal/texture.hpp
 )
 
 find_package(Vulkan REQUIRED)
