@@ -73,28 +73,6 @@ auto create_example_scene() -> GameObject* {
 #include <aurora/integer.hpp>
 #include <vulkan/vulkan.h>
 
-auto find_memory_type_index(
-  VkPhysicalDevice physical_device,
-  u32 memory_type_bits,
-  VkMemoryPropertyFlags property_flags
-) -> u32 {
-  auto memory_properties = VkPhysicalDeviceMemoryProperties{};
-
-  // TODO: this should only be read out once during device creation.
-  vkGetPhysicalDeviceMemoryProperties(physical_device, &memory_properties);
-
-  for (u32 i = 0; i < memory_properties.memoryTypeCount; i++) {
-    if (memory_type_bits & (1 << i)) {
-      auto property_flags_have = memory_properties.memoryTypes[i].propertyFlags;
-      if ((property_flags_have & property_flags) == property_flags) {
-        return i;
-      }
-    }
-  }
-
-  Assert(false, "Vulkan: find_memory_type_index() failed to find suitable memory type.");
-}
-
 auto get_vk_format_from_attribute(
   VertexBufferLayout::Attribute const& attribute
 ) -> VkFormat {
