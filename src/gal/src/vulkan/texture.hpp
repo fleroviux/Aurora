@@ -10,34 +10,20 @@
 namespace Aura {
 
 struct VulkanTexture final : GPUTexture {
-  VulkanTexture(
-    VkDevice device,
-    VkImage image,
-    VkImageView image_view,
-    Grade grade,
-    Format format,
-    Usage usage,
-    u32 width,
-    u32 height,
-    u32 depth
-  ) : device_(device)
-    , image_(image)
-    , image_view_(image_view)
-    , grade_(grade)
-    , format_(format)
-    , usage_(usage)
-    , width_(width)
-    , height_(height)
-    , depth_(depth)
-    , image_owned_(false) {
-  }
-
  ~VulkanTexture() override {
     vkDestroyImageView(device_, image_view_, nullptr);
     if (image_owned_) {
       vkDestroyImage(device_, image_, nullptr);
     }
   }
+
+  auto handle() -> void* override { return (void*)image_view_; }
+  auto grade() const -> Grade override { return grade_; }
+  auto format() const -> Format override { return format_; };
+  auto usage() const -> Usage override { return usage_; }
+  auto width() const -> u32 override { return width_; }
+  auto height() const -> u32 override { return height_; }
+  auto depth() const -> u32 override { return depth_; }
 
   static auto from_swapchain_image(
     VkDevice device,
@@ -74,26 +60,21 @@ struct VulkanTexture final : GPUTexture {
       Assert(false, "VulkanTexture: failed to create image view");
     }
 
-    return std::make_unique<VulkanTexture>(
-      device,
-      image,
-      image_view,
-      Grade::_2D,
-      Format::B8G8R8B8_SRGB,
-      Usage::ColorAttachment | Usage::CopyDst,
-      width,
-      height,
-      1
-    );
-  }
+    auto texture = std::make_unique<VulkanTexture>();
 
-  auto handle() -> void* override { return (void*)image_view_; }
-  auto grade() const -> Grade override { return grade_; }
-  auto format() const -> Format override { return format_; };
-  auto usage() const -> Usage override { return usage_; }
-  auto width() const -> u32 override { return width_; }
-  auto height() const -> u32 override { return height_; }
-  auto depth() const -> u32 override { return depth_; }
+    texture->device_ = device;
+    texture->image_ = image;
+    texture->image_view_ = image_view;
+    texture->grade_ = Grade::_2D;
+    texture->format_ = format;
+    texture->usage_ = Usage::ColorAttachment;
+    texture->width_ = width;
+    texture->height_ = height;
+    texture->depth_ = 1;
+    texture->image_owned_ = false;
+
+    return texture;
+  }
 
 private:
   VkDevice device_;
