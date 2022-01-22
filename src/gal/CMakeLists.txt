@@ -10,6 +10,7 @@ set(SOURCES
 
 set(HEADERS
   src/vulkan/buffer.hpp
+  src/vulkan/common.hpp
   src/vulkan/render_target.hpp
   src/vulkan/shader_module.hpp
   src/vulkan/texture.hpp

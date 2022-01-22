@@ -7,6 +7,8 @@
 #include <aurora/gal/backend/vulkan.hpp>
 #include <aurora/log.hpp>
 
+#include "common.hpp"
+
 namespace Aura {
 
 struct VulkanBuffer final : Buffer {
@@ -40,7 +42,7 @@ struct VulkanBuffer final : Buffer {
       .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
       .pNext = nullptr,
       .allocationSize = memory_requirements.size,
-      .memoryTypeIndex = find_memory_type_index(
+      .memoryTypeIndex = vk_find_memory_type(
         physical_device,
         memory_requirements.memoryTypeBits,
         host_visible ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT : 0
@@ -118,28 +120,6 @@ struct VulkanBuffer final : Buffer {
   }
 
 private:
-  static auto find_memory_type_index(
-    VkPhysicalDevice physical_device,
-    u32 memory_type_bits,
-    VkMemoryPropertyFlags property_flags
-  ) -> u32 {
-    auto memory_properties = VkPhysicalDeviceMemoryProperties{};
-
-    // TODO: this should only be read out once during device creation.
-    vkGetPhysicalDeviceMemoryProperties(physical_device, &memory_properties);
-
-    for (u32 i = 0; i < memory_properties.memoryTypeCount; i++) {
-      if (memory_type_bits & (1 << i)) {
-        auto property_flags_have = memory_properties.memoryTypes[i].propertyFlags;
-        if ((property_flags_have & property_flags) == property_flags) {
-          return i;
-        }
-      }
-    }
-
-    Assert(false, "VulkanBuffer: find_memory_type_index() failed to find suitable memory type.");
-  }
-
   VkDevice device;
   VkBuffer buffer;
   VkDeviceMemory memory;

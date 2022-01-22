@@ -70,6 +70,13 @@ struct RenderDevice {
     size_t size
   ) -> std::unique_ptr<ShaderModule> = 0;
 
+  virtual auto CreateTexture2D(
+    u32 width,
+    u32 height,
+    GPUTexture::Format format,
+    GPUTexture::Usage usage
+  ) -> std::unique_ptr<GPUTexture> = 0;
+
   virtual auto CreateTexture2DFromSwapchainImage(
     u32 width,
     u32 height,

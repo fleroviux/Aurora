@@ -45,6 +45,15 @@ struct VulkanRenderDevice final : RenderDevice {
     return std::make_unique<VulkanShaderModule>(device, spirv, size);
   }
 
+  auto CreateTexture2D(
+    u32 width,
+    u32 height,
+    GPUTexture::Format format,
+    GPUTexture::Usage usage
+  ) -> std::unique_ptr<GPUTexture> override {
+    return VulkanTexture::create(physical_device, device, width, height, format, usage);
+  }
+
   auto CreateTexture2DFromSwapchainImage(
     u32 width,
     u32 height,

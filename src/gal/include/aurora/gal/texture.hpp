@@ -20,7 +20,8 @@ struct GPUTexture {
   // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkFormat
   // TODO: find a subset of formats that work on all targeted platforms.
   enum class Format {
-    B8G8R8B8_SRGB = 50
+    B8G8R8B8_SRGB = 50,
+    DEPTH_F32 = 126
   };
 
   // subset of VkImageUsageFlagBits:

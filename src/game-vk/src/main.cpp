@@ -925,6 +925,9 @@ int main(int argc, char** argv) {
   auto textures = std::vector<std::unique_ptr<GPUTexture>>{};
   auto render_targets = std::vector<std::unique_ptr<RenderTarget>>{};
 
+  auto depth_texture = render_device->CreateTexture2D(
+    1600, 900, GPUTexture::Format::DEPTH_F32, GPUTexture::Usage::DepthStencilAttachment);
+
   {
     u32 swapchain_image_count;
     vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, nullptr);
