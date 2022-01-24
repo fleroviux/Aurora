@@ -42,7 +42,26 @@ struct VulkanRenderTarget final : RenderTarget {
       attachment_handles.push_back((VkImageView)texture->handle());
     }
 
-    // TODO: depth-stencil attachment
+    auto depth_attachment_ref = VkAttachmentReference{
+      .attachment = (u32)attachments.size(),
+      .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    };
+
+    if (depth_stencil_attachment) {
+      attachments.push_back(VkAttachmentDescription{
+        .flags = 0,
+        .format = (VkFormat)depth_stencil_attachment->format(),
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+      });
+
+      attachment_handles.push_back((VkImageView)depth_stencil_attachment->handle());
+    }
 
     auto subpass_info = VkSubpassDescription{
       .flags = 0,
@@ -56,6 +75,10 @@ struct VulkanRenderTarget final : RenderTarget {
       .preserveAttachmentCount = 0,
       .pPreserveAttachments = nullptr
     };
+
+    if (depth_stencil_attachment) {
+      subpass_info.pDepthStencilAttachment = &depth_attachment_ref;
+    }
 
     auto pass_info = VkRenderPassCreateInfo{
       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,

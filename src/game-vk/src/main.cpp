@@ -329,6 +329,21 @@ auto create_pipeline(
     .alphaToOneEnable = VK_FALSE
   };
 
+  auto depth_stencil_info = VkPipelineDepthStencilStateCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = 0,
+    .depthTestEnable = VK_FALSE,
+    .depthWriteEnable = VK_TRUE,
+    .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
+    .depthBoundsTestEnable = VK_FALSE,
+    .stencilTestEnable = VK_FALSE,
+    .front = {},
+    .back = {},
+    .minDepthBounds = 0,
+    .maxDepthBounds = 0
+  };
+  
   auto color_blend_attachment_info = VkPipelineColorBlendAttachmentState{
     .blendEnable = VK_FALSE,
     .colorWriteMask = 0xF // ?
@@ -355,7 +370,7 @@ auto create_pipeline(
     .pViewportState = &viewport_info,
     .pRasterizationState = &rasterization_info,
     .pMultisampleState = &multisample_info,
-    .pDepthStencilState = nullptr,
+    .pDepthStencilState = &depth_stencil_info,
     .pColorBlendState = &color_blend_info,
     // TODO: set this to make e.g. the viewport and scissor test dynamic.
     .pDynamicState = nullptr,
@@ -874,21 +889,44 @@ int main(int argc, char** argv) {
   VkRenderPass render_pass;
   
   {
-    auto render_pass_attachment = VkAttachmentDescription{
-      .flags = 0,
-      .format = VK_FORMAT_B8G8R8A8_SRGB, // same as specified in swapchain
-      .samples = VK_SAMPLE_COUNT_1_BIT,
-      .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-      .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-      .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-      .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+    auto attachments = std::vector<VkAttachmentDescription>{
+      // Color Attachment
+      {
+        .flags = 0,
+        .format = VK_FORMAT_B8G8R8A8_SRGB,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+      },
+      // Depth Attachment
+      {
+        .flags = 0,
+        .format = VK_FORMAT_D32_SFLOAT,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+      }
     };
 
-    auto render_pass_attachment_ref = VkAttachmentReference{
-      .attachment = 0, // index into VkRenderPassCreateInfo.pAttachments
-      .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    auto refs = std::vector<VkAttachmentReference>{
+      // Color Attachment reference
+      {
+        .attachment = 0,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+      },
+      // Depth Attachment reference
+      {
+        .attachment = 1,
+        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+      }
     };
 
     auto render_pass_subpass = VkSubpassDescription{
@@ -897,9 +935,9 @@ int main(int argc, char** argv) {
       .inputAttachmentCount = 0,
       .pInputAttachments = nullptr,
       .colorAttachmentCount = 1,
-      .pColorAttachments = &render_pass_attachment_ref,
+      .pColorAttachments = &refs[0],
       .pResolveAttachments = nullptr,
-      .pDepthStencilAttachment = nullptr,
+      .pDepthStencilAttachment = &refs[1],
       .preserveAttachmentCount = 0,
       .pPreserveAttachments = nullptr
     };
@@ -908,8 +946,8 @@ int main(int argc, char** argv) {
       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
-      .attachmentCount = 1,
-      .pAttachments = &render_pass_attachment,
+      .attachmentCount = (u32)attachments.size(),
+      .pAttachments = attachments.data(),
       .subpassCount = 1,
       .pSubpasses = &render_pass_subpass,
       .dependencyCount = 0,
@@ -944,7 +982,7 @@ int main(int argc, char** argv) {
         (void*)swapchain_image
       );
 
-      auto render_target = render_device->CreateRenderTarget({ texture.get() }, nullptr);
+      auto render_target = render_device->CreateRenderTarget({ texture.get() }, depth_texture.get());
   
       render_targets.push_back(std::move(render_target));
       textures.push_back(std::move(texture)); // keep texture alive
@@ -1039,9 +1077,16 @@ int main(int argc, char** argv) {
 
     auto& render_target = render_targets[swapchain_image_id];
 
-    auto clear_value = VkClearValue{
-      .color = VkClearColorValue{
-        .float32 = { 0.01, 0.01, 0.01, 1}
+    const auto clear_values = std::vector<VkClearValue>{
+      {
+        .color = VkClearColorValue{
+          .float32 = { 0.01, 0.01, 0.01, 1 }
+        }
+      },
+      {
+        .depthStencil = VkClearDepthStencilValue{
+          .depth = 1
+        }
       }
     };
 
@@ -1060,8 +1105,8 @@ int main(int argc, char** argv) {
           .height = 900
         }
       },
-      .clearValueCount = 1,
-      .pClearValues = &clear_value
+      .clearValueCount = (u32)clear_values.size(),
+      .pClearValues = clear_values.data()
     };
 
     vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
