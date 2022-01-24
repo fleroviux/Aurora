@@ -96,7 +96,16 @@ struct VulkanRenderTarget final : RenderTarget {
       Assert(false, "VulkanRenderTarget: failed to create render pass");
     }
 
-    // TODO: this breaks if we only have a depth attachment!
+    GPUTexture* first_attachment = nullptr;
+
+    if (color_attachments.size() > 0) {
+      first_attachment = color_attachments[0];
+    } else {
+      Assert(depth_stencil_attachment, "VulkanRenderTarget: cannot have render target with zero attachments");
+
+      first_attachment = depth_stencil_attachment;
+    }
+
     auto frame_buffer_info = VkFramebufferCreateInfo{
       .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
       .pNext = nullptr,
@@ -104,8 +113,8 @@ struct VulkanRenderTarget final : RenderTarget {
       .renderPass = render_pass,
       .attachmentCount = (u32)attachment_handles.size(),
       .pAttachments = attachment_handles.data(),
-      .width = color_attachments[0]->width(),
-      .height = color_attachments[0]->height(),
+      .width = first_attachment->width(),
+      .height = first_attachment->height(),
       .layers = 1
     };
 
