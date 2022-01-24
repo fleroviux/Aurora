@@ -209,14 +209,36 @@ auto create_pipeline(
   VkRenderPass render_pass,
   Geometry const* geometry
 ) -> VkPipeline {
+  auto descriptor_set_layout_binding = VkDescriptorSetLayoutBinding{
+    .binding = 0,
+    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    .descriptorCount = 1, // number of "locations" in the binding?
+    .stageFlags = VK_SHADER_STAGE_ALL,
+    .pImmutableSamplers = nullptr
+  };
+
+  auto descriptor_set_layout_info = VkDescriptorSetLayoutCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = 0,
+    .bindingCount = 1,
+    .pBindings = &descriptor_set_layout_binding
+  };
+
+  auto descriptor_set_layout = VkDescriptorSetLayout{};
+
+  if (vkCreateDescriptorSetLayout(device, &descriptor_set_layout_info, nullptr, &descriptor_set_layout) != VK_SUCCESS) {
+    Assert(false, "Vulkan: failed to create descriptor set layout");
+  }
+
   auto pipeline_layout = VkPipelineLayout{};
 
   auto pipeline_layout_info = VkPipelineLayoutCreateInfo{
     .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     .pNext = nullptr,
     .flags = 0,
-    .setLayoutCount = 0,
-    .pSetLayouts = nullptr,
+    .setLayoutCount = 1,
+    .pSetLayouts = &descriptor_set_layout,
     .pushConstantRangeCount = 0,
     .pPushConstantRanges = nullptr
   };
@@ -333,7 +355,7 @@ auto create_pipeline(
     .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
     .pNext = nullptr,
     .flags = 0,
-    .depthTestEnable = VK_FALSE,
+    .depthTestEnable = VK_TRUE,
     .depthWriteEnable = VK_TRUE,
     .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
     .depthBoundsTestEnable = VK_FALSE,
