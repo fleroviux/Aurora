@@ -10,6 +10,8 @@ set(SOURCES
 )
 
 set(HEADERS
+  src/triangle.vert.h
+  src/triangle.frag.h
 )
 
 include(FindSDL2)

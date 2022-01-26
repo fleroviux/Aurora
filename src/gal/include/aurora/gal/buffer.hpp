@@ -32,7 +32,7 @@ struct Buffer {
   virtual void Flush(size_t offset, size_t size) = 0;
 
   template<typename T>
-  void Update(T const* data, size_t count, size_t index = 0) {
+  void Update(T const* data, size_t count = 1, size_t index = 0) {
     auto offset = index * sizeof(T);
     auto size = count * sizeof(T);
     auto range_end = offset + size;

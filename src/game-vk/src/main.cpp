@@ -1060,11 +1060,11 @@ int main(int argc, char** argv) {
   }
 
   std::unique_ptr<Buffer> ubo;
+  float triangle_intensity = 0.0;
 
   // Create our example uniform buffer and bind it to our descriptor set
   {
-    float data = 0.5;
-    ubo = render_device->CreateBufferWithData(Aura::Buffer::Usage::UniformBuffer, &data, sizeof(float));
+    ubo = render_device->CreateBufferWithData(Aura::Buffer::Usage::UniformBuffer, &triangle_intensity, sizeof(float));
 
     auto buffer_info = VkDescriptorBufferInfo{
       .buffer = (VkBuffer)ubo->Handle(),
@@ -1167,6 +1167,13 @@ int main(int argc, char** argv) {
   auto event = SDL_Event{};
 
   while (true) {
+    // Update uniforms
+    triangle_intensity += 0.01;
+    if (triangle_intensity > 1) {
+      triangle_intensity = 0.0;
+    }
+    ubo->Update(&triangle_intensity);
+
     u32 swapchain_image_id;
 
     // TODO: wait for this? why would we need to? Vsync?
