@@ -207,46 +207,9 @@ auto create_pipeline(
   VkShaderModule shader_vert,
   VkShaderModule shader_frag,
   VkRenderPass render_pass,
+  VkPipelineLayout pipeline_layout,
   Geometry const* geometry
 ) -> VkPipeline {
-  auto descriptor_set_layout_binding = VkDescriptorSetLayoutBinding{
-    .binding = 0,
-    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-    .descriptorCount = 1, // number of "locations" in the binding?
-    .stageFlags = VK_SHADER_STAGE_ALL,
-    .pImmutableSamplers = nullptr
-  };
-
-  auto descriptor_set_layout_info = VkDescriptorSetLayoutCreateInfo{
-    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .bindingCount = 1,
-    .pBindings = &descriptor_set_layout_binding
-  };
-
-  auto descriptor_set_layout = VkDescriptorSetLayout{};
-
-  if (vkCreateDescriptorSetLayout(device, &descriptor_set_layout_info, nullptr, &descriptor_set_layout) != VK_SUCCESS) {
-    Assert(false, "Vulkan: failed to create descriptor set layout");
-  }
-
-  auto pipeline_layout = VkPipelineLayout{};
-
-  auto pipeline_layout_info = VkPipelineLayoutCreateInfo{
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .setLayoutCount = 1,
-    .pSetLayouts = &descriptor_set_layout,
-    .pushConstantRangeCount = 0,
-    .pPushConstantRanges = nullptr
-  };
-
-  if (vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout) != VK_SUCCESS) {
-    Assert(false, "Vulkan: failed to create pipeline layout :(");
-  }
-
   auto pipeline = VkPipeline{};
 
   VkPipelineShaderStageCreateInfo pipeline_stages[] = {
@@ -431,6 +394,7 @@ void upload_geometry(
   VkShaderModule shader_vert,
   VkShaderModule shader_frag,
   VkRenderPass render_pass,
+  VkPipelineLayout pipeline_layout,
   Geometry const* geometry
 ) {
   auto match = geometry_cache.find(geometry);
@@ -438,7 +402,7 @@ void upload_geometry(
   if (match == geometry_cache.end()) {
     auto entry = GeometryCacheEntry{};
 
-    entry.pipeline = create_pipeline(device, shader_vert, shader_frag, render_pass, geometry);
+    entry.pipeline = create_pipeline(device, shader_vert, shader_frag, render_pass, pipeline_layout, geometry);
 
     // TODO: write ArrayBuffer constructor (and maybe a cast operator) which accepts a std::vector
     // Also maybe support an ArrayView that doesn't allow modification to the underlying data.
@@ -467,7 +431,6 @@ void draw_geometry(
   auto const& index_buffer = geometry->index_buffer;
 
   vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entry.pipeline);
-
   vkCmdBindVertexBuffers(command_buffer, 0, entry.vk_vbos.size(), entry.vk_vbos.data(), entry.vk_vbo_offs.data());
 
   switch (index_buffer.data_type()) {
@@ -906,10 +869,10 @@ int main(int argc, char** argv) {
     .instance = instance,
     .physical_device = physical_device,
     .device = device
-  });
+    });
 
   VkRenderPass render_pass;
-  
+
   {
     auto attachments = std::vector<VkAttachmentDescription>{
       // Color Attachment
@@ -975,7 +938,7 @@ int main(int argc, char** argv) {
       .dependencyCount = 0,
       .pDependencies = nullptr
     };
-    
+
     if (vkCreateRenderPass(device, &render_pass_info, nullptr, &render_pass) != VK_SUCCESS) {
       std::puts("Failed to create the render pass :(");
       return -1;
@@ -1005,9 +968,91 @@ int main(int argc, char** argv) {
       );
 
       auto render_target = render_device->CreateRenderTarget({ texture.get() }, depth_texture.get());
-  
+
       render_targets.push_back(std::move(render_target));
       textures.push_back(std::move(texture)); // keep texture alive
+    }
+  }
+
+  auto descriptor_set_layout = VkDescriptorSetLayout{};
+
+  // Create descriptor set layout
+  {
+    auto descriptor_set_layout_binding = VkDescriptorSetLayoutBinding{
+      .binding = 0,
+      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      .descriptorCount = 1, // number of "locations" in the binding?
+      .stageFlags = VK_SHADER_STAGE_ALL,
+      .pImmutableSamplers = nullptr
+    };
+
+    auto descriptor_set_layout_info = VkDescriptorSetLayoutCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .bindingCount = 1,
+      .pBindings = &descriptor_set_layout_binding
+    };
+
+    if (vkCreateDescriptorSetLayout(device, &descriptor_set_layout_info, nullptr, &descriptor_set_layout) != VK_SUCCESS) {
+      Assert(false, "Vulkan: failed to create descriptor set layout");
+    }
+  }
+
+  auto pipeline_layout = VkPipelineLayout{};
+
+  // Create pipeline layout info
+  {
+    auto pipeline_layout_info = VkPipelineLayoutCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .setLayoutCount = 1,
+      .pSetLayouts = &descriptor_set_layout,
+      .pushConstantRangeCount = 0,
+      .pPushConstantRanges = nullptr
+    };
+
+    if (vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout) != VK_SUCCESS) {
+      Assert(false, "Vulkan: failed to create pipeline layout :(");
+    }
+  }
+
+  auto descriptor_set = VkDescriptorSet{};
+
+  // Create descriptor pool and descriptor set
+  {
+    // TODO: how do people typically handle descriptor pools in their engines?
+    auto descriptor_pool = VkDescriptorPool{};
+    auto descriptor_pool_sizes = std::vector<VkDescriptorPoolSize>{
+      {
+        .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1024
+      }
+    };
+    auto descriptor_pool_info = VkDescriptorPoolCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .maxSets = 1024,
+      .poolSizeCount = (u32)descriptor_pool_sizes.size(),
+      .pPoolSizes = descriptor_pool_sizes.data()
+    };
+
+    if (vkCreateDescriptorPool(device, &descriptor_pool_info, nullptr, &descriptor_pool) != VK_SUCCESS) {
+      Assert(false, "Vulkan: failed to create descriptor pool");
+    }
+
+    auto descriptor_set_info = VkDescriptorSetAllocateInfo{
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+      .pNext = nullptr,
+      .descriptorPool = descriptor_pool,
+      .descriptorSetCount = 1,
+      .pSetLayouts = &descriptor_set_layout
+    };
+
+    if (vkAllocateDescriptorSets(device, &descriptor_set_info, &descriptor_set) != VK_SUCCESS) {
+      Assert(false, "Vulkan: failed to allocate descriptor set");
     }
   }
 
@@ -1135,7 +1180,7 @@ int main(int argc, char** argv) {
     vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
     {
       // TODO: is it a good idea to upload the geometry while recording the command buffer?
-      upload_geometry(physical_device, device, render_device, shader_vert, shader_frag, render_pass, &triangle);
+      upload_geometry(physical_device, device, render_device, shader_vert, shader_frag, render_pass, pipeline_layout, &triangle);
       draw_geometry(command_buffer, &triangle);
     }
     vkCmdEndRenderPass(command_buffer);
