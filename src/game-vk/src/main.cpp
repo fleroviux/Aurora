@@ -425,6 +425,8 @@ void upload_geometry(
 
 void draw_geometry(
   VkCommandBuffer command_buffer,
+  VkPipelineLayout pipeline_layout,
+  VkDescriptorSet descriptor_set,
   Geometry const* geometry
 ) {
   auto const& entry = geometry_cache[geometry];
@@ -432,6 +434,7 @@ void draw_geometry(
 
   vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entry.pipeline);
   vkCmdBindVertexBuffers(command_buffer, 0, entry.vk_vbos.size(), entry.vk_vbos.data(), entry.vk_vbo_offs.data());
+  vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
 
   switch (index_buffer.data_type()) {
     case IndexDataType::UInt16:
@@ -1056,6 +1059,35 @@ int main(int argc, char** argv) {
     }
   }
 
+  std::unique_ptr<Buffer> ubo;
+
+  // Create our example uniform buffer and bind it to our descriptor set
+  {
+    float data = 0.5;
+    ubo = render_device->CreateBufferWithData(Aura::Buffer::Usage::UniformBuffer, &data, sizeof(float));
+
+    auto buffer_info = VkDescriptorBufferInfo{
+      .buffer = (VkBuffer)ubo->Handle(),
+      .offset = 0,
+      .range = VK_WHOLE_SIZE
+    };
+
+    auto descriptor_set_write = VkWriteDescriptorSet{
+      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .pNext = nullptr,
+      .dstSet = descriptor_set,
+      .dstBinding = 0,
+      .dstArrayElement = 0,
+      .descriptorCount = 1,
+      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      .pImageInfo = nullptr,
+      .pBufferInfo = &buffer_info,
+      .pTexelBufferView = nullptr
+    };
+
+    vkUpdateDescriptorSets(device, 1, &descriptor_set_write, 0, nullptr);
+  }
+
   VkCommandPool command_pool;
   VkCommandBuffer command_buffer;
   auto command_buffer_begin_info = VkCommandBufferBeginInfo{
@@ -1181,7 +1213,7 @@ int main(int argc, char** argv) {
     {
       // TODO: is it a good idea to upload the geometry while recording the command buffer?
       upload_geometry(physical_device, device, render_device, shader_vert, shader_frag, render_pass, pipeline_layout, &triangle);
-      draw_geometry(command_buffer, &triangle);
+      draw_geometry(command_buffer, pipeline_layout, descriptor_set, &triangle);
     }
     vkCmdEndRenderPass(command_buffer);
     vkEndCommandBuffer(command_buffer);
