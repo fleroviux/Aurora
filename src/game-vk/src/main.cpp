@@ -1060,11 +1060,13 @@ int main(int argc, char** argv) {
   }
 
   std::unique_ptr<Buffer> ubo;
-  float triangle_intensity = 0.0;
+  //float triangle_intensity = 0.0;
+  float angle = 0;
+  Matrix4 transform = Matrix4::rotation_z(angle);
 
   // Create our example uniform buffer and bind it to our descriptor set
   {
-    ubo = render_device->CreateBufferWithData(Aura::Buffer::Usage::UniformBuffer, &triangle_intensity, sizeof(float));
+    ubo = render_device->CreateBufferWithData(Aura::Buffer::Usage::UniformBuffer, &transform, sizeof(transform));
 
     auto buffer_info = VkDescriptorBufferInfo{
       .buffer = (VkBuffer)ubo->Handle(),
@@ -1168,11 +1170,9 @@ int main(int argc, char** argv) {
 
   while (true) {
     // Update uniforms
-    triangle_intensity += 0.01;
-    if (triangle_intensity > 1) {
-      triangle_intensity = 0.0;
-    }
-    ubo->Update(&triangle_intensity);
+    angle += 0.01;
+    transform = Matrix4::rotation_z(angle);
+    ubo->Update(&transform);
 
     u32 swapchain_image_id;
 
