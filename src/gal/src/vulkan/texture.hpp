@@ -19,6 +19,7 @@ struct VulkanTexture final : GPUTexture {
   }
 
   auto handle() -> void* override { return (void*)image_view_; }
+  auto handle2() -> void* override { return (void*)image_; }
   auto grade() const -> Grade override { return grade_; }
   auto format() const -> Format override { return format_; };
   auto usage() const -> Usage override { return usage_; }

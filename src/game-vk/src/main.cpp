@@ -468,13 +468,15 @@ using u32 = std::uint32_t;
 using u64 = std::uint64_t;
 
 float vertices[] = {
-  -1, -1,  0,   1, 0, 0,
-   1, -1,  0,   0, 1, 0,
-   0,  1,  0,   0, 0, 1
+  -1, -1,  3,   1, 0, 0,  0, 0,
+   1, -1,  3,   0, 1, 0,  1, 0,
+   1,  1,  3,   0, 0, 1,  1, 1,
+  -1,  1,  3,   1, 1, 0,  0, 1
 };
 
 u16 indices[] = {
-  0, 1, 2
+  0, 1, 2,
+  2, 3, 0
 };
 
 const auto triangle = Geometry{
@@ -487,7 +489,7 @@ const auto triangle = Geometry{
   },
   std::vector<VertexBuffer>{VertexBuffer{
     VertexBufferLayout{
-      .stride = sizeof(float) * 6,
+      .stride = sizeof(float) * 8,
       .attributes = std::vector<VertexBufferLayout::Attribute>{
         {
           .index = 0,
@@ -502,6 +504,13 @@ const auto triangle = Geometry{
           .components = 3,
           .normalized = false,
           .offset = sizeof(float) * 3
+        },
+        {
+          .index = 2,
+          .data_type = VertexDataType::Float32,
+          .components = 2,
+          .normalized = false,
+          .offset = sizeof(float) * 6
         }
       }
     },
@@ -981,20 +990,30 @@ int main(int argc, char** argv) {
 
   // Create descriptor set layout
   {
-    auto descriptor_set_layout_binding = VkDescriptorSetLayoutBinding{
-      .binding = 0,
-      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-      .descriptorCount = 1, // number of "locations" in the binding?
-      .stageFlags = VK_SHADER_STAGE_ALL,
-      .pImmutableSamplers = nullptr
+    auto descriptor_set_layout_bindings = std::vector<VkDescriptorSetLayoutBinding>{
+      {
+        .binding = 0,
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1, // number of "locations" in the binding?
+        .stageFlags = VK_SHADER_STAGE_ALL,
+        .pImmutableSamplers = nullptr
+      },
+      {
+        // TODO: can this be zero too since we have a different descriptor type?
+        .binding = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+        .descriptorCount = 1, // number of "locations" in the binding?
+        .stageFlags = VK_SHADER_STAGE_ALL,
+        .pImmutableSamplers = nullptr
+      }
     };
 
     auto descriptor_set_layout_info = VkDescriptorSetLayoutCreateInfo{
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
-      .bindingCount = 1,
-      .pBindings = &descriptor_set_layout_binding
+      .bindingCount = (u32)descriptor_set_layout_bindings.size(),
+      .pBindings = descriptor_set_layout_bindings.data()
     };
 
     if (vkCreateDescriptorSetLayout(device, &descriptor_set_layout_info, nullptr, &descriptor_set_layout) != VK_SUCCESS) {
@@ -1031,6 +1050,10 @@ int main(int argc, char** argv) {
       {
         .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1024
+      },
+      {
+        .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+        .descriptorCount = 1024
       }
     };
     auto descriptor_pool_info = VkDescriptorPoolCreateInfo{
@@ -1060,7 +1083,6 @@ int main(int argc, char** argv) {
   }
 
   std::unique_ptr<Buffer> ubo;
-  //float triangle_intensity = 0.0;
   float angle = 0;
   Matrix4 transform = Matrix4::rotation_z(angle);
 
@@ -1085,6 +1107,70 @@ int main(int argc, char** argv) {
       .pImageInfo = nullptr,
       .pBufferInfo = &buffer_info,
       .pTexelBufferView = nullptr
+    };
+
+    vkUpdateDescriptorSets(device, 1, &descriptor_set_write, 0, nullptr);
+  }
+
+  std::unique_ptr<GPUTexture> texture;
+  std::unique_ptr<Buffer> texture_buffer; // texture staging buffer...
+
+  // Create an example texture and bind it to our descriptor set
+  {
+    auto girl_texture = Texture::load("girl.png");
+
+    // TODO: maybe add usage CopyDst?
+    texture = render_device->CreateTexture2D(girl_texture->width(), girl_texture->height(), GPUTexture::Format::B8G8R8B8_SRGB, GPUTexture::Usage::Sampled | GPUTexture::Usage::CopyDst);
+    texture_buffer = render_device->CreateBuffer(Aura::Buffer::Usage::CopySrc, sizeof(u32) * girl_texture->width() * girl_texture->height());
+
+    // Upload some data to our staging buffer...
+    // u32* data = new u32[64*64]; // todo: this leaks...
+    // for (int i = 0; i < 64*64; i++) {
+    //   data[i] = 0xFFFF0000;
+    // }
+    texture_buffer->Update(girl_texture->data(), girl_texture->width() * girl_texture->height() * sizeof(u32));
+
+    auto sampler_info = VkSamplerCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .magFilter = VK_FILTER_LINEAR,
+      .minFilter = VK_FILTER_LINEAR,
+      .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+      .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+      .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+      .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+      .mipLodBias = 0,
+      .anisotropyEnable = VK_FALSE,
+      .compareEnable = VK_FALSE,
+      .compareOp = VK_COMPARE_OP_NEVER,
+      .minLod = 0,
+      .maxLod = 0,
+      .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+      .unnormalizedCoordinates = VK_FALSE
+    };
+
+    auto sampler = VkSampler{};
+
+    if (vkCreateSampler(device, &sampler_info, nullptr, &sampler) != VK_SUCCESS) {
+      Assert(false, "Vulkan: failed to create sampler for texture :(");
+    }
+
+    auto image_info = VkDescriptorImageInfo{
+      .sampler = sampler,
+      .imageView = (VkImageView)texture->handle(),
+      .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL // TODO
+    };
+
+    auto descriptor_set_write = VkWriteDescriptorSet{
+      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .pNext = nullptr,
+      .dstSet = descriptor_set,
+      .dstBinding = 1,
+      .dstArrayElement = 0,
+      .descriptorCount = 1,
+      .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+      .pImageInfo = &image_info
     };
 
     vkUpdateDescriptorSets(device, 1, &descriptor_set_write, 0, nullptr);
@@ -1171,7 +1257,7 @@ int main(int argc, char** argv) {
   while (true) {
     // Update uniforms
     angle += 0.01;
-    transform = Matrix4::rotation_z(angle);
+    transform = Matrix4::perspective_dx(45/180.0*3.141592, 1600.0/900, 0.01, 100.0) * Matrix4::rotation_z(angle);
     ubo->Update(&transform);
 
     u32 swapchain_image_id;
@@ -1216,6 +1302,32 @@ int main(int argc, char** argv) {
     };
 
     vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
+
+    // TODO: copy image only once instead of every frame.
+    // Also maybe insert a (memory?) barrier to make sure the image is uploaded before we render it.
+    auto region = VkBufferImageCopy{
+      .bufferOffset = 0,
+      .bufferRowLength = texture->width(),
+      .bufferImageHeight = texture->height(),
+      .imageSubresource = VkImageSubresourceLayers{
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .mipLevel = 0,
+        .baseArrayLayer = 0,
+        .layerCount = 1
+      },
+      .imageOffset = VkOffset3D{
+        .x = 0,
+        .y = 0,
+        .z = 0
+      },
+      .imageExtent = VkExtent3D{
+        .width = texture->width(),
+        .height = texture->height(),
+        .depth = 1
+      }
+    };
+    vkCmdCopyBufferToImage(command_buffer, (VkBuffer)texture_buffer->Handle(), (VkImage)texture->handle2(), VK_IMAGE_LAYOUT_UNDEFINED, 1, &region);
+
     vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
     {
       // TODO: is it a good idea to upload the geometry while recording the command buffer?
@@ -1223,6 +1335,7 @@ int main(int argc, char** argv) {
       draw_geometry(command_buffer, pipeline_layout, descriptor_set, &triangle);
     }
     vkCmdEndRenderPass(command_buffer);
+    
     vkEndCommandBuffer(command_buffer);
     
     vkResetFences(device, 1, &fence);

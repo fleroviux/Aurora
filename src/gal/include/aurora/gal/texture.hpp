@@ -38,6 +38,7 @@ struct GPUTexture {
   virtual ~GPUTexture() = default;
 
   virtual auto handle() -> void* = 0;
+  virtual auto handle2() -> void* = 0;
   virtual auto grade() const -> Grade = 0;
   virtual auto format() const -> Format = 0;
   virtual auto usage() const -> Usage = 0;
