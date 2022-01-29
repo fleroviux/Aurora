@@ -8,6 +8,10 @@
 #include <cmath>
 #include <aurora/math/vector.hpp>
 
+#ifndef M_PI
+  #define M_PI 3.14159265358979323
+#endif
+
 namespace Aura {
 
 namespace detail {

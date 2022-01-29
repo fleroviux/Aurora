@@ -5,6 +5,7 @@
 #pragma once
 
 #include <aurora/renderer/gpu_resource.hpp>
+#include <aurora/array_view.hpp>
 #include <aurora/integer.hpp>
 #include <vector>
 
@@ -55,6 +56,16 @@ struct IndexBuffer final : GPUResource {
 
   auto size() const -> size_t {
     return buffer_.size();
+  }
+
+  template<typename T>
+  auto view() const -> ArrayView<T const> {
+    return ArrayView<T const>{(T*)data(), size() / sizeof(T)};
+  }
+
+  template<typename T>
+  auto view() -> ArrayView<T> {
+    return ArrayView<T>{(T*)data(), size() / sizeof(T)};
   }
 
 private:

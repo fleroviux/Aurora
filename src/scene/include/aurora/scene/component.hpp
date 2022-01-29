@@ -19,9 +19,7 @@ namespace Aura {
 
 struct GameObject;
 
-struct Component {
-  AURA_NO_COPY_NO_MOVE(Component);
-
+struct Component : NonCopyable, NonMovable {
   Component(GameObject* owner) : owner_(owner) {
   }
 

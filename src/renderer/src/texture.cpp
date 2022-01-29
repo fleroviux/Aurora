@@ -3,6 +3,7 @@
  */
 
 #include <aurora/renderer/texture.hpp>
+#include <stb_image.h>
 
 namespace Aura {
 
