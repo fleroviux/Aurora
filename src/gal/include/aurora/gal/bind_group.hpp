@@ -5,8 +5,15 @@
 #pragma once
 
 #include <aurora/integer.hpp>
+#include <memory>
 
 namespace Aura {
+
+struct BindGroup {
+  virtual ~BindGroup() = default;
+
+  virtual auto Handle() -> void* = 0;
+};
 
 struct BindGroupLayout {
   struct Entry {
@@ -33,6 +40,7 @@ struct BindGroupLayout {
   virtual ~BindGroupLayout() = default;
 
   virtual auto Handle() -> void* = 0;
+  virtual auto Instantiate() -> std::unique_ptr<BindGroup> = 0;
 };
 
 constexpr auto operator|(

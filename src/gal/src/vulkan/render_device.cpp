@@ -18,6 +18,7 @@ struct VulkanRenderDevice final : RenderDevice {
       : instance(options.instance)
       , physical_device(options.physical_device)
       , device(options.device) {
+    CreateDescriptorPool();
   }
 
   auto Handle() -> void* override {
@@ -75,7 +76,7 @@ struct VulkanRenderDevice final : RenderDevice {
   auto CreateBindGroupLayout(
     std::vector<BindGroupLayout::Entry> const& entries
   ) -> std::shared_ptr<BindGroupLayout> override {
-    return std::make_shared<VulkanBindGroupLayout>(device, entries);
+    return std::make_shared<VulkanBindGroupLayout>(device, descriptor_pool, entries);
   }
 
   auto CreatePipelineLayout(
@@ -85,9 +86,37 @@ struct VulkanRenderDevice final : RenderDevice {
   }
 
 private:
+  void CreateDescriptorPool() {
+    // TODO: create pools for other descriptor types
+    VkDescriptorPoolSize pool_sizes[] {
+      {
+        .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 4096
+      },
+      {
+        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .descriptorCount = 4096
+      }
+    };
+
+    auto info = VkDescriptorPoolCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+      .maxSets = 1024,
+      .poolSizeCount = (u32)(sizeof(pool_sizes) / sizeof(VkDescriptorPoolSize)),
+      .pPoolSizes = pool_sizes
+    };
+
+    if (vkCreateDescriptorPool(device, &info, nullptr, &descriptor_pool) != VK_SUCCESS) {
+      Assert(false, "VulkanRenderDevice: failed to create descriptor pool");
+    }
+  }
+
   VkInstance instance;
   VkPhysicalDevice physical_device;
   VkDevice device;
+  VkDescriptorPool descriptor_pool;
 };
 
 auto CreateVulkanRenderDevice(

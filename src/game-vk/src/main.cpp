@@ -996,51 +996,8 @@ int main(int argc, char** argv) {
       .type = BindGroupLayout::Entry::Type::ImageWithSampler
     }
   });
-
+  auto bind_group = bind_group_layout->Instantiate();
   auto pipeline_layout = render_device->CreatePipelineLayout({ bind_group_layout });
-
-  auto descriptor_set = VkDescriptorSet{};
-
-  // Create descriptor pool and descriptor set
-  {
-    // TODO: how do people typically handle descriptor pools in their engines?
-    auto descriptor_pool = VkDescriptorPool{};
-    auto descriptor_pool_sizes = std::vector<VkDescriptorPoolSize>{
-      {
-        .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1024
-      },
-      {
-        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1024
-      }
-    };
-    auto descriptor_pool_info = VkDescriptorPoolCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .maxSets = 1024,
-      .poolSizeCount = (u32)descriptor_pool_sizes.size(),
-      .pPoolSizes = descriptor_pool_sizes.data()
-    };
-
-    if (vkCreateDescriptorPool(device, &descriptor_pool_info, nullptr, &descriptor_pool) != VK_SUCCESS) {
-      Assert(false, "Vulkan: failed to create descriptor pool");
-    }
-
-    auto _handle = (VkDescriptorSetLayout)bind_group_layout->Handle();
-    auto descriptor_set_info = VkDescriptorSetAllocateInfo{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-      .pNext = nullptr,
-      .descriptorPool = descriptor_pool,
-      .descriptorSetCount = 1,
-      .pSetLayouts = &_handle
-    };
-
-    if (vkAllocateDescriptorSets(device, &descriptor_set_info, &descriptor_set) != VK_SUCCESS) {
-      Assert(false, "Vulkan: failed to allocate descriptor set");
-    }
-  }
 
   std::unique_ptr<Buffer> ubo;
   float angle = 0;
@@ -1059,7 +1016,7 @@ int main(int argc, char** argv) {
     auto descriptor_set_write = VkWriteDescriptorSet{
       .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
       .pNext = nullptr,
-      .dstSet = descriptor_set,
+      .dstSet = (VkDescriptorSet)bind_group->Handle(),
       .dstBinding = 0,
       .dstArrayElement = 0,
       .descriptorCount = 1,
@@ -1125,7 +1082,7 @@ int main(int argc, char** argv) {
     auto descriptor_set_write = VkWriteDescriptorSet{
       .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
       .pNext = nullptr,
-      .dstSet = descriptor_set,
+      .dstSet = (VkDescriptorSet)bind_group->Handle(),
       .dstBinding = 1,
       .dstArrayElement = 0,
       .descriptorCount = 1,
@@ -1292,7 +1249,7 @@ int main(int argc, char** argv) {
     {
       // TODO: is it a good idea to upload the geometry while recording the command buffer?
       upload_geometry(physical_device, device, render_device, shader_vert, shader_frag, render_pass, (VkPipelineLayout)pipeline_layout->Handle(), &triangle);
-      draw_geometry(command_buffer, (VkPipelineLayout)pipeline_layout->Handle(), descriptor_set, &triangle);
+      draw_geometry(command_buffer, (VkPipelineLayout)pipeline_layout->Handle(), (VkDescriptorSet)bind_group->Handle(), &triangle);
     }
     vkCmdEndRenderPass(command_buffer);
     
