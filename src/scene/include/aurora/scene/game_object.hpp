@@ -18,9 +18,7 @@
 
 namespace Aura {
 
-struct GameObject final {
-  AURA_NO_COPY_NO_MOVE(GameObject);
-
+struct GameObject final : NonCopyable, NonMovable {
   GameObject() {
     add_default_components();
   }

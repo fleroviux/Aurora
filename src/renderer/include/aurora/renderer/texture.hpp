@@ -13,9 +13,7 @@
 
 namespace Aura {
 
-struct Texture final : GPUResource {
-  AURA_NO_COPY_NO_MOVE(Texture);
-
+struct Texture final : GPUResource, NonCopyable, NonMovable {
   Texture(uint width, uint height, u8* data)
       : width_(width)
       , height_(height)

@@ -7,19 +7,21 @@
 #include <functional>
 #include <utility>
 
-#define AURA_NO_COPY(T)\
-  T(T const& other) = delete;\
-  void operator=(T const& other) = delete;
-
-#define AURA_NO_MOVE(T)\
-  T(T&& other) = delete;\
-  void operator=(T&& other) = delete;
-
-#define AURA_NO_COPY_NO_MOVE(T)\
-  AURA_NO_COPY(T)\
-  AURA_NO_MOVE(T)
-
 namespace Aura {
+
+struct NonCopyable {
+  NonCopyable() {}
+  NonCopyable(NonCopyable const& other) = delete;
+
+  auto operator=(NonCopyable const& other) -> NonCopyable& = delete;
+};
+
+struct NonMovable {
+  NonMovable() {}
+  NonMovable(NonMovable&& other) = delete;
+
+  auto operator=(NonMovable&& other) -> NonMovable& = delete;
+};
 
 template<bool flag = false>
 constexpr void static_no_match() {
