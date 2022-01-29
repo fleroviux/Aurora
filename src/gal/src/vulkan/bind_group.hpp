@@ -36,6 +36,33 @@ struct VulkanBindGroup final : BindGroup {
     return (void*)descriptor_set_;
   }
 
+  void Bind(
+    u32 binding,
+    std::unique_ptr<Buffer>& buffer,
+    BindGroupLayout::Entry::Type type
+  ) override {
+    auto buffer_info = VkDescriptorBufferInfo{
+      .buffer = (VkBuffer)buffer->Handle(),
+      .offset = 0,
+      .range = VK_WHOLE_SIZE
+    };
+
+    auto write_descriptor_set = VkWriteDescriptorSet{
+      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .pNext = nullptr,
+      .dstSet = descriptor_set_,
+      .dstBinding = binding,
+      .dstArrayElement = 0,
+      .descriptorCount = 1,
+      .descriptorType = (VkDescriptorType)type,
+      .pImageInfo = nullptr,
+      .pBufferInfo = &buffer_info,
+      .pTexelBufferView = nullptr
+    };
+
+    vkUpdateDescriptorSets(device_, 1, &write_descriptor_set, 0, nullptr);
+  }
+
 private:
   VkDevice device_;
   VkDescriptorPool descriptor_pool_;
@@ -81,7 +108,7 @@ struct VulkanBindGroupLayout final : BindGroupLayout {
    return (void*)layout_;
   }
 
-  auto Instantiate() -> std::unique_ptr<BindGroup> {
+  auto Instantiate() -> std::unique_ptr<BindGroup> override {
     return std::make_unique<VulkanBindGroup>(device_, descriptor_pool_, layout_);
   }
 

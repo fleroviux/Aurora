@@ -4,16 +4,13 @@
 
 #pragma once
 
+#include <aurora/gal/buffer.hpp>
 #include <aurora/integer.hpp>
 #include <memory>
 
 namespace Aura {
 
-struct BindGroup {
-  virtual ~BindGroup() = default;
-
-  virtual auto Handle() -> void* = 0;
-};
+struct BindGroup;
 
 struct BindGroupLayout {
   struct Entry {
@@ -49,5 +46,17 @@ constexpr auto operator|(
 ) -> BindGroupLayout::Entry::ShaderStage {
   return (BindGroupLayout::Entry::ShaderStage)((u32)lhs | (u32)rhs);
 }
+
+struct BindGroup {
+  virtual ~BindGroup() = default;
+
+  virtual auto Handle() -> void* = 0;
+
+  virtual void Bind(
+    u32 binding,
+    std::unique_ptr<Buffer>& buffer,
+    BindGroupLayout::Entry::Type type
+  ) = 0;
+};
 
 } // namespace Aura

@@ -1004,30 +1004,12 @@ int main(int argc, char** argv) {
   Matrix4 transform = Matrix4::rotation_z(angle);
 
   // Create our example uniform buffer and bind it to our descriptor set
-  {
-    ubo = render_device->CreateBufferWithData(Aura::Buffer::Usage::UniformBuffer, &transform, sizeof(transform));
-
-    auto buffer_info = VkDescriptorBufferInfo{
-      .buffer = (VkBuffer)ubo->Handle(),
-      .offset = 0,
-      .range = VK_WHOLE_SIZE
-    };
-
-    auto descriptor_set_write = VkWriteDescriptorSet{
-      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-      .pNext = nullptr,
-      .dstSet = (VkDescriptorSet)bind_group->Handle(),
-      .dstBinding = 0,
-      .dstArrayElement = 0,
-      .descriptorCount = 1,
-      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-      .pImageInfo = nullptr,
-      .pBufferInfo = &buffer_info,
-      .pTexelBufferView = nullptr
-    };
-
-    vkUpdateDescriptorSets(device, 1, &descriptor_set_write, 0, nullptr);
-  }
+  ubo = render_device->CreateBufferWithData(
+    Aura::Buffer::Usage::UniformBuffer,
+    &transform,
+    sizeof(transform)
+  );
+  bind_group->Bind(0, ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
   std::unique_ptr<GPUTexture> texture;
   std::unique_ptr<Buffer> texture_buffer; // texture staging buffer...
@@ -1041,10 +1023,6 @@ int main(int argc, char** argv) {
     texture_buffer = render_device->CreateBuffer(Aura::Buffer::Usage::CopySrc, sizeof(u32) * girl_texture->width() * girl_texture->height());
 
     // Upload some data to our staging buffer...
-    // u32* data = new u32[64*64]; // todo: this leaks...
-    // for (int i = 0; i < 64*64; i++) {
-    //   data[i] = 0xFFFF0000;
-    // }
     texture_buffer->Update(girl_texture->data(), girl_texture->width() * girl_texture->height() * sizeof(u32));
 
     auto sampler_info = VkSamplerCreateInfo{
