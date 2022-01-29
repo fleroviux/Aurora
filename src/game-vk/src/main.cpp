@@ -986,76 +986,18 @@ int main(int argc, char** argv) {
     }
   }
 
-  auto descriptor_set_layout = VkDescriptorSetLayout{};
-
-  // Create descriptor set layout
-  {
-    // Similar to bind group layout entry?
-    auto descriptor_set_layout_bindings = std::vector<VkDescriptorSetLayoutBinding>{
-      {
-        .binding = 0,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1, // array size
-        .stageFlags = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = nullptr
-      },
-      {
-        // TODO: can this be zero too since we have a different descriptor type?
-        .binding = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1, // array size
-        .stageFlags = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = nullptr
-      }
-    };
-
-    // Similar to bind group layout?
-    auto descriptor_set_layout_info = VkDescriptorSetLayoutCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .bindingCount = (u32)descriptor_set_layout_bindings.size(),
-      .pBindings = descriptor_set_layout_bindings.data()
-    };
-
-    if (vkCreateDescriptorSetLayout(device, &descriptor_set_layout_info, nullptr, &descriptor_set_layout) != VK_SUCCESS) {
-      Assert(false, "Vulkan: failed to create descriptor set layout");
-    }
-  }
-
-  auto pipeline_layout = VkPipelineLayout{};
-
-  /*// Create pipeline layout info
-  {
-    auto pipeline_layout_info = VkPipelineLayoutCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .setLayoutCount = 1,
-      .pSetLayouts = &descriptor_set_layout,
-      .pushConstantRangeCount = 0,
-      .pPushConstantRanges = nullptr
-    };
-
-    if (vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout) != VK_SUCCESS) {
-      Assert(false, "Vulkan: failed to create pipeline layout :(");
-    }
-  }*/
-
-  auto test_pipeline_layout = render_device->CreatePipelineLayout({{
+  auto bind_group_layout = render_device->CreateBindGroupLayout({
     {
       .binding = 0,
-      .type = BindGroupLayoutEntry::Type::UniformBuffer,
-      //.stages = BindGroupLayoutEntry::ShaderStage::Vertex
+      .type = BindGroupLayout::Entry::Type::UniformBuffer
     },
     {
       .binding = 1,
-      .type = BindGroupLayoutEntry::Type::ImageWithSampler,
-      //.stages = BindGroupLayoutEntry::ShaderStage::Fragment
+      .type = BindGroupLayout::Entry::Type::ImageWithSampler
     }
-  }});
+  });
 
-  pipeline_layout = (VkPipelineLayout)test_pipeline_layout->Handle();
+  auto pipeline_layout = render_device->CreatePipelineLayout({ bind_group_layout });
 
   auto descriptor_set = VkDescriptorSet{};
 
@@ -1086,12 +1028,13 @@ int main(int argc, char** argv) {
       Assert(false, "Vulkan: failed to create descriptor pool");
     }
 
+    auto _handle = (VkDescriptorSetLayout)bind_group_layout->Handle();
     auto descriptor_set_info = VkDescriptorSetAllocateInfo{
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
       .pNext = nullptr,
       .descriptorPool = descriptor_pool,
       .descriptorSetCount = 1,
-      .pSetLayouts = &descriptor_set_layout
+      .pSetLayouts = &_handle
     };
 
     if (vkAllocateDescriptorSets(device, &descriptor_set_info, &descriptor_set) != VK_SUCCESS) {
@@ -1348,8 +1291,8 @@ int main(int argc, char** argv) {
     vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
     {
       // TODO: is it a good idea to upload the geometry while recording the command buffer?
-      upload_geometry(physical_device, device, render_device, shader_vert, shader_frag, render_pass, pipeline_layout, &triangle);
-      draw_geometry(command_buffer, pipeline_layout, descriptor_set, &triangle);
+      upload_geometry(physical_device, device, render_device, shader_vert, shader_frag, render_pass, (VkPipelineLayout)pipeline_layout->Handle(), &triangle);
+      draw_geometry(command_buffer, (VkPipelineLayout)pipeline_layout->Handle(), descriptor_set, &triangle);
     }
     vkCmdEndRenderPass(command_buffer);
     

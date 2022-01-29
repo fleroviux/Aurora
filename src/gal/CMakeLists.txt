@@ -9,6 +9,7 @@ set(SOURCES
 )
 
 set(HEADERS
+  src/vulkan/bind_group.hpp
   src/vulkan/buffer.hpp
   src/vulkan/common.hpp
   src/vulkan/pipeline_layout.hpp
@@ -19,6 +20,7 @@ set(HEADERS
 
 set(HEADERS_PUBLIC
   include/aurora/gal/backend/vulkan.hpp
+  include/aurora/gal/bind_group.hpp
   include/aurora/gal/buffer.hpp
   include/aurora/gal/pipeline_layout.hpp
   include/aurora/gal/render_device.hpp

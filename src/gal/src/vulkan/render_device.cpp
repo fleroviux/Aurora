@@ -4,6 +4,7 @@
 
 #include <aurora/gal/backend/vulkan.hpp>
 
+#include "bind_group.hpp"
 #include "buffer.hpp"
 #include "pipeline_layout.hpp"
 #include "render_target.hpp"
@@ -71,8 +72,14 @@ struct VulkanRenderDevice final : RenderDevice {
     return std::make_unique<VulkanRenderTarget>(device, color_attachments, depth_stencil_attachment);
   }
 
+  auto CreateBindGroupLayout(
+    std::vector<BindGroupLayout::Entry> const& entries
+  ) -> std::shared_ptr<BindGroupLayout> override {
+    return std::make_shared<VulkanBindGroupLayout>(device, entries);
+  }
+
   auto CreatePipelineLayout(
-    std::vector<BindGroupLayout> const& bind_groups
+    std::vector<std::shared_ptr<BindGroupLayout>> const& bind_groups
   ) -> std::unique_ptr<PipelineLayout> override {
     return std::make_unique<VulkanPipelineLayout>(device, bind_groups);
   }
