@@ -990,24 +990,26 @@ int main(int argc, char** argv) {
 
   // Create descriptor set layout
   {
+    // Similar to bind group layout entry?
     auto descriptor_set_layout_bindings = std::vector<VkDescriptorSetLayoutBinding>{
       {
         .binding = 0,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1, // number of "locations" in the binding?
+        .descriptorCount = 1, // array size
         .stageFlags = VK_SHADER_STAGE_ALL,
         .pImmutableSamplers = nullptr
       },
       {
         // TODO: can this be zero too since we have a different descriptor type?
         .binding = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-        .descriptorCount = 1, // number of "locations" in the binding?
+        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .descriptorCount = 1, // array size
         .stageFlags = VK_SHADER_STAGE_ALL,
         .pImmutableSamplers = nullptr
       }
     };
 
+    // Similar to bind group layout?
     auto descriptor_set_layout_info = VkDescriptorSetLayoutCreateInfo{
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
       .pNext = nullptr,
@@ -1023,7 +1025,7 @@ int main(int argc, char** argv) {
 
   auto pipeline_layout = VkPipelineLayout{};
 
-  // Create pipeline layout info
+  /*// Create pipeline layout info
   {
     auto pipeline_layout_info = VkPipelineLayoutCreateInfo{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -1038,7 +1040,22 @@ int main(int argc, char** argv) {
     if (vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout) != VK_SUCCESS) {
       Assert(false, "Vulkan: failed to create pipeline layout :(");
     }
-  }
+  }*/
+
+  auto test_pipeline_layout = render_device->CreatePipelineLayout({{
+    {
+      .binding = 0,
+      .type = BindGroupLayoutEntry::Type::UniformBuffer,
+      //.stages = BindGroupLayoutEntry::ShaderStage::Vertex
+    },
+    {
+      .binding = 1,
+      .type = BindGroupLayoutEntry::Type::ImageWithSampler,
+      //.stages = BindGroupLayoutEntry::ShaderStage::Fragment
+    }
+  }});
+
+  pipeline_layout = (VkPipelineLayout)test_pipeline_layout->Handle();
 
   auto descriptor_set = VkDescriptorSet{};
 
@@ -1052,7 +1069,7 @@ int main(int argc, char** argv) {
         .descriptorCount = 1024
       },
       {
-        .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1024
       }
     };
@@ -1169,7 +1186,7 @@ int main(int argc, char** argv) {
       .dstBinding = 1,
       .dstArrayElement = 0,
       .descriptorCount = 1,
-      .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+      .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
       .pImageInfo = &image_info
     };
 

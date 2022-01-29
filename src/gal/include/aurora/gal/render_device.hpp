@@ -5,6 +5,7 @@
 #pragma once
 
 #include <aurora/gal/buffer.hpp>
+#include <aurora/gal/pipeline_layout.hpp>
 #include <aurora/gal/render_target.hpp>
 #include <aurora/gal/shader_module.hpp>
 #include <aurora/gal/texture.hpp>
@@ -15,7 +16,9 @@
 #include <vector>
 
 namespace Aura {
- 
+
+using BindGroupLayout = std::vector<BindGroupLayoutEntry>;
+
 struct RenderDevice {
   virtual ~RenderDevice() = default;
 
@@ -88,6 +91,10 @@ struct RenderDevice {
     std::vector<GPUTexture*> const& color_attachments,
     GPUTexture* depth_stencil_attachment = nullptr
   ) -> std::unique_ptr<RenderTarget> = 0;
+
+  virtual auto CreatePipelineLayout(
+    std::vector<BindGroupLayout> const& bind_groups
+  ) -> std::unique_ptr<PipelineLayout> = 0;
 };
 
 } // namespace Aura

@@ -5,6 +5,7 @@
 #include <aurora/gal/backend/vulkan.hpp>
 
 #include "buffer.hpp"
+#include "pipeline_layout.hpp"
 #include "render_target.hpp"
 #include "shader_module.hpp"
 #include "texture.hpp"
@@ -68,6 +69,12 @@ struct VulkanRenderDevice final : RenderDevice {
     GPUTexture* depth_stencil_attachment = nullptr
   ) -> std::unique_ptr<RenderTarget> override {
     return std::make_unique<VulkanRenderTarget>(device, color_attachments, depth_stencil_attachment);
+  }
+
+  auto CreatePipelineLayout(
+    std::vector<BindGroupLayout> const& bind_groups
+  ) -> std::unique_ptr<PipelineLayout> override {
+    return std::make_unique<VulkanPipelineLayout>(device, bind_groups);
   }
 
 private:
