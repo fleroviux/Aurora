@@ -975,7 +975,7 @@ int main(int argc, char** argv) {
       auto texture = render_device->CreateTexture2DFromSwapchainImage(
         1600,
         900,
-        GPUTexture::Format::B8G8R8B8_SRGB,
+        GPUTexture::Format::B8G8R8A8_SRGB,
         (void*)swapchain_image
       );
 
@@ -1018,8 +1018,7 @@ int main(int argc, char** argv) {
   {
     auto girl_texture = Texture::load("girl.png");
 
-    // TODO: maybe add usage CopyDst?
-    texture = render_device->CreateTexture2D(girl_texture->width(), girl_texture->height(), GPUTexture::Format::B8G8R8B8_SRGB, GPUTexture::Usage::Sampled | GPUTexture::Usage::CopyDst);
+    texture = render_device->CreateTexture2D(girl_texture->width(), girl_texture->height(), GPUTexture::Format::B8G8R8A8_SRGB, GPUTexture::Usage::Sampled | GPUTexture::Usage::CopyDst);
     texture_buffer = render_device->CreateBuffer(Aura::Buffer::Usage::CopySrc, sizeof(u32) * girl_texture->width() * girl_texture->height());
 
     // Upload some data to our staging buffer...
