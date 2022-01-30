@@ -5,6 +5,8 @@
 #pragma once
 
 #include <aurora/gal/buffer.hpp>
+#include <aurora/gal/sampler.hpp>
+#include <aurora/gal/texture.hpp>
 #include <aurora/integer.hpp>
 #include <memory>
 
@@ -56,6 +58,12 @@ struct BindGroup {
     u32 binding,
     std::unique_ptr<Buffer>& buffer,
     BindGroupLayout::Entry::Type type
+  ) = 0;
+
+  virtual void Bind(
+    u32 binding,
+    std::unique_ptr<GPUTexture>& texture,
+    std::unique_ptr<Sampler>& sampler
   ) = 0;
 };
 

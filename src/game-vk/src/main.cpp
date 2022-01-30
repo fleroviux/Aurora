@@ -827,6 +827,60 @@ auto sdl_create_surface(
   return VK_NULL_HANDLE;
 }
 
+void transition_image_layout(
+  VkCommandBuffer command_buffer,
+  VkImage image,
+  VkImageLayout old_layout,
+  VkImageLayout new_layout
+) {
+  auto barrier = VkImageMemoryBarrier{
+    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    .srcAccessMask = 0, // TODO
+    .dstAccessMask = 0,  // TODO
+    .oldLayout = old_layout,
+    .newLayout = new_layout,
+    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .image = image,
+    .subresourceRange = VkImageSubresourceRange{
+      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .baseMipLevel = 0,
+      .levelCount = 1,
+      .baseArrayLayer = 0,
+      .layerCount = 1
+    }
+  };
+
+  auto src_stage = VkPipelineStageFlags{};
+  auto dst_stage = VkPipelineStageFlags{};
+
+  if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+    src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  } else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    // TODO: what if a texture is read from the vertex shader?
+    src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  } else {
+    Assert(false, "Vulkan: unhandled image layout transition: {} to {}", old_layout, new_layout);
+  }
+
+  vkCmdPipelineBarrier(
+    command_buffer,
+    src_stage,
+    dst_stage,
+    0,
+    0, nullptr,
+    0, nullptr,
+    1, &barrier);
+}
+
 int main(int argc, char** argv) {
   (void)argc;
   (void)argv;
@@ -1012,62 +1066,29 @@ int main(int argc, char** argv) {
   bind_group->Bind(0, ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
   std::unique_ptr<GPUTexture> texture;
-  std::unique_ptr<Buffer> texture_buffer; // texture staging buffer...
+  std::unique_ptr<Buffer> texture_buffer;
+  std::unique_ptr<Sampler> texture_sampler;
 
   // Create an example texture and bind it to our descriptor set
   {
-    auto girl_texture = Texture::load("girl.png");
+    auto girl = Texture::load("girl.png");
+    auto width = girl->width();
+    auto height = girl->height();
 
-    texture = render_device->CreateTexture2D(girl_texture->width(), girl_texture->height(), GPUTexture::Format::B8G8R8A8_SRGB, GPUTexture::Usage::Sampled | GPUTexture::Usage::CopyDst);
-    texture_buffer = render_device->CreateBuffer(Aura::Buffer::Usage::CopySrc, sizeof(u32) * girl_texture->width() * girl_texture->height());
+    texture = render_device->CreateTexture2D(
+      width,
+      height,
+      GPUTexture::Format::B8G8R8A8_SRGB,
+      GPUTexture::Usage::Sampled | GPUTexture::Usage::CopyDst
+    );
+    texture_buffer = render_device->CreateBuffer(
+      Aura::Buffer::Usage::CopySrc,
+      sizeof(u32) * width * height
+    );
+    texture_buffer->Update(girl->data(), width * height * sizeof(u32));
+    texture_sampler = render_device->CreateSampler({});
 
-    // Upload some data to our staging buffer...
-    texture_buffer->Update(girl_texture->data(), girl_texture->width() * girl_texture->height() * sizeof(u32));
-
-    auto sampler_info = VkSamplerCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .magFilter = VK_FILTER_LINEAR,
-      .minFilter = VK_FILTER_LINEAR,
-      .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-      .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-      .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-      .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-      .mipLodBias = 0,
-      .anisotropyEnable = VK_FALSE,
-      .compareEnable = VK_FALSE,
-      .compareOp = VK_COMPARE_OP_NEVER,
-      .minLod = 0,
-      .maxLod = 0,
-      .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
-      .unnormalizedCoordinates = VK_FALSE
-    };
-
-    auto sampler = VkSampler{};
-
-    if (vkCreateSampler(device, &sampler_info, nullptr, &sampler) != VK_SUCCESS) {
-      Assert(false, "Vulkan: failed to create sampler for texture :(");
-    }
-
-    auto image_info = VkDescriptorImageInfo{
-      .sampler = sampler,
-      .imageView = (VkImageView)texture->handle(),
-      .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL // TODO
-    };
-
-    auto descriptor_set_write = VkWriteDescriptorSet{
-      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-      .pNext = nullptr,
-      .dstSet = (VkDescriptorSet)bind_group->Handle(),
-      .dstBinding = 1,
-      .dstArrayElement = 0,
-      .descriptorCount = 1,
-      .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-      .pImageInfo = &image_info
-    };
-
-    vkUpdateDescriptorSets(device, 1, &descriptor_set_write, 0, nullptr);
+    bind_group->Bind(1, texture, texture_sampler);
   }
 
   VkCommandPool command_pool;
@@ -1147,6 +1168,7 @@ int main(int argc, char** argv) {
   auto shader_frag = (VkShaderModule)shader_frag_->Handle();
 
   auto event = SDL_Event{};
+  bool did_upload_texture = false;
 
   while (true) {
     // Update uniforms
@@ -1197,30 +1219,51 @@ int main(int argc, char** argv) {
 
     vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
 
-    // TODO: copy image only once instead of every frame.
-    // Also maybe insert a (memory?) barrier to make sure the image is uploaded before we render it.
-    auto region = VkBufferImageCopy{
-      .bufferOffset = 0,
-      .bufferRowLength = texture->width(),
-      .bufferImageHeight = texture->height(),
-      .imageSubresource = VkImageSubresourceLayers{
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .mipLevel = 0,
-        .baseArrayLayer = 0,
-        .layerCount = 1
-      },
-      .imageOffset = VkOffset3D{
-        .x = 0,
-        .y = 0,
-        .z = 0
-      },
-      .imageExtent = VkExtent3D{
-        .width = texture->width(),
-        .height = texture->height(),
-        .depth = 1
-      }
-    };
-    vkCmdCopyBufferToImage(command_buffer, (VkBuffer)texture_buffer->Handle(), (VkImage)texture->handle2(), VK_IMAGE_LAYOUT_UNDEFINED, 1, &region);
+    if (!did_upload_texture) {
+      // make the texture ready for being written to
+      transition_image_layout(
+        command_buffer,
+        (VkImage)texture->handle2(),
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+      );
+
+      // TODO: copy image only once instead of every frame.
+      // Also maybe insert a (memory?) barrier to make sure the image is uploaded before we render it.
+      auto region = VkBufferImageCopy{
+        .bufferOffset = 0,
+        .bufferRowLength = texture->width(),
+        .bufferImageHeight = texture->height(),
+        .imageSubresource = VkImageSubresourceLayers{
+          .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+          .mipLevel = 0,
+          .baseArrayLayer = 0,
+          .layerCount = 1
+        },
+        .imageOffset = VkOffset3D{
+          .x = 0,
+          .y = 0,
+          .z = 0
+        },
+        .imageExtent = VkExtent3D{
+          .width = texture->width(),
+          .height = texture->height(),
+          .depth = 1
+        }
+      };
+
+      vkCmdCopyBufferToImage(command_buffer, (VkBuffer)texture_buffer->Handle(), (VkImage)texture->handle2(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+      // make the texture ready for being read in a shader
+      transition_image_layout(
+        command_buffer,
+        (VkImage)texture->handle2(),
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+      );
+
+      did_upload_texture = true;
+    }
 
     vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
     {

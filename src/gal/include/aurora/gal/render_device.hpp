@@ -8,6 +8,7 @@
 #include <aurora/gal/buffer.hpp>
 #include <aurora/gal/pipeline_layout.hpp>
 #include <aurora/gal/render_target.hpp>
+#include <aurora/gal/sampler.hpp>
 #include <aurora/gal/shader_module.hpp>
 #include <aurora/gal/texture.hpp>
 #include <aurora/array_view.hpp>
@@ -85,6 +86,10 @@ struct RenderDevice {
     GPUTexture::Format format,
     void* image_handle
   ) -> std::unique_ptr<GPUTexture> = 0;
+
+  virtual auto CreateSampler(
+    Sampler::Config const& config
+  ) -> std::unique_ptr<Sampler> = 0;
 
   virtual auto CreateRenderTarget(
     std::vector<GPUTexture*> const& color_attachments,

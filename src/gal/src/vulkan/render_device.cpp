@@ -8,6 +8,7 @@
 #include "buffer.hpp"
 #include "pipeline_layout.hpp"
 #include "render_target.hpp"
+#include "sampler.hpp"
 #include "shader_module.hpp"
 #include "texture.hpp"
 
@@ -64,6 +65,12 @@ struct VulkanRenderDevice final : RenderDevice {
     void* image_handle
   ) -> std::unique_ptr<GPUTexture> override {
     return VulkanTexture::from_swapchain_image(device, width, height, format, (VkImage)image_handle);
+  }
+
+  auto CreateSampler(
+    Sampler::Config const& config
+  ) -> std::unique_ptr<Sampler> override {
+    return std::make_unique<VulkanSampler>(device, config);
   }
 
   auto CreateRenderTarget(

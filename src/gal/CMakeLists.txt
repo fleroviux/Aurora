@@ -14,6 +14,7 @@ set(HEADERS
   src/vulkan/common.hpp
   src/vulkan/pipeline_layout.hpp
   src/vulkan/render_target.hpp
+  src/vulkan/sampler.hpp
   src/vulkan/shader_module.hpp
   src/vulkan/texture.hpp
 )
@@ -25,6 +26,7 @@ set(HEADERS_PUBLIC
   include/aurora/gal/pipeline_layout.hpp
   include/aurora/gal/render_device.hpp
   include/aurora/gal/render_target.hpp
+  include/aurora/gal/sampler.hpp
   include/aurora/gal/shader_module.hpp
   include/aurora/gal/texture.hpp
 )

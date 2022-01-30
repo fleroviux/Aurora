@@ -63,6 +63,33 @@ struct VulkanBindGroup final : BindGroup {
     vkUpdateDescriptorSets(device_, 1, &write_descriptor_set, 0, nullptr);
   }
 
+  void Bind(
+    u32 binding,
+    std::unique_ptr<GPUTexture>& texture,
+    std::unique_ptr<Sampler>& sampler
+  ) override {
+    auto image_info = VkDescriptorImageInfo{
+      .sampler = (VkSampler)sampler->Handle(),
+      .imageView = (VkImageView)texture->handle(),
+      .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL // TODO
+    };
+
+    auto write_descriptor_set = VkWriteDescriptorSet{
+      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .pNext = nullptr,
+      .dstSet = descriptor_set_,
+      .dstBinding = binding,
+      .dstArrayElement = 0,
+      .descriptorCount = 1,
+      .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+      .pImageInfo = &image_info,
+      .pBufferInfo = nullptr,
+      .pTexelBufferView = nullptr
+    };
+
+    vkUpdateDescriptorSets(device_, 1, &write_descriptor_set, 0, nullptr);
+  }
+
 private:
   VkDevice device_;
   VkDescriptorPool descriptor_pool_;
