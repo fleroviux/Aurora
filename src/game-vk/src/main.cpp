@@ -1078,7 +1078,7 @@ int main(int argc, char** argv) {
     texture = render_device->CreateTexture2D(
       width,
       height,
-      GPUTexture::Format::B8G8R8A8_SRGB,
+      GPUTexture::Format::R8G8B8A8_SRGB,
       GPUTexture::Usage::Sampled | GPUTexture::Usage::CopyDst
     );
     texture_buffer = render_device->CreateBuffer(
@@ -1228,8 +1228,6 @@ int main(int argc, char** argv) {
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
       );
 
-      // TODO: copy image only once instead of every frame.
-      // Also maybe insert a (memory?) barrier to make sure the image is uploaded before we render it.
       auto region = VkBufferImageCopy{
         .bufferOffset = 0,
         .bufferRowLength = texture->width(),
