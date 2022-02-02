@@ -1011,10 +1011,10 @@ int main(int argc, char** argv) {
     }
   }
 
-  auto textures = std::vector<std::unique_ptr<GPUTexture>>{};
+  auto textures = std::vector<std::shared_ptr<GPUTexture>>{};
   auto render_targets = std::vector<std::unique_ptr<RenderTarget>>{};
 
-  auto depth_texture = render_device->CreateTexture2D(
+  auto depth_texture = (std::shared_ptr<GPUTexture>)render_device->CreateTexture2D(
     1600, 900, GPUTexture::Format::DEPTH_F32, GPUTexture::Usage::DepthStencilAttachment);
 
   {
@@ -1026,14 +1026,14 @@ int main(int argc, char** argv) {
     vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, swapchain_images.data());
 
     for (auto swapchain_image : swapchain_images) {
-      auto texture = render_device->CreateTexture2DFromSwapchainImage(
+      auto texture = (std::shared_ptr<GPUTexture>)render_device->CreateTexture2DFromSwapchainImage(
         1600,
         900,
         GPUTexture::Format::B8G8R8A8_SRGB,
         (void*)swapchain_image
       );
 
-      auto render_target = render_device->CreateRenderTarget({ texture.get() }, depth_texture.get());
+      auto render_target = render_device->CreateRenderTarget({ texture }, depth_texture);
 
       render_targets.push_back(std::move(render_target));
       textures.push_back(std::move(texture)); // keep texture alive

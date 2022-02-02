@@ -92,8 +92,8 @@ struct RenderDevice {
   ) -> std::unique_ptr<Sampler> = 0;
 
   virtual auto CreateRenderTarget(
-    std::vector<GPUTexture*> const& color_attachments,
-    GPUTexture* depth_stencil_attachment = nullptr
+    std::vector<std::shared_ptr<GPUTexture>> const& color_attachments,
+    std::shared_ptr<GPUTexture> depth_stencil_attachment = {}
   ) -> std::unique_ptr<RenderTarget> = 0;
 
   virtual auto CreateBindGroupLayout(
