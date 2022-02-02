@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <aurora/gal/backend/vulkan.hpp>
 #include <aurora/log.hpp>
+#include <vector>
 
 namespace Aura {
 
@@ -44,7 +45,15 @@ struct VulkanRenderPass final : RenderPass {
         .attachment = (u32)index,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
       });
+
+      clear_values_.push_back(VkClearValue{
+        .color = VkClearColorValue{
+          .float32 = {0, 0, 0, 1}
+        }
+      });
     }
+
+    color_attachment_count_ = color_attachments.size();
 
     auto depth_reference = VkAttachmentReference{
       .attachment = (u32)attachments.size(),
@@ -55,7 +64,6 @@ struct VulkanRenderPass final : RenderPass {
       auto layout_src = depth_stencil_descriptor.layout_src;
       auto layout_dst = depth_stencil_descriptor.layout_dst;
 
-      // Be forgiving about the exact image layout since the default is color attachment
       if (layout_src == GPUTexture::Layout::ColorAttachment) {
         layout_src = GPUTexture::Layout::DepthStencilAttachment;
       }
@@ -74,6 +82,13 @@ struct VulkanRenderPass final : RenderPass {
         .stencilStoreOp = (VkAttachmentStoreOp)depth_stencil_descriptor.stencil_store_op,
         .initialLayout = (VkImageLayout)layout_src,
         .finalLayout = (VkImageLayout)layout_dst
+      });
+
+      clear_values_.push_back(VkClearValue{
+        .depthStencil = VkClearDepthStencilValue{
+          .depth = 1,
+          .stencil = 0
+        }
       });
     }
 
@@ -117,21 +132,31 @@ struct VulkanRenderPass final : RenderPass {
 
   auto Handle() -> VkRenderPass { return render_pass_; }
 
+  auto GetClearValues() -> std::vector<VkClearValue> const& { return clear_values_; }
+
   void SetClearColor(int index, float r, float g, float b, float a) override {
-    // TODO
+    Assert(index < color_attachment_count_,
+      "VulkanRenderPass: SetClearColor() called with an out-of-bounds index");
+
+    // TODO: handle texture formats which don't use float32
+    clear_values_[index].color = VkClearColorValue{
+      .float32 = {r, g, b, a}
+    };
   }
 
   void SetClearDepth(float depth) override {
-    // TODO
+    clear_values_.back().depthStencil.depth = depth;
   }
 
   void SetClearStencil(u32 stencil) override {
-    // TODO
+    clear_values_.back().depthStencil.stencil = stencil;
   }
 
 private:
   VkDevice device_;
   VkRenderPass render_pass_;
+  std::vector<VkClearValue> clear_values_;
+  size_t color_attachment_count_;
 };
 
 } // namespace Aura

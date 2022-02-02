@@ -972,6 +972,8 @@ int main(int argc, char** argv) {
     .layout_src = GPUTexture::Layout::Undefined,
     .layout_dst = GPUTexture::Layout::PresentSrc
   }});
+  render_pass->SetClearColor(0, 0.5, 0.5, 0.5, 1);
+  render_pass->SetClearDepth(1.0);
 
   auto bind_group_layout = render_device->CreateBindGroupLayout({
     {
@@ -1117,24 +1119,13 @@ int main(int argc, char** argv) {
     vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
 
     auto& render_target = render_targets[swapchain_image_id];
-
-    const auto clear_values = std::vector<VkClearValue>{
-      {
-        .color = VkClearColorValue{
-          .float32 = { 0.01, 0.01, 0.01, 1 }
-        }
-      },
-      {
-        .depthStencil = VkClearDepthStencilValue{
-          .depth = 1
-        }
-      }
-    };
+    auto render_pass_ = (VulkanRenderPass*)render_pass.get();
+    auto& clear_values = render_pass_->GetClearValues();
 
     auto render_pass_begin_info = VkRenderPassBeginInfo{
       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
       .pNext = nullptr,
-      .renderPass = ((VulkanRenderPass*)render_pass.get())->Handle(),
+      .renderPass = render_pass_->Handle(),
       .framebuffer = (VkFramebuffer)render_target->handle(),
       .renderArea = VkRect2D{
         .offset = VkOffset2D{
