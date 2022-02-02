@@ -1040,6 +1040,8 @@ int main(int argc, char** argv) {
     }
   }
 
+  auto render_pass_ = render_targets[0]->CreateRenderPass();
+
   auto bind_group_layout = render_device->CreateBindGroupLayout({
     {
       .binding = 0,
