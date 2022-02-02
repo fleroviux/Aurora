@@ -34,7 +34,7 @@ struct RenderPass {
 
   virtual ~RenderPass() = default;
 
-  virtual void SetClearColor(float r, float g, float b, float a) = 0;
+  virtual void SetClearColor(int index, float r, float g, float b, float a) = 0;
   virtual void SetClearDepth(float depth) = 0;
   virtual void SetClearStencil(u32 stencil) = 0;
 };

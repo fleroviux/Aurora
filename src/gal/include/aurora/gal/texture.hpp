@@ -20,7 +20,8 @@ struct GPUTexture {
     DepthStencilReadOnly = 4,
     ShaderReadOnly = 5,
     CopySrc = 6,
-    CopyDst = 7
+    CopyDst = 7,
+    PresentSrc = 1000001002
   };
 
   enum class Grade {

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <aurora/gal/backend/vulkan.hpp>
 #include <aurora/log.hpp>
 
@@ -20,21 +21,23 @@ struct VulkanRenderPass final : RenderPass {
     auto attachments = std::vector<VkAttachmentDescription>{};
     auto references = std::vector<VkAttachmentReference>{};
 
-    // TODO: fill out structures according to descriptors
+    Assert(color_attachments.size() == 0 || color_descriptors.size() > 0,
+      "VulkanRenderPass: must have at least one color descriptor when using a color attachment");
 
     for (auto& texture : color_attachments) {
       auto index = attachments.size();
+      auto& descriptor = color_descriptors[std::min(index, color_descriptors.size() - 1)];
 
       attachments.push_back(VkAttachmentDescription{
         .flags = 0,
         .format = (VkFormat)texture->format(),
         .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+        .loadOp = (VkAttachmentLoadOp)descriptor.load_op,
+        .storeOp = (VkAttachmentStoreOp)descriptor.store_op,
+        .stencilLoadOp = (VkAttachmentLoadOp)descriptor.stencil_load_op,
+        .stencilStoreOp = (VkAttachmentStoreOp)descriptor.stencil_store_op,
+        .initialLayout = (VkImageLayout)descriptor.layout_src,
+        .finalLayout = (VkImageLayout)descriptor.layout_dst
       });
 
       references.push_back(VkAttachmentReference{
@@ -49,16 +52,28 @@ struct VulkanRenderPass final : RenderPass {
     };
 
     if (depth_stencil_attachment) {
+      auto layout_src = depth_stencil_descriptor.layout_src;
+      auto layout_dst = depth_stencil_descriptor.layout_dst;
+
+      // Be forgiving about the exact image layout since the default is color attachment
+      if (layout_src == GPUTexture::Layout::ColorAttachment) {
+        layout_src = GPUTexture::Layout::DepthStencilAttachment;
+      }
+
+      if (layout_dst == GPUTexture::Layout::ColorAttachment) {
+        layout_dst = GPUTexture::Layout::DepthStencilAttachment;
+      }
+
       attachments.push_back(VkAttachmentDescription{
         .flags = 0,
         .format = (VkFormat)depth_stencil_attachment->format(),
         .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+        .loadOp = (VkAttachmentLoadOp)depth_stencil_descriptor.load_op,
+        .storeOp = (VkAttachmentStoreOp)depth_stencil_descriptor.store_op,
+        .stencilLoadOp = (VkAttachmentLoadOp)depth_stencil_descriptor.stencil_load_op,
+        .stencilStoreOp = (VkAttachmentStoreOp)depth_stencil_descriptor.stencil_store_op,
+        .initialLayout = (VkImageLayout)layout_src,
+        .finalLayout = (VkImageLayout)layout_dst
       });
     }
 
@@ -102,7 +117,7 @@ struct VulkanRenderPass final : RenderPass {
 
   auto Handle() -> VkRenderPass { return render_pass_; }
 
-  void SetClearColor(float r, float g, float b, float a) override {
+  void SetClearColor(int index, float r, float g, float b, float a) override {
     // TODO
   }
 

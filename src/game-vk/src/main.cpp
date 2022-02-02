@@ -7,6 +7,8 @@
 #include <aurora/renderer/component/mesh.hpp>
 #include <aurora/scene/game_object.hpp>
 
+#include "../../gal/src/vulkan/render_pass.hpp"
+
 using namespace Aura;
 
 auto create_example_scene() -> GameObject* {
@@ -935,81 +937,7 @@ int main(int argc, char** argv) {
     .instance = instance,
     .physical_device = physical_device,
     .device = device
-    });
-
-  VkRenderPass render_pass;
-
-  {
-    auto attachments = std::vector<VkAttachmentDescription>{
-      // Color Attachment
-      {
-        .flags = 0,
-        .format = VK_FORMAT_B8G8R8A8_SRGB,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-      },
-      // Depth Attachment
-      {
-        .flags = 0,
-        .format = VK_FORMAT_D32_SFLOAT,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-      }
-    };
-
-    auto refs = std::vector<VkAttachmentReference>{
-      // Color Attachment reference
-      {
-        .attachment = 0,
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-      },
-      // Depth Attachment reference
-      {
-        .attachment = 1,
-        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-      }
-    };
-
-    auto render_pass_subpass = VkSubpassDescription{
-      .flags = 0,
-      .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-      .inputAttachmentCount = 0,
-      .pInputAttachments = nullptr,
-      .colorAttachmentCount = 1,
-      .pColorAttachments = &refs[0],
-      .pResolveAttachments = nullptr,
-      .pDepthStencilAttachment = &refs[1],
-      .preserveAttachmentCount = 0,
-      .pPreserveAttachments = nullptr
-    };
-
-    auto render_pass_info = VkRenderPassCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .attachmentCount = (u32)attachments.size(),
-      .pAttachments = attachments.data(),
-      .subpassCount = 1,
-      .pSubpasses = &render_pass_subpass,
-      .dependencyCount = 0,
-      .pDependencies = nullptr
-    };
-
-    if (vkCreateRenderPass(device, &render_pass_info, nullptr, &render_pass) != VK_SUCCESS) {
-      std::puts("Failed to create the render pass :(");
-      return -1;
-    }
-  }
+  });
 
   auto textures = std::vector<std::shared_ptr<GPUTexture>>{};
   auto render_targets = std::vector<std::unique_ptr<RenderTarget>>{};
@@ -1040,7 +968,10 @@ int main(int argc, char** argv) {
     }
   }
 
-  auto render_pass_ = render_targets[0]->CreateRenderPass();
+  auto render_pass = render_targets[0]->CreateRenderPass({RenderPass::Descriptor{
+    .layout_src = GPUTexture::Layout::Undefined,
+    .layout_dst = GPUTexture::Layout::PresentSrc
+  }});
 
   auto bind_group_layout = render_device->CreateBindGroupLayout({
     {
@@ -1203,7 +1134,7 @@ int main(int argc, char** argv) {
     auto render_pass_begin_info = VkRenderPassBeginInfo{
       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
       .pNext = nullptr,
-      .renderPass = render_pass,
+      .renderPass = ((VulkanRenderPass*)render_pass.get())->Handle(),
       .framebuffer = (VkFramebuffer)render_target->handle(),
       .renderArea = VkRect2D{
         .offset = VkOffset2D{
@@ -1268,8 +1199,23 @@ int main(int argc, char** argv) {
     vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
     {
       // TODO: is it a good idea to upload the geometry while recording the command buffer?
-      upload_geometry(physical_device, device, render_device, shader_vert, shader_frag, render_pass, (VkPipelineLayout)pipeline_layout->Handle(), &triangle);
-      draw_geometry(command_buffer, (VkPipelineLayout)pipeline_layout->Handle(), (VkDescriptorSet)bind_group->Handle(), &triangle);
+      upload_geometry(
+        physical_device,
+        device,
+        render_device,
+        shader_vert,
+        shader_frag,
+        ((VulkanRenderPass*)render_pass.get())->Handle(),
+        (VkPipelineLayout)pipeline_layout->Handle(),
+        &triangle
+      );
+
+      draw_geometry(
+        command_buffer,
+        (VkPipelineLayout)pipeline_layout->Handle(),
+        (VkDescriptorSet)bind_group->Handle(),
+        &triangle
+      );
     }
     vkCmdEndRenderPass(command_buffer);
     
