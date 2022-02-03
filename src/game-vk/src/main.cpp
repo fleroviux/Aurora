@@ -1260,7 +1260,6 @@ int main(int argc, char** argv) {
   }
 
   auto event = SDL_Event{};
-  //bool did_upload_texture = false;
 
   while (true) {
     // TODO: reinstantiate this code later
@@ -1278,55 +1277,6 @@ int main(int argc, char** argv) {
     vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
 
     app.Render(command_buffer, swapchain_image_id);
-
-    // Off-screen render to texture
-    {
-      //auto& render_target = app.render_targets[swapchain_image_id];
-      //auto render_pass_ = (VulkanRenderPass*)app.render_pass.get();
-      //auto& clear_values = render_pass_->GetClearValues();
-
-      //auto render_pass_begin_info = VkRenderPassBeginInfo{
-      //  .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-      //  .pNext = nullptr,
-      //  .renderPass = render_pass_->Handle(),
-      //  .framebuffer = (VkFramebuffer)render_target->handle(),
-      //  .renderArea = VkRect2D{
-      //    .offset = VkOffset2D{
-      //      .x = 0,
-      //      .y = 0
-      //    },
-      //    .extent = VkExtent2D{
-      //      .width = 1600,
-      //      .height = 900
-      //    }
-      //  },
-      //  .clearValueCount = (u32)clear_values.size(),
-      //  .pClearValues = clear_values.data()
-      //};
-
-      //vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-      //{
-      //  // TODO: is it a good idea to upload the geometry while recording the command buffer?
-      //  upload_geometry(
-      //    physical_device,
-      //    device,
-      //    app.render_device,
-      //    (VkShaderModule)app.quad_renderer.shader_vert->Handle(),
-      //    (VkShaderModule)app.quad_renderer.shader_frag->Handle(),
-      //    ((VulkanRenderPass*)app.render_pass.get())->Handle(),
-      //    (VkPipelineLayout)app.quad_renderer.pipeline_layout->Handle(),
-      //    &triangle
-      //  );
-
-      //  draw_geometry(
-      //    command_buffer,
-      //    (VkPipelineLayout)app.quad_renderer.pipeline_layout->Handle(),
-      //    (VkDescriptorSet)app.quad_renderer.bind_group->Handle(),
-      //    &triangle
-      //  );
-      //}
-      //vkCmdEndRenderPass(command_buffer);
-    }
 
     // Output render to screen
     
