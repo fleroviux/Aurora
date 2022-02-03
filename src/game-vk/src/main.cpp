@@ -392,7 +392,7 @@ std::unordered_map<Geometry const*, GeometryCacheEntry> geometry_cache;
 void upload_geometry(
   VkPhysicalDevice physical_device,
   VkDevice device,
-  std::unique_ptr<RenderDevice>& render_device,
+  std::shared_ptr<RenderDevice> render_device,
   VkShaderModule shader_vert,
   VkShaderModule shader_frag,
   VkRenderPass render_pass,
@@ -883,6 +883,147 @@ void transition_image_layout(
     1, &barrier);
 }
 
+struct QuadRenderer {
+  void Initialize(std::shared_ptr<RenderDevice> render_device) {
+    this->render_device = render_device;
+    CreatePipelineLayoutAndBindGroup();
+    CreateUniformBuffer();
+    CreateSampledTexture();
+    CreateShaderModules();
+  }
+
+//private:
+  void CreatePipelineLayoutAndBindGroup() {
+    bind_group_layout = render_device->CreateBindGroupLayout({
+      {
+        .binding = 0,
+        .type = BindGroupLayout::Entry::Type::UniformBuffer
+      },
+      {
+        .binding = 1,
+        .type = BindGroupLayout::Entry::Type::ImageWithSampler
+      }
+    });
+    bind_group = bind_group_layout->Instantiate();
+
+    pipeline_layout = render_device->CreatePipelineLayout({ bind_group_layout });
+  }
+
+  void CreateUniformBuffer() {
+    auto transform = Matrix4::perspective_dx(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0);
+
+    ubo = render_device->CreateBufferWithData(
+      Aura::Buffer::Usage::UniformBuffer,
+      &transform,
+      sizeof(transform)
+    );
+    bind_group->Bind(0, ubo, BindGroupLayout::Entry::Type::UniformBuffer);
+  }
+
+  void CreateSampledTexture() {
+    auto girl = Texture::load("girl.png");
+    auto width = girl->width();
+    auto height = girl->height();
+
+    texture = render_device->CreateTexture2D(
+      width,
+      height,
+      GPUTexture::Format::R8G8B8A8_SRGB,
+      GPUTexture::Usage::Sampled | GPUTexture::Usage::CopyDst
+    );
+    texture_buffer = render_device->CreateBuffer(
+      Aura::Buffer::Usage::CopySrc,
+      sizeof(u32) * width * height
+    );
+    texture_buffer->Update(girl->data(), width * height * sizeof(u32));
+    texture_sampler = render_device->CreateSampler({});
+
+    bind_group->Bind(1, texture, texture_sampler);
+  }
+
+  void CreateShaderModules() {
+    shader_vert = render_device->CreateShaderModule(triangle_vert, sizeof(triangle_vert));
+    shader_frag = render_device->CreateShaderModule(triangle_frag, sizeof(triangle_frag));
+  }
+
+  std::shared_ptr<RenderDevice> render_device;
+  std::unique_ptr<PipelineLayout> pipeline_layout;
+  std::shared_ptr<BindGroupLayout> bind_group_layout;
+  std::unique_ptr<BindGroup> bind_group;
+  std::unique_ptr<Buffer> ubo;
+  std::unique_ptr<GPUTexture> texture;
+  std::unique_ptr<Buffer> texture_buffer;
+  std::unique_ptr<Sampler> texture_sampler;
+  std::unique_ptr<ShaderModule> shader_vert;
+  std::unique_ptr<ShaderModule> shader_frag;
+};
+
+struct Application {
+  Application(
+    VkInstance instance,
+    VkPhysicalDevice physical_device,
+    VkDevice device,
+    VkSwapchainKHR swapchain
+  )   : instance(instance)
+      , physical_device(physical_device)
+      , device(device)
+      , swapchain(swapchain) {
+  }
+
+  void Initialize() {
+    CreateRenderDevice();
+    CreateSwapChainRenderTargets();
+    quad_renderer.Initialize(render_device);
+  }
+
+//private:
+  void CreateRenderDevice() {
+    render_device = CreateVulkanRenderDevice({
+      .instance = instance,
+      .physical_device = physical_device,
+      .device = device
+    });
+  }
+
+  void CreateSwapChainRenderTargets() {
+    u32 swapchain_image_count;
+    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, nullptr);
+
+    auto swapchain_images = std::vector<VkImage>{};
+    swapchain_images.resize(swapchain_image_count);
+    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, swapchain_images.data());
+
+    for (auto swapchain_image : swapchain_images) {
+      auto texture = (std::shared_ptr<GPUTexture>)render_device->CreateTexture2DFromSwapchainImage(
+        1600,
+        900,
+        GPUTexture::Format::B8G8R8A8_SRGB,
+        (void*)swapchain_image
+      );
+
+      auto render_target = render_device->CreateRenderTarget({ texture });
+
+      render_targets.push_back(std::move(render_target));
+    }
+
+    render_pass = render_targets[0]->CreateRenderPass({ RenderPass::Descriptor{
+      //.load_op = RenderPass::LoadOp::DontCare,
+      .layout_src = GPUTexture::Layout::Undefined,
+      .layout_dst = GPUTexture::Layout::PresentSrc
+    }});
+  }
+
+  VkInstance instance;
+  VkPhysicalDevice physical_device;
+  VkDevice device;
+  VkSwapchainKHR swapchain;
+  std::shared_ptr<RenderDevice> render_device;
+  std::vector<std::unique_ptr<RenderTarget>> render_targets;
+  std::unique_ptr<RenderPass> render_pass;
+
+  QuadRenderer quad_renderer;
+};
+
 int main(int argc, char** argv) {
   (void)argc;
   (void)argv;
@@ -933,98 +1074,9 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  auto render_device = CreateVulkanRenderDevice({
-    .instance = instance,
-    .physical_device = physical_device,
-    .device = device
-  });
+  auto app = Application{instance, physical_device, device, swapchain};
 
-  auto textures = std::vector<std::shared_ptr<GPUTexture>>{};
-  auto render_targets = std::vector<std::unique_ptr<RenderTarget>>{};
-
-  auto depth_texture = (std::shared_ptr<GPUTexture>)render_device->CreateTexture2D(
-    1600, 900, GPUTexture::Format::DEPTH_F32, GPUTexture::Usage::DepthStencilAttachment);
-
-  {
-    u32 swapchain_image_count;
-    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, nullptr);
-
-    auto swapchain_images = std::vector<VkImage>{};
-    swapchain_images.resize(swapchain_image_count);
-    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, swapchain_images.data());
-
-    for (auto swapchain_image : swapchain_images) {
-      auto texture = (std::shared_ptr<GPUTexture>)render_device->CreateTexture2DFromSwapchainImage(
-        1600,
-        900,
-        GPUTexture::Format::B8G8R8A8_SRGB,
-        (void*)swapchain_image
-      );
-
-      auto render_target = render_device->CreateRenderTarget({ texture }, depth_texture);
-
-      render_targets.push_back(std::move(render_target));
-      textures.push_back(std::move(texture)); // keep texture alive
-    }
-  }
-
-  auto render_pass = render_targets[0]->CreateRenderPass({RenderPass::Descriptor{
-    .layout_src = GPUTexture::Layout::Undefined,
-    .layout_dst = GPUTexture::Layout::PresentSrc
-  }});
-  render_pass->SetClearColor(0, 0.5, 0.5, 0.5, 1);
-  render_pass->SetClearDepth(1.0);
-
-  auto bind_group_layout = render_device->CreateBindGroupLayout({
-    {
-      .binding = 0,
-      .type = BindGroupLayout::Entry::Type::UniformBuffer
-    },
-    {
-      .binding = 1,
-      .type = BindGroupLayout::Entry::Type::ImageWithSampler
-    }
-  });
-  auto bind_group = bind_group_layout->Instantiate();
-  auto pipeline_layout = render_device->CreatePipelineLayout({ bind_group_layout });
-
-  std::unique_ptr<Buffer> ubo;
-  float angle = 0;
-  Matrix4 transform = Matrix4::rotation_z(angle);
-
-  // Create our example uniform buffer and bind it to our descriptor set
-  ubo = render_device->CreateBufferWithData(
-    Aura::Buffer::Usage::UniformBuffer,
-    &transform,
-    sizeof(transform)
-  );
-  bind_group->Bind(0, ubo, BindGroupLayout::Entry::Type::UniformBuffer);
-
-  std::unique_ptr<GPUTexture> texture;
-  std::unique_ptr<Buffer> texture_buffer;
-  std::unique_ptr<Sampler> texture_sampler;
-
-  // Create an example texture and bind it to our descriptor set
-  {
-    auto girl = Texture::load("girl.png");
-    auto width = girl->width();
-    auto height = girl->height();
-
-    texture = render_device->CreateTexture2D(
-      width,
-      height,
-      GPUTexture::Format::R8G8B8A8_SRGB,
-      GPUTexture::Usage::Sampled | GPUTexture::Usage::CopyDst
-    );
-    texture_buffer = render_device->CreateBuffer(
-      Aura::Buffer::Usage::CopySrc,
-      sizeof(u32) * width * height
-    );
-    texture_buffer->Update(girl->data(), width * height * sizeof(u32));
-    texture_sampler = render_device->CreateSampler({});
-
-    bind_group->Bind(1, texture, texture_sampler);
-  }
+  app.Initialize();
 
   VkCommandPool command_pool;
   VkCommandBuffer command_buffer;
@@ -1097,19 +1149,15 @@ int main(int argc, char** argv) {
     }
   }
 
-  auto shader_vert_ = render_device->CreateShaderModule(triangle_vert, sizeof(triangle_vert));
-  auto shader_frag_ = render_device->CreateShaderModule(triangle_frag, sizeof(triangle_frag));
-  auto shader_vert = (VkShaderModule)shader_vert_->Handle();
-  auto shader_frag = (VkShaderModule)shader_frag_->Handle();
-
   auto event = SDL_Event{};
   bool did_upload_texture = false;
 
   while (true) {
+    // TODO: reinstantiate this code later
     // Update uniforms
-    angle += 0.01;
-    transform = Matrix4::perspective_dx(45/180.0*3.141592, 1600.0/900, 0.01, 100.0) * Matrix4::rotation_z(angle);
-    ubo->Update(&transform);
+    //angle += 0.01;
+    //transform = Matrix4::perspective_dx(45/180.0*3.141592, 1600.0/900, 0.01, 100.0) * Matrix4::rotation_z(angle);
+    //ubo->Update(&transform);
 
     u32 swapchain_image_id;
 
@@ -1118,44 +1166,21 @@ int main(int argc, char** argv) {
     vkAcquireNextImageKHR(device, swapchain, u64(-1), VK_NULL_HANDLE, fence, &swapchain_image_id);
     vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
 
-    auto& render_target = render_targets[swapchain_image_id];
-    auto render_pass_ = (VulkanRenderPass*)render_pass.get();
-    auto& clear_values = render_pass_->GetClearValues();
-
-    auto render_pass_begin_info = VkRenderPassBeginInfo{
-      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-      .pNext = nullptr,
-      .renderPass = render_pass_->Handle(),
-      .framebuffer = (VkFramebuffer)render_target->handle(),
-      .renderArea = VkRect2D{
-        .offset = VkOffset2D{
-          .x = 0,
-          .y = 0
-        },
-        .extent = VkExtent2D{
-          .width = 1600,
-          .height = 900
-        }
-      },
-      .clearValueCount = (u32)clear_values.size(),
-      .pClearValues = clear_values.data()
-    };
-
     vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
 
     if (!did_upload_texture) {
       // make the texture ready for being written to
       transition_image_layout(
         command_buffer,
-        (VkImage)texture->handle2(),
+        (VkImage)app.quad_renderer.texture->handle2(),
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
       );
 
       auto region = VkBufferImageCopy{
         .bufferOffset = 0,
-        .bufferRowLength = texture->width(),
-        .bufferImageHeight = texture->height(),
+        .bufferRowLength = app.quad_renderer.texture->width(),
+        .bufferImageHeight = app.quad_renderer.texture->height(),
         .imageSubresource = VkImageSubresourceLayers{
           .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
           .mipLevel = 0,
@@ -1168,18 +1193,18 @@ int main(int argc, char** argv) {
           .z = 0
         },
         .imageExtent = VkExtent3D{
-          .width = texture->width(),
-          .height = texture->height(),
+          .width = app.quad_renderer.texture->width(),
+          .height = app.quad_renderer.texture->height(),
           .depth = 1
         }
       };
 
-      vkCmdCopyBufferToImage(command_buffer, (VkBuffer)texture_buffer->Handle(), (VkImage)texture->handle2(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+      vkCmdCopyBufferToImage(command_buffer, (VkBuffer)app.quad_renderer.texture_buffer->Handle(), (VkImage)app.quad_renderer.texture->handle2(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
       // make the texture ready for being read in a shader
       transition_image_layout(
         command_buffer,
-        (VkImage)texture->handle2(),
+        (VkImage)app.quad_renderer.texture->handle2(),
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
       );
@@ -1187,28 +1212,56 @@ int main(int argc, char** argv) {
       did_upload_texture = true;
     }
 
-    vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    // Off-screen render to texture
     {
-      // TODO: is it a good idea to upload the geometry while recording the command buffer?
-      upload_geometry(
-        physical_device,
-        device,
-        render_device,
-        shader_vert,
-        shader_frag,
-        ((VulkanRenderPass*)render_pass.get())->Handle(),
-        (VkPipelineLayout)pipeline_layout->Handle(),
-        &triangle
-      );
+      auto& render_target = app.render_targets[swapchain_image_id];
+      auto render_pass_ = (VulkanRenderPass*)app.render_pass.get();
+      auto& clear_values = render_pass_->GetClearValues();
 
-      draw_geometry(
-        command_buffer,
-        (VkPipelineLayout)pipeline_layout->Handle(),
-        (VkDescriptorSet)bind_group->Handle(),
-        &triangle
-      );
+      auto render_pass_begin_info = VkRenderPassBeginInfo{
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .pNext = nullptr,
+        .renderPass = render_pass_->Handle(),
+        .framebuffer = (VkFramebuffer)render_target->handle(),
+        .renderArea = VkRect2D{
+          .offset = VkOffset2D{
+            .x = 0,
+            .y = 0
+          },
+          .extent = VkExtent2D{
+            .width = 1600,
+            .height = 900
+          }
+        },
+        .clearValueCount = (u32)clear_values.size(),
+        .pClearValues = clear_values.data()
+      };
+
+      vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+      {
+        // TODO: is it a good idea to upload the geometry while recording the command buffer?
+        upload_geometry(
+          physical_device,
+          device,
+          app.render_device,
+          (VkShaderModule)app.quad_renderer.shader_vert->Handle(),
+          (VkShaderModule)app.quad_renderer.shader_frag->Handle(),
+          ((VulkanRenderPass*)app.render_pass.get())->Handle(),
+          (VkPipelineLayout)app.quad_renderer.pipeline_layout->Handle(),
+          &triangle
+        );
+
+        draw_geometry(
+          command_buffer,
+          (VkPipelineLayout)app.quad_renderer.pipeline_layout->Handle(),
+          (VkDescriptorSet)app.quad_renderer.bind_group->Handle(),
+          &triangle
+        );
+      }
+      vkCmdEndRenderPass(command_buffer);
     }
-    vkCmdEndRenderPass(command_buffer);
+
+    // Output render to screen
     
     vkEndCommandBuffer(command_buffer);
     
