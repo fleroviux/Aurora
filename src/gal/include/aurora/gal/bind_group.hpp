@@ -7,6 +7,7 @@
 #include <aurora/gal/buffer.hpp>
 #include <aurora/gal/sampler.hpp>
 #include <aurora/gal/texture.hpp>
+#include <aurora/any_ptr.hpp>
 #include <aurora/integer.hpp>
 #include <memory>
 
@@ -56,14 +57,14 @@ struct BindGroup {
 
   virtual void Bind(
     u32 binding,
-    std::unique_ptr<Buffer>& buffer,
+    AnyPtr<Buffer> buffer,
     BindGroupLayout::Entry::Type type
   ) = 0;
 
   virtual void Bind(
     u32 binding,
-    std::unique_ptr<GPUTexture>& texture,
-    std::unique_ptr<Sampler>& sampler
+    AnyPtr<GPUTexture> texture,
+    AnyPtr<Sampler> sampler
   ) = 0;
 };
 

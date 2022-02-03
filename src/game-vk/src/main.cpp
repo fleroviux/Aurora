@@ -869,6 +869,13 @@ void transition_image_layout(
     // TODO: what if a texture is read from the vertex shader?
     src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  } else if (old_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    // TODO: what if a texture is read from the vertex shader?
+    src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
   } else {
     Assert(false, "Vulkan: unhandled image layout transition: {} to {}", old_layout, new_layout);
   }
@@ -880,7 +887,8 @@ void transition_image_layout(
     0,
     0, nullptr,
     0, nullptr,
-    1, &barrier);
+    1, &barrier
+  );
 }
 
 struct QuadRenderer {
@@ -889,6 +897,7 @@ struct QuadRenderer {
 
   void Initialize(std::shared_ptr<RenderDevice> render_device) {
     this->render_device = render_device;
+    CreateRenderTarget();
     CreatePipelineLayoutAndBindGroup();
     CreateUniformBuffer();
     CreateSampledTexture();
@@ -896,9 +905,7 @@ struct QuadRenderer {
   }
 
   void Render(
-    VkCommandBuffer command_buffer,
-    std::unique_ptr<RenderTarget>& render_target,
-    std::unique_ptr<RenderPass>& render_pass
+    VkCommandBuffer command_buffer
   ) {
     UploadTexture(command_buffer);
 
@@ -946,9 +953,19 @@ struct QuadRenderer {
     );
     
     vkCmdEndRenderPass(command_buffer);
+
+    // TODO: use render subpass dependency to transition image layout
+    transition_image_layout(command_buffer, (VkImage)color_texture->handle2(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   }
 
 //private:
+  void CreateRenderTarget() {
+    color_texture = render_device->CreateTexture2D(1600, 900, GPUTexture::Format::B8G8R8A8_SRGB, GPUTexture::Usage::ColorAttachment | GPUTexture::Usage::Sampled);
+    depth_texture = render_device->CreateTexture2D(1600, 900, GPUTexture::Format::DEPTH_F32, GPUTexture::Usage::DepthStencilAttachment);
+    render_target = render_device->CreateRenderTarget({ color_texture }, depth_texture);
+    render_pass = render_target->CreateRenderPass();
+  }
+
   void CreatePipelineLayoutAndBindGroup() {
     bind_group_layout = render_device->CreateBindGroupLayout({
       {
@@ -1051,6 +1068,13 @@ struct QuadRenderer {
   VkPhysicalDevice physical_device;
   VkDevice device;
   std::shared_ptr<RenderDevice> render_device;
+
+  std::shared_ptr<GPUTexture> color_texture;
+  std::shared_ptr<GPUTexture> depth_texture;
+  std::unique_ptr<RenderTarget> render_target;
+  std::unique_ptr<RenderPass> render_pass;
+
+  // TODO: clean this up a bit...
   std::unique_ptr<PipelineLayout> pipeline_layout;
   std::shared_ptr<BindGroupLayout> bind_group_layout;
   std::unique_ptr<BindGroup> bind_group;
@@ -1063,6 +1087,173 @@ struct QuadRenderer {
   bool did_upload_texture = false;
 };
 
+static const auto fullscreen_quad = Geometry{
+  IndexBuffer{
+    IndexDataType::UInt16,
+    std::vector<u8>{
+      (u8*)indices,
+      (u8*)indices + sizeof(indices)
+    }
+  },
+  std::vector<VertexBuffer>{VertexBuffer{
+    VertexBufferLayout{
+      .stride = sizeof(float) * 8,
+      .attributes = std::vector<VertexBufferLayout::Attribute>{
+        {
+          .index = 0,
+          .data_type = VertexDataType::Float32,
+          .components = 3,
+          .normalized = false,
+          .offset = 0
+        },
+        {
+          .index = 1,
+          .data_type = VertexDataType::Float32,
+          .components = 3,
+          .normalized = false,
+          .offset = sizeof(float) * 3
+        },
+        {
+          .index = 2,
+          .data_type = VertexDataType::Float32,
+          .components = 2,
+          .normalized = false,
+          .offset = sizeof(float) * 6
+        }
+      }
+    },
+    std::vector<u8>{
+      (u8*)vertices,
+      (u8*)vertices + sizeof(vertices)
+    }
+  }}
+};
+
+struct ScreenRenderer {
+  ScreenRenderer(VkPhysicalDevice physical_device, VkDevice device)
+    : physical_device(physical_device), device(device) {}
+
+  void Initialize(std::shared_ptr<RenderDevice> render_device) {
+    this->render_device = render_device;
+    CreatePipelineLayoutAndBindGroup();
+    CreateUniformBuffer();
+    CreateSampler();
+    CreateShaderModules();
+  }
+
+  void Render(
+    VkCommandBuffer command_buffer,
+    std::unique_ptr<RenderTarget>& render_target,
+    std::unique_ptr<RenderPass>& render_pass,
+    std::shared_ptr<GPUTexture>& texture
+  ) {
+    bind_group->Bind(1, texture, sampler);
+
+    auto render_pass_ = (VulkanRenderPass*)render_pass.get();
+    auto& clear_values = render_pass_->GetClearValues();
+
+    auto render_pass_begin_info = VkRenderPassBeginInfo{
+      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+      .pNext = nullptr,
+      .renderPass = render_pass_->Handle(),
+      .framebuffer = (VkFramebuffer)render_target->handle(),
+      .renderArea = VkRect2D{
+        .offset = VkOffset2D{
+          .x = 0,
+          .y = 0
+        },
+        .extent = VkExtent2D{
+          .width = 1600,
+          .height = 900
+        }
+      },
+      .clearValueCount = (u32)clear_values.size(),
+      .pClearValues = clear_values.data()
+    };
+
+    // Just for fun~
+    render_pass->SetClearColor(0, 1, 0, 0, 1);
+
+    vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+    // TODO: is it a good idea to upload the geometry while recording the command buffer?
+    upload_geometry(
+      physical_device,
+      device,
+      render_device,
+      (VkShaderModule)shader_vert->Handle(),
+      (VkShaderModule)shader_frag->Handle(),
+      render_pass_->Handle(),
+      (VkPipelineLayout)pipeline_layout->Handle(),
+      &fullscreen_quad
+    );
+
+    draw_geometry(
+      command_buffer,
+      (VkPipelineLayout)pipeline_layout->Handle(),
+      (VkDescriptorSet)bind_group->Handle(),
+      &fullscreen_quad
+    );
+
+    vkCmdEndRenderPass(command_buffer);
+  }
+
+//private:
+  void CreatePipelineLayoutAndBindGroup() {
+    bind_group_layout = render_device->CreateBindGroupLayout({
+      {
+        .binding = 0,
+        .type = BindGroupLayout::Entry::Type::UniformBuffer
+      },
+      {
+        .binding = 1,
+        .type = BindGroupLayout::Entry::Type::ImageWithSampler
+      }
+      });
+    bind_group = bind_group_layout->Instantiate();
+
+    pipeline_layout = render_device->CreatePipelineLayout({ bind_group_layout });
+  }
+
+  // TODO: get rid of this once we reworked the shader
+  void CreateUniformBuffer() {
+    auto transform = Matrix4::perspective_dx(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0);
+
+    ubo = render_device->CreateBufferWithData(
+      Aura::Buffer::Usage::UniformBuffer,
+      &transform,
+      sizeof(transform)
+    );
+    bind_group->Bind(0, ubo, BindGroupLayout::Entry::Type::UniformBuffer);
+  }
+
+  // TODO: specify a sampler inside the shader if possible
+  void CreateSampler() {
+    sampler = render_device->CreateSampler({
+      .mag_filter = Sampler::FilterMode::Nearest,
+      .min_filter = Sampler::FilterMode::Nearest
+    });
+  }
+
+  void CreateShaderModules() {
+    shader_vert = render_device->CreateShaderModule(triangle_vert, sizeof(triangle_vert));
+    shader_frag = render_device->CreateShaderModule(triangle_frag, sizeof(triangle_frag));
+  }
+
+  VkPhysicalDevice physical_device;
+  VkDevice device;
+  std::shared_ptr<RenderDevice> render_device;
+
+  // TODO: clean this up a bit...
+  std::unique_ptr<PipelineLayout> pipeline_layout;
+  std::shared_ptr<BindGroupLayout> bind_group_layout;
+  std::unique_ptr<BindGroup> bind_group;
+  std::unique_ptr<Buffer> ubo;
+  std::unique_ptr<Sampler> sampler;
+  std::unique_ptr<ShaderModule> shader_vert;
+  std::unique_ptr<ShaderModule> shader_frag;
+};
+
 struct Application {
   Application(
     VkInstance instance,
@@ -1073,17 +1264,20 @@ struct Application {
       , physical_device(physical_device)
       , device(device)
       , swapchain(swapchain)
-      , quad_renderer(physical_device, device) {
+      , quad_renderer(physical_device, device)
+      , screen_renderer(physical_device, device) {
   }
 
   void Initialize() {
     CreateRenderDevice();
     CreateSwapChainRenderTargets();
     quad_renderer.Initialize(render_device);
+    screen_renderer.Initialize(render_device);
   }
 
   void Render(VkCommandBuffer command_buffer, u32 image_id) {
-    quad_renderer.Render(command_buffer, render_targets[image_id], render_pass);
+    quad_renderer.Render(command_buffer);
+    screen_renderer.Render(command_buffer, render_targets[image_id], render_pass, quad_renderer.color_texture);
   }
 
 //private:
@@ -1132,6 +1326,7 @@ struct Application {
   std::unique_ptr<RenderPass> render_pass;
 
   QuadRenderer quad_renderer;
+  ScreenRenderer screen_renderer;
 };
 
 int main(int argc, char** argv) {

@@ -38,7 +38,7 @@ struct VulkanBindGroup final : BindGroup {
 
   void Bind(
     u32 binding,
-    std::unique_ptr<Buffer>& buffer,
+    AnyPtr<Buffer> buffer,
     BindGroupLayout::Entry::Type type
   ) override {
     auto buffer_info = VkDescriptorBufferInfo{
@@ -65,8 +65,8 @@ struct VulkanBindGroup final : BindGroup {
 
   void Bind(
     u32 binding,
-    std::unique_ptr<GPUTexture>& texture,
-    std::unique_ptr<Sampler>& sampler
+    AnyPtr<GPUTexture> texture,
+    AnyPtr<Sampler> sampler
   ) override {
     auto image_info = VkDescriptorImageInfo{
       .sampler = (VkSampler)sampler->Handle(),

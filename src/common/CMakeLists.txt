@@ -10,6 +10,7 @@ set(HEADERS
 )
 
 set(HEADERS_PUBLIC
+  include/aurora/any_ptr.hpp
   include/aurora/array_view.hpp
   include/aurora/integer.hpp
   include/aurora/log.hpp
