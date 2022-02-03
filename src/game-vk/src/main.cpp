@@ -884,12 +884,68 @@ void transition_image_layout(
 }
 
 struct QuadRenderer {
+  QuadRenderer(VkPhysicalDevice physical_device, VkDevice device)
+      : physical_device(physical_device), device(device) {}
+
   void Initialize(std::shared_ptr<RenderDevice> render_device) {
     this->render_device = render_device;
     CreatePipelineLayoutAndBindGroup();
     CreateUniformBuffer();
     CreateSampledTexture();
     CreateShaderModules();
+  }
+
+  void Render(
+    VkCommandBuffer command_buffer,
+    std::unique_ptr<RenderTarget>& render_target,
+    std::unique_ptr<RenderPass>& render_pass
+  ) {
+    UploadTexture(command_buffer);
+
+    auto render_pass_ = (VulkanRenderPass*)render_pass.get();
+    auto& clear_values = render_pass_->GetClearValues();
+
+    auto render_pass_begin_info = VkRenderPassBeginInfo{
+      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+      .pNext = nullptr,
+      .renderPass = render_pass_->Handle(),
+      .framebuffer = (VkFramebuffer)render_target->handle(),
+      .renderArea = VkRect2D{
+        .offset = VkOffset2D{
+          .x = 0,
+          .y = 0
+        },
+        .extent = VkExtent2D{
+          .width = 1600,
+          .height = 900
+        }
+      },
+      .clearValueCount = (u32)clear_values.size(),
+      .pClearValues = clear_values.data()
+    };
+
+    vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+    // TODO: is it a good idea to upload the geometry while recording the command buffer?
+    upload_geometry(
+      physical_device,
+      device,
+      render_device,
+      (VkShaderModule)shader_vert->Handle(),
+      (VkShaderModule)shader_frag->Handle(),
+      render_pass_->Handle(),
+      (VkPipelineLayout)pipeline_layout->Handle(),
+      &triangle
+    );
+
+    draw_geometry(
+      command_buffer,
+      (VkPipelineLayout)pipeline_layout->Handle(),
+      (VkDescriptorSet)bind_group->Handle(),
+      &triangle
+    );
+    
+    vkCmdEndRenderPass(command_buffer);
   }
 
 //private:
@@ -946,6 +1002,54 @@ struct QuadRenderer {
     shader_frag = render_device->CreateShaderModule(triangle_frag, sizeof(triangle_frag));
   }
 
+  void UploadTexture(VkCommandBuffer command_buffer) {
+    if (!did_upload_texture) {
+      // make the texture ready for being written to
+      transition_image_layout(
+        command_buffer,
+        (VkImage)texture->handle2(),
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+      );
+
+      auto region = VkBufferImageCopy{
+        .bufferOffset = 0,
+        .bufferRowLength = texture->width(),
+        .bufferImageHeight = texture->height(),
+        .imageSubresource = VkImageSubresourceLayers{
+          .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+          .mipLevel = 0,
+          .baseArrayLayer = 0,
+          .layerCount = 1
+        },
+        .imageOffset = VkOffset3D{
+          .x = 0,
+          .y = 0,
+          .z = 0
+        },
+        .imageExtent = VkExtent3D{
+          .width = texture->width(),
+          .height = texture->height(),
+          .depth = 1
+        }
+      };
+
+      vkCmdCopyBufferToImage(command_buffer, (VkBuffer)texture_buffer->Handle(), (VkImage)texture->handle2(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+      // make the texture ready for being read in a shader
+      transition_image_layout(
+        command_buffer,
+        (VkImage)texture->handle2(),
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+      );
+
+      did_upload_texture = true;
+    }
+  }
+
+  VkPhysicalDevice physical_device;
+  VkDevice device;
   std::shared_ptr<RenderDevice> render_device;
   std::unique_ptr<PipelineLayout> pipeline_layout;
   std::shared_ptr<BindGroupLayout> bind_group_layout;
@@ -956,6 +1060,7 @@ struct QuadRenderer {
   std::unique_ptr<Sampler> texture_sampler;
   std::unique_ptr<ShaderModule> shader_vert;
   std::unique_ptr<ShaderModule> shader_frag;
+  bool did_upload_texture = false;
 };
 
 struct Application {
@@ -967,13 +1072,18 @@ struct Application {
   )   : instance(instance)
       , physical_device(physical_device)
       , device(device)
-      , swapchain(swapchain) {
+      , swapchain(swapchain)
+      , quad_renderer(physical_device, device) {
   }
 
   void Initialize() {
     CreateRenderDevice();
     CreateSwapChainRenderTargets();
     quad_renderer.Initialize(render_device);
+  }
+
+  void Render(VkCommandBuffer command_buffer, u32 image_id) {
+    quad_renderer.Render(command_buffer, render_targets[image_id], render_pass);
   }
 
 //private:
@@ -1150,7 +1260,7 @@ int main(int argc, char** argv) {
   }
 
   auto event = SDL_Event{};
-  bool did_upload_texture = false;
+  //bool did_upload_texture = false;
 
   while (true) {
     // TODO: reinstantiate this code later
@@ -1161,104 +1271,61 @@ int main(int argc, char** argv) {
 
     u32 swapchain_image_id;
 
-    // TODO: wait for this? why would we need to? Vsync?
     vkResetFences(device, 1, &fence);
     vkAcquireNextImageKHR(device, swapchain, u64(-1), VK_NULL_HANDLE, fence, &swapchain_image_id);
     vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
 
     vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
 
-    if (!did_upload_texture) {
-      // make the texture ready for being written to
-      transition_image_layout(
-        command_buffer,
-        (VkImage)app.quad_renderer.texture->handle2(),
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-      );
-
-      auto region = VkBufferImageCopy{
-        .bufferOffset = 0,
-        .bufferRowLength = app.quad_renderer.texture->width(),
-        .bufferImageHeight = app.quad_renderer.texture->height(),
-        .imageSubresource = VkImageSubresourceLayers{
-          .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-          .mipLevel = 0,
-          .baseArrayLayer = 0,
-          .layerCount = 1
-        },
-        .imageOffset = VkOffset3D{
-          .x = 0,
-          .y = 0,
-          .z = 0
-        },
-        .imageExtent = VkExtent3D{
-          .width = app.quad_renderer.texture->width(),
-          .height = app.quad_renderer.texture->height(),
-          .depth = 1
-        }
-      };
-
-      vkCmdCopyBufferToImage(command_buffer, (VkBuffer)app.quad_renderer.texture_buffer->Handle(), (VkImage)app.quad_renderer.texture->handle2(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-      // make the texture ready for being read in a shader
-      transition_image_layout(
-        command_buffer,
-        (VkImage)app.quad_renderer.texture->handle2(),
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-      );
-
-      did_upload_texture = true;
-    }
+    app.Render(command_buffer, swapchain_image_id);
 
     // Off-screen render to texture
     {
-      auto& render_target = app.render_targets[swapchain_image_id];
-      auto render_pass_ = (VulkanRenderPass*)app.render_pass.get();
-      auto& clear_values = render_pass_->GetClearValues();
+      //auto& render_target = app.render_targets[swapchain_image_id];
+      //auto render_pass_ = (VulkanRenderPass*)app.render_pass.get();
+      //auto& clear_values = render_pass_->GetClearValues();
 
-      auto render_pass_begin_info = VkRenderPassBeginInfo{
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .pNext = nullptr,
-        .renderPass = render_pass_->Handle(),
-        .framebuffer = (VkFramebuffer)render_target->handle(),
-        .renderArea = VkRect2D{
-          .offset = VkOffset2D{
-            .x = 0,
-            .y = 0
-          },
-          .extent = VkExtent2D{
-            .width = 1600,
-            .height = 900
-          }
-        },
-        .clearValueCount = (u32)clear_values.size(),
-        .pClearValues = clear_values.data()
-      };
+      //auto render_pass_begin_info = VkRenderPassBeginInfo{
+      //  .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+      //  .pNext = nullptr,
+      //  .renderPass = render_pass_->Handle(),
+      //  .framebuffer = (VkFramebuffer)render_target->handle(),
+      //  .renderArea = VkRect2D{
+      //    .offset = VkOffset2D{
+      //      .x = 0,
+      //      .y = 0
+      //    },
+      //    .extent = VkExtent2D{
+      //      .width = 1600,
+      //      .height = 900
+      //    }
+      //  },
+      //  .clearValueCount = (u32)clear_values.size(),
+      //  .pClearValues = clear_values.data()
+      //};
 
-      vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-      {
-        // TODO: is it a good idea to upload the geometry while recording the command buffer?
-        upload_geometry(
-          physical_device,
-          device,
-          app.render_device,
-          (VkShaderModule)app.quad_renderer.shader_vert->Handle(),
-          (VkShaderModule)app.quad_renderer.shader_frag->Handle(),
-          ((VulkanRenderPass*)app.render_pass.get())->Handle(),
-          (VkPipelineLayout)app.quad_renderer.pipeline_layout->Handle(),
-          &triangle
-        );
+      //vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+      //{
+      //  // TODO: is it a good idea to upload the geometry while recording the command buffer?
+      //  upload_geometry(
+      //    physical_device,
+      //    device,
+      //    app.render_device,
+      //    (VkShaderModule)app.quad_renderer.shader_vert->Handle(),
+      //    (VkShaderModule)app.quad_renderer.shader_frag->Handle(),
+      //    ((VulkanRenderPass*)app.render_pass.get())->Handle(),
+      //    (VkPipelineLayout)app.quad_renderer.pipeline_layout->Handle(),
+      //    &triangle
+      //  );
 
-        draw_geometry(
-          command_buffer,
-          (VkPipelineLayout)app.quad_renderer.pipeline_layout->Handle(),
-          (VkDescriptorSet)app.quad_renderer.bind_group->Handle(),
-          &triangle
-        );
-      }
-      vkCmdEndRenderPass(command_buffer);
+      //  draw_geometry(
+      //    command_buffer,
+      //    (VkPipelineLayout)app.quad_renderer.pipeline_layout->Handle(),
+      //    (VkDescriptorSet)app.quad_renderer.bind_group->Handle(),
+      //    &triangle
+      //  );
+      //}
+      //vkCmdEndRenderPass(command_buffer);
     }
 
     // Output render to screen
