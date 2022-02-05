@@ -14,66 +14,6 @@
 
 using namespace Aura;
 
-auto create_example_scene() -> GameObject* {
-  auto scene = new GameObject{};
-
-  const u16 plane_indices[] = {
-    0, 1, 2,
-    2, 3, 0
-  };
-
-  const float plane_vertices[] = {
-  // POSITION   UV         COLOR
-    -1, +1, 2,  0.0, 0.0,  1.0, 0.0, 0.0,
-    +1, +1, 2,  1.0, 0.0,  0.0, 1.0, 0.0,
-    +1, -1, 2,  1.0, 1.0,  0.0, 0.0, 1.0,
-    -1, -1, 2,  0.0, 1.0,  1.0, 0.0, 1.0
-  };
-
-  auto index_buffer = IndexBuffer{IndexDataType::UInt16, 6};
-  std::memcpy(
-    index_buffer.data(), plane_indices, sizeof(plane_indices));
-
-  auto vertex_buffer_layout = VertexBufferLayout{
-    .stride = sizeof(float) * 8,
-    .attributes = {{
-      .index = 0,
-      .data_type = VertexDataType::Float32,
-      .components = 3,
-      .normalized = false,
-      .offset = 0
-    }, {
-      .index = 2,
-      .data_type = VertexDataType::Float32,
-      .components = 2,
-      .normalized = false,
-      .offset = sizeof(float) * 3
-    }, {
-      .index = 3,
-      .data_type = VertexDataType::Float32,
-      .components = 3,
-      .normalized = false,
-      .offset = sizeof(float) * 5
-    }}
-  };
-  auto vertex_buffer = VertexBuffer{vertex_buffer_layout, 4};
-  std::memcpy(
-    vertex_buffer.data(), plane_vertices, sizeof(plane_vertices));
-
-  auto geometry = std::make_shared<Geometry>(index_buffer);
-  geometry->buffers.push_back(std::move(vertex_buffer));
-
-  auto material = std::make_shared<PbrMaterial>();
-
-  auto plane = new GameObject{"Plane0"};
-  plane->add_component<Mesh>(geometry, material);
-  scene->add_child(plane);
-  return scene;
-}
-
-// ---------------------------------------------------
-// legacy level one 
-
 #include <aurora/array_view.hpp>
 #include <aurora/integer.hpp>
 #include <vulkan/vulkan.h>
@@ -650,6 +590,7 @@ auto create_logical_device(VkInstance instance, VkPhysicalDevice physical_device
   // Let use hope that any GPU has VK_KHR_swapchain...
   const std::vector<char const*> kDeviceExtensions {
     "VK_KHR_swapchain",
+    "VK_KHR_maintenance1",
 #ifdef __APPLE__
     "VK_KHR_portability_subset"
 #endif
@@ -1446,7 +1387,12 @@ int main(int argc, char** argv) {
   }
 
   auto event = SDL_Event{};
-  auto scene = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf");
+  //auto scene = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf");
+  auto scene = new GameObject{};
+  scene->add_child(GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf"));
+  scene->add_child(GLTFLoader{}.parse("cube.gltf"));
+  scene->children()[0]->transform().position() = Vector3{ 0, 0, 5 };
+  scene->children()[1]->transform().position() = Vector3{ 2, 1, 3 };
 
   while (true) {
     // TODO: reinstantiate this code later

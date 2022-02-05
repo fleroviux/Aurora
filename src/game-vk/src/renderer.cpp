@@ -100,7 +100,7 @@ void Renderer::RenderObject(
     object_data.bind_group = object_data.bind_group_layout->Instantiate();
 
     // Create some dummy uniform buffer and bind it to the bind group
-    auto transform = Matrix4::perspective_dx(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0) * Matrix4::translation(0, 0, 3);
+    auto transform = Matrix4::perspective_dx(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0) * object->transform().world();
     object_data.ubo = render_device->CreateBufferWithData(
       Buffer::Usage::UniformBuffer,
       &transform,
@@ -234,9 +234,9 @@ auto Renderer::CreatePipeline(
 
   auto viewport = VkViewport{
     .x = 0,
-    .y = 0,
+    .y = 900,
     .width = 1600,
-    .height = 900,
+    .height = -900,
     .minDepth = 0,
     .maxDepth = 1
   };

@@ -25,7 +25,7 @@ struct NonMovable {
 
 template<bool flag = false>
 constexpr void static_no_match() {
-  //static_assert(flag);
+  static_assert(flag);
 }
 
 struct pair_hash {
