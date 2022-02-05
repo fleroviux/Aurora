@@ -7,13 +7,19 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 
 set(SOURCES
   src/main.cpp
+  src/renderer.cpp
+  ../game/src/gltf_loader.cpp
 )
 
 set(HEADERS
-  src/output.vert.h
-  src/output.frag.h
-  src/triangle.vert.h
-  src/triangle.frag.h
+  src/shader/output.vert.h
+  src/shader/output.frag.h
+  src/shader/triangle.vert.h
+  src/shader/triangle.frag.h
+  src/shader/surface.vert.h
+  src/shader/surface.frag.h
+  src/renderer.hpp
+  ../game/src/gltf_loader.hpp
 )
 
 include(FindSDL2)
@@ -21,5 +27,5 @@ find_package(SDL2 REQUIRED)
 find_package(Vulkan REQUIRED)
 
 add_executable(Aurora-Game-Vk ${SOURCES} ${HEADERS})
-target_link_libraries(Aurora-Game-Vk PRIVATE Aurora-Renderer ${SDL2_LIBRARY} Aurora-GAL Vulkan::Vulkan)
+target_link_libraries(Aurora-Game-Vk PRIVATE Aurora-Renderer ${SDL2_LIBRARY} Aurora-GAL Vulkan::Vulkan nlohmann_json)
 target_include_directories(Aurora-Game-Vk PRIVATE ${SDL2_INCLUDE_DIR})

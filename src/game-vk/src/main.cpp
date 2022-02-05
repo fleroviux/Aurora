@@ -8,6 +8,9 @@
 #include <aurora/scene/game_object.hpp>
 
 #include "../../gal/src/vulkan/render_pass.hpp"
+#include "../../game/src/gltf_loader.hpp"
+
+#include "renderer.hpp"
 
 using namespace Aura;
 
@@ -232,27 +235,6 @@ auto create_pipeline(
       .module = shader_frag,
       .pName = "main",
       .pSpecializationInfo = nullptr
-    }
-  };
-
-  auto vertex_binding_info = VkVertexInputBindingDescription{
-    .binding = 0,
-    .stride = sizeof(float) * 6,
-    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-  };
-
-  VkVertexInputAttributeDescription vertex_attribute_infos[] {
-    {
-      .location = 0,
-      .binding = 0,
-      .format = VK_FORMAT_R32G32B32_SFLOAT,
-      .offset = 0
-    },
-    {
-      .location = 1,
-      .binding = 0,
-      .format = VK_FORMAT_R32G32B32_SFLOAT,
-      .offset = sizeof(float) * 3
     }
   };
 
@@ -525,11 +507,10 @@ const auto triangle = Geometry{
 
 // glslangValidator -S vert -V100 --vn triangle_vert -o triangle.vert.h triangle.vert.glsl
 // glslangValidator -S frag -V100 --vn triangle_frag -o triangle.frag.h triangle.frag.glsl
-#include "triangle.vert.h"
-#include "triangle.frag.h"
-
-#include "output.vert.h"
-#include "output.frag.h"
+#include "shader/triangle.vert.h"
+#include "shader/triangle.frag.h"
+#include "shader/output.vert.h"
+#include "shader/output.frag.h"
 
 u32 queue_family_graphics;
 u32 queue_family_transfer;
@@ -1269,11 +1250,24 @@ struct Application {
     CreateSwapChainRenderTargets();
     quad_renderer.Initialize(render_device);
     screen_renderer.Initialize(render_device);
+    renderer.Initialize(physical_device, device, render_device);
   }
 
-  void Render(VkCommandBuffer command_buffer, u32 image_id) {
+  void Render(VkCommandBuffer command_buffer, GameObject* scene, u32 image_id) {
     quad_renderer.Render(command_buffer);
-    screen_renderer.Render(command_buffer, render_targets[image_id], render_pass, quad_renderer.color_texture);
+
+    renderer.Render(command_buffer, scene);
+
+    // TODO: use a subpass dependency to transition image layout.
+    auto& texture = renderer.color_texture;
+    transition_image_layout(
+      command_buffer,
+      (VkImage)texture->handle2(),
+      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    );
+
+    screen_renderer.Render(command_buffer, render_targets[image_id], render_pass, texture);
   }
 
 //private:
@@ -1323,6 +1317,7 @@ struct Application {
 
   QuadRenderer quad_renderer;
   ScreenRenderer screen_renderer;
+  Renderer renderer;
 };
 
 int main(int argc, char** argv) {
@@ -1451,6 +1446,7 @@ int main(int argc, char** argv) {
   }
 
   auto event = SDL_Event{};
+  auto scene = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf");
 
   while (true) {
     // TODO: reinstantiate this code later
@@ -1467,7 +1463,7 @@ int main(int argc, char** argv) {
 
     vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
 
-    app.Render(command_buffer, swapchain_image_id);
+    app.Render(command_buffer, scene, swapchain_image_id);
 
     // Output render to screen
     
