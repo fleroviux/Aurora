@@ -528,6 +528,9 @@ const auto triangle = Geometry{
 #include "triangle.vert.h"
 #include "triangle.frag.h"
 
+#include "output.vert.h"
+#include "output.frag.h"
+
 u32 queue_family_graphics;
 u32 queue_family_transfer;
 
@@ -1109,13 +1112,6 @@ static const auto fullscreen_quad = Geometry{
         {
           .index = 1,
           .data_type = VertexDataType::Float32,
-          .components = 3,
-          .normalized = false,
-          .offset = sizeof(float) * 3
-        },
-        {
-          .index = 2,
-          .data_type = VertexDataType::Float32,
           .components = 2,
           .normalized = false,
           .offset = sizeof(float) * 6
@@ -1236,8 +1232,8 @@ struct ScreenRenderer {
   }
 
   void CreateShaderModules() {
-    shader_vert = render_device->CreateShaderModule(triangle_vert, sizeof(triangle_vert));
-    shader_frag = render_device->CreateShaderModule(triangle_frag, sizeof(triangle_frag));
+    shader_vert = render_device->CreateShaderModule(output_vert, sizeof(output_vert));
+    shader_frag = render_device->CreateShaderModule(output_frag, sizeof(output_frag));
   }
 
   VkPhysicalDevice physical_device;
@@ -1336,7 +1332,7 @@ int main(int argc, char** argv) {
   SDL_Init(SDL_INIT_VIDEO);
 
   auto window = SDL_CreateWindow(
-    "Aurora VR3",
+    "Zephyr",
     SDL_WINDOWPOS_CENTERED,
     SDL_WINDOWPOS_CENTERED,
     1600,

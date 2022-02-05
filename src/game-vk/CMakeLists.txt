@@ -10,6 +10,8 @@ set(SOURCES
 )
 
 set(HEADERS
+  src/output.vert.h
+  src/output.frag.h
   src/triangle.vert.h
   src/triangle.frag.h
 )
