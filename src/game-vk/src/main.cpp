@@ -590,7 +590,6 @@ auto create_logical_device(VkInstance instance, VkPhysicalDevice physical_device
   // Let use hope that any GPU has VK_KHR_swapchain...
   const std::vector<char const*> kDeviceExtensions {
     "VK_KHR_swapchain",
-    "VK_KHR_maintenance1",
 #ifdef __APPLE__
     "VK_KHR_portability_subset"
 #endif
@@ -1394,12 +1393,11 @@ int main(int argc, char** argv) {
   scene->children()[0]->transform().position() = Vector3{ 0, 0, 5 };
   scene->children()[1]->transform().position() = Vector3{ 2, 1, 3 };
 
+  float time = 0.0;
+
   while (true) {
-    // TODO: reinstantiate this code later
-    // Update uniforms
-    //angle += 0.01;
-    //transform = Matrix4::perspective_dx(45/180.0*3.141592, 1600.0/900, 0.01, 100.0) * Matrix4::rotation_z(angle);
-    //ubo->Update(&transform);
+    time += 0.01;
+    scene->children()[1]->transform().position().x() = std::sinf(time);
 
     u32 swapchain_image_id;
 

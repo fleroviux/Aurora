@@ -100,12 +100,7 @@ void Renderer::RenderObject(
     object_data.bind_group = object_data.bind_group_layout->Instantiate();
 
     // Create some dummy uniform buffer and bind it to the bind group
-    auto transform = Matrix4::perspective_dx(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0) * object->transform().world();
-    object_data.ubo = render_device->CreateBufferWithData(
-      Buffer::Usage::UniformBuffer,
-      &transform,
-      sizeof(transform)
-    );
+    object_data.ubo = render_device->CreateBuffer(Buffer::Usage::UniformBuffer, sizeof(Matrix4));
     object_data.bind_group->Bind(0, object_data.ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
     // Create shader modules
@@ -136,6 +131,11 @@ void Renderer::RenderObject(
 
     object_data.valid = true;
   }
+
+  // Update object transform UBO
+  auto projection = Matrix4::perspective_dx(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0);
+  auto transform = projection * object->transform().world();
+  object_data.ubo->Update(&transform);
 
   // TODO: creating a std::vector everytime is slow. make this faster.
   auto descriptor_set = (VkDescriptorSet)object_data.bind_group->Handle();
