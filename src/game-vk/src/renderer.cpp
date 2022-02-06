@@ -26,10 +26,6 @@ void Renderer::Initialize(
 }
 
 void Renderer::Render(VkCommandBuffer command_buffer, GameObject* scene) {
-  //// TODO: check that scene component and camera exist.
-  //const auto scene_component = scene->get_component<Scene>();
-  //const auto camera = scene_component->camera;
-
   const std::function<void(GameObject*)> traverse = [&](GameObject* object) {
     if (!object->visible()) {
       return;
@@ -92,11 +88,12 @@ void Renderer::RenderObject(
   GameObject* object,
   Mesh* mesh
 ) {
+  auto& geometry = mesh->geometry;
+  //auto& material = mesh->material;
+
   auto& object_data = object_cache[object];
 
   if (!object_data.valid) {
-    auto& geometry = mesh->geometry;
-
     // Create bind group layout, pipeline layout and bind group.
     object_data.bind_group_layout = render_device->CreateBindGroupLayout({
       {
@@ -169,7 +166,7 @@ void Renderer::RenderObject(
     nullptr
   );
 
-  auto& index_buffer = mesh->geometry->index_buffer;
+  auto& index_buffer = geometry->index_buffer;
 
   auto index_type = VkIndexType{};
   auto index_count = 0UL;

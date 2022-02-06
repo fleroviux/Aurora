@@ -390,63 +390,6 @@ void draw_geometry(
 #undef main
 #endif
 
-using u32 = std::uint32_t;
-using u64 = std::uint64_t;
-
-float vertices[] = {
-  -1, -1,  3,   1, 0, 0,  0, 0,
-   1, -1,  3,   0, 1, 0,  1, 0,
-   1,  1,  3,   0, 0, 1,  1, 1,
-  -1,  1,  3,   1, 1, 0,  0, 1
-};
-
-u16 indices[] = {
-  0, 1, 2,
-  2, 3, 0
-};
-
-const auto triangle = Geometry{
-  IndexBuffer{
-    IndexDataType::UInt16,
-    std::vector<u8>{
-      (u8*)indices,
-      (u8*)indices + sizeof(indices)
-    }
-  },
-  std::vector<VertexBuffer>{VertexBuffer{
-    VertexBufferLayout{
-      .stride = sizeof(float) * 8,
-      .attributes = std::vector<VertexBufferLayout::Attribute>{
-        {
-          .index = 0,
-          .data_type = VertexDataType::Float32,
-          .components = 3,
-          .normalized = false,
-          .offset = 0
-        },
-        {
-          .index = 1,
-          .data_type = VertexDataType::Float32,
-          .components = 3,
-          .normalized = false,
-          .offset = sizeof(float) * 3
-        },
-        {
-          .index = 2,
-          .data_type = VertexDataType::Float32,
-          .components = 2,
-          .normalized = false,
-          .offset = sizeof(float) * 6
-        }
-      }
-    },
-    std::vector<u8>{
-      (u8*)vertices,
-      (u8*)vertices + sizeof(vertices)
-    }
-  }}
-};
-
 // glslangValidator -S vert -V100 --vn triangle_vert -o triangle.vert.h triangle.vert.glsl
 // glslangValidator -S frag -V100 --vn triangle_frag -o triangle.frag.h triangle.frag.glsl
 #include "shader/triangle.vert.h"
@@ -816,6 +759,18 @@ void transition_image_layout(
     1, &barrier
   );
 }
+
+static float vertices[] = {
+  -1, -1,  3,   1, 0, 0,  0, 0,
+   1, -1,  3,   0, 1, 0,  1, 0,
+   1,  1,  3,   0, 0, 1,  1, 1,
+  -1,  1,  3,   1, 1, 0,  0, 1
+};
+
+static u16 indices[] = {
+  0, 1, 2,
+  2, 3, 0
+};
 
 static const auto fullscreen_quad = Geometry{
   IndexBuffer{
