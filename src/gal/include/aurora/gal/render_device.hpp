@@ -4,8 +4,11 @@
 
 #pragma once
 
+#include <aurora/gal/bind_group.hpp>
 #include <aurora/gal/buffer.hpp>
+#include <aurora/gal/pipeline_layout.hpp>
 #include <aurora/gal/render_target.hpp>
+#include <aurora/gal/sampler.hpp>
 #include <aurora/gal/shader_module.hpp>
 #include <aurora/gal/texture.hpp>
 #include <aurora/array_view.hpp>
@@ -15,7 +18,7 @@
 #include <vector>
 
 namespace Aura {
- 
+
 struct RenderDevice {
   virtual ~RenderDevice() = default;
 
@@ -84,10 +87,22 @@ struct RenderDevice {
     void* image_handle
   ) -> std::unique_ptr<GPUTexture> = 0;
 
+  virtual auto CreateSampler(
+    Sampler::Config const& config
+  ) -> std::unique_ptr<Sampler> = 0;
+
   virtual auto CreateRenderTarget(
-    std::vector<GPUTexture*> const& color_attachments,
-    GPUTexture* depth_stencil_attachment = nullptr
+    std::vector<std::shared_ptr<GPUTexture>> const& color_attachments,
+    std::shared_ptr<GPUTexture> depth_stencil_attachment = {}
   ) -> std::unique_ptr<RenderTarget> = 0;
+
+  virtual auto CreateBindGroupLayout(
+    std::vector<BindGroupLayout::Entry> const& entries
+  ) -> std::shared_ptr<BindGroupLayout> = 0;
+
+  virtual auto CreatePipelineLayout(
+    std::vector<std::shared_ptr<BindGroupLayout>> const& bind_groups
+  ) -> std::unique_ptr<PipelineLayout> = 0;
 };
 
 } // namespace Aura

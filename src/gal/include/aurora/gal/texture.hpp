@@ -10,21 +10,36 @@ namespace Aura {
 
 // TODO: make naming scheme consistent.
 struct GPUTexture {
+  // Subset of VkImageLayout:
+  // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkImageLayout
+  enum class Layout {
+    Undefined = 0,
+    General = 1,
+    ColorAttachment = 2,
+    DepthStencilAttachment = 3,
+    DepthStencilReadOnly = 4,
+    ShaderReadOnly = 5,
+    CopySrc = 6,
+    CopyDst = 7,
+    PresentSrc = 1000001002
+  };
+
   enum class Grade {
     _1D,
     _2D,
     _3D
   };
 
-  // subset of VkFormat:
+  // Subset of VkFormat:
   // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkFormat
   // TODO: find a subset of formats that work on all targeted platforms.
   enum class Format {
-    B8G8R8B8_SRGB = 50,
+    R8G8B8A8_SRGB = 43,
+    B8G8R8A8_SRGB = 50,
     DEPTH_F32 = 126
   };
 
-  // subset of VkImageUsageFlagBits:
+  // Subset of VkImageUsageFlagBits:
   // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkImageUsageFlagBits
   enum class Usage : u32 {
     CopySrc = 0x00000001,

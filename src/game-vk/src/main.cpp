@@ -4,156 +4,21 @@
  */
 
 #include <aurora/gal/backend/vulkan.hpp>
+#include <aurora/renderer/component/camera.hpp>
 #include <aurora/renderer/component/mesh.hpp>
+#include <aurora/renderer/component/scene.hpp>
 #include <aurora/scene/game_object.hpp>
 
+#include "../../gal/src/vulkan/render_pass.hpp"
+#include "../../game/src/gltf_loader.hpp"
+
+#include "renderer.hpp"
+
 using namespace Aura;
-
-auto create_example_scene() -> GameObject* {
-  auto scene = new GameObject{};
-
-  const u16 plane_indices[] = {
-    0, 1, 2,
-    2, 3, 0
-  };
-
-  const float plane_vertices[] = {
-  // POSITION   UV         COLOR
-    -1, +1, 2,  0.0, 0.0,  1.0, 0.0, 0.0,
-    +1, +1, 2,  1.0, 0.0,  0.0, 1.0, 0.0,
-    +1, -1, 2,  1.0, 1.0,  0.0, 0.0, 1.0,
-    -1, -1, 2,  0.0, 1.0,  1.0, 0.0, 1.0
-  };
-
-  auto index_buffer = IndexBuffer{IndexDataType::UInt16, 6};
-  std::memcpy(
-    index_buffer.data(), plane_indices, sizeof(plane_indices));
-
-  auto vertex_buffer_layout = VertexBufferLayout{
-    .stride = sizeof(float) * 8,
-    .attributes = {{
-      .index = 0,
-      .data_type = VertexDataType::Float32,
-      .components = 3,
-      .normalized = false,
-      .offset = 0
-    }, {
-      .index = 2,
-      .data_type = VertexDataType::Float32,
-      .components = 2,
-      .normalized = false,
-      .offset = sizeof(float) * 3
-    }, {
-      .index = 3,
-      .data_type = VertexDataType::Float32,
-      .components = 3,
-      .normalized = false,
-      .offset = sizeof(float) * 5
-    }}
-  };
-  auto vertex_buffer = VertexBuffer{vertex_buffer_layout, 4};
-  std::memcpy(
-    vertex_buffer.data(), plane_vertices, sizeof(plane_vertices));
-
-  auto geometry = std::make_shared<Geometry>(index_buffer);
-  geometry->buffers.push_back(std::move(vertex_buffer));
-
-  auto material = std::make_shared<PbrMaterial>();
-
-  auto plane = new GameObject{"Plane0"};
-  plane->add_component<Mesh>(geometry, material);
-  scene->add_child(plane);
-  return scene;
-}
-
-// ---------------------------------------------------
-// legacy level one 
 
 #include <aurora/array_view.hpp>
 #include <aurora/integer.hpp>
 #include <vulkan/vulkan.h>
-
-auto get_vk_format_from_attribute(
-  VertexBufferLayout::Attribute const& attribute
-) -> VkFormat {
-  const auto components = attribute.components;
-  const bool normalized = attribute.normalized;
-
-  switch (attribute.data_type) {
-    case VertexDataType::SInt8: {
-      if (normalized) {
-        if (components == 1) return VK_FORMAT_R8_SNORM;
-        if (components == 2) return VK_FORMAT_R8G8_SNORM;
-        if (components == 3) return VK_FORMAT_R8G8B8_SNORM;
-        if (components == 4) return VK_FORMAT_R8G8B8A8_SNORM;
-      } else {
-        if (components == 1) return VK_FORMAT_R8_SINT;
-        if (components == 2) return VK_FORMAT_R8G8_SINT;
-        if (components == 3) return VK_FORMAT_R8G8B8_SINT;
-        if (components == 4) return VK_FORMAT_R8G8B8A8_SINT;
-      } 
-      break;
-    }
-    case VertexDataType::UInt8: {
-      if (normalized) {
-        if (components == 1) return VK_FORMAT_R8_UNORM;
-        if (components == 2) return VK_FORMAT_R8G8_UNORM;
-        if (components == 3) return VK_FORMAT_R8G8B8_UNORM;
-        if (components == 4) return VK_FORMAT_R8G8B8A8_UNORM;
-      } else {
-        if (components == 1) return VK_FORMAT_R8_UINT;
-        if (components == 2) return VK_FORMAT_R8G8_UINT;
-        if (components == 3) return VK_FORMAT_R8G8B8_UINT;
-        if (components == 4) return VK_FORMAT_R8G8B8A8_UINT;
-      }
-      break;
-    }
-    case VertexDataType::SInt16: {
-      if (normalized) {
-        if (components == 1) return VK_FORMAT_R16_SNORM;
-        if (components == 2) return VK_FORMAT_R16G16_SNORM;
-        if (components == 3) return VK_FORMAT_R16G16B16_SNORM;
-        if (components == 4) return VK_FORMAT_R16G16B16A16_SNORM;
-      } else {
-        if (components == 1) return VK_FORMAT_R16_SINT;
-        if (components == 2) return VK_FORMAT_R16G16_SINT;
-        if (components == 3) return VK_FORMAT_R16G16B16_SINT;
-        if (components == 4) return VK_FORMAT_R16G16B16A16_SINT;
-      }
-      break;
-    }
-    case VertexDataType::UInt16: {
-      if (normalized) {
-        if (components == 1) return VK_FORMAT_R16_UNORM;
-        if (components == 2) return VK_FORMAT_R16G16_UNORM;
-        if (components == 3) return VK_FORMAT_R16G16B16_UNORM;
-        if (components == 4) return VK_FORMAT_R16G16B16A16_UNORM;
-      } else {
-        if (components == 1) return VK_FORMAT_R16_UINT;
-        if (components == 2) return VK_FORMAT_R16G16_UINT;
-        if (components == 3) return VK_FORMAT_R16G16B16_UINT;
-        if (components == 4) return VK_FORMAT_R16G16B16A16_UINT;
-      }
-      break;
-    }
-    case VertexDataType::Float16: {
-      if (components == 1) return VK_FORMAT_R16_SFLOAT;
-      if (components == 2) return VK_FORMAT_R16G16_SFLOAT;
-      if (components == 3) return VK_FORMAT_R16G16B16_SFLOAT;
-      if (components == 4) return VK_FORMAT_R16G16B16A16_SFLOAT;
-      break;
-    }
-    case VertexDataType::Float32: {
-      if (components == 1) return VK_FORMAT_R32_SFLOAT;
-      if (components == 2) return VK_FORMAT_R32G32_SFLOAT;
-      if (components == 3) return VK_FORMAT_R32G32B32_SFLOAT;
-      if (components == 4) return VK_FORMAT_R32G32B32A32_SFLOAT;
-      break;
-    }
-  }
-
-  Assert(false, "Vulkan: failed to map vertex attribute to VkFormat");
-}
 
 void configure_pipeline_geometry(
   VkGraphicsPipelineCreateInfo& pipeline,
@@ -177,7 +42,7 @@ void configure_pipeline_geometry(
       attributes->push_back(VkVertexInputAttributeDescription{
         .location = u32(attribute.index),
         .binding = binding,
-        .format = get_vk_format_from_attribute(attribute),
+        .format = Renderer::GetVkFormatFromAttribute(attribute),
         .offset = u32(attribute.offset)
       });
     }
@@ -233,27 +98,6 @@ auto create_pipeline(
     }
   };
 
-  auto vertex_binding_info = VkVertexInputBindingDescription{
-    .binding = 0,
-    .stride = sizeof(float) * 6,
-    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-  };
-
-  VkVertexInputAttributeDescription vertex_attribute_infos[] {
-    {
-      .location = 0,
-      .binding = 0,
-      .format = VK_FORMAT_R32G32B32_SFLOAT,
-      .offset = 0
-    },
-    {
-      .location = 1,
-      .binding = 0,
-      .format = VK_FORMAT_R32G32B32_SFLOAT,
-      .offset = sizeof(float) * 3
-    }
-  };
-
   auto viewport = VkViewport{
     .x = 0,
     .y = 0,
@@ -278,8 +122,6 @@ auto create_pipeline(
     .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
     .pNext = nullptr,
     .flags = 0,
-    // TODO: viewports and scissors are ignored if viewport or scissor state is dynarmic.
-    // We probably actually want to have it dynamic because fuck recreating pipelines when the resolution changes.
     .viewportCount = 1,
     .pViewports = &viewport,
     .scissorCount = 1,
@@ -291,11 +133,10 @@ auto create_pipeline(
     .pNext = nullptr,
     .flags = 0,
     .depthClampEnable = VK_FALSE,
-    .rasterizerDiscardEnable = VK_FALSE, // the fuck does this do????
+    .rasterizerDiscardEnable = VK_FALSE,
     .polygonMode = VK_POLYGON_MODE_FILL,
     .cullMode = VK_CULL_MODE_NONE,
     .depthBiasEnable = VK_FALSE,
-    // probably don't need to set this if depth bias is disabled.
     .depthBiasConstantFactor = 0,
     .depthBiasClamp = 0,
     .depthBiasSlopeFactor = 0,
@@ -342,7 +183,7 @@ auto create_pipeline(
     .logicOp = VK_LOGIC_OP_NO_OP,
     .attachmentCount = 1,
     .pAttachments = &color_blend_attachment_info,
-    .blendConstants = {0, 0, 0, 0} // probably don't need to set this unless needed.
+    .blendConstants = {0, 0, 0, 0}
   };
 
   auto pipeline_info = VkGraphicsPipelineCreateInfo{
@@ -357,7 +198,6 @@ auto create_pipeline(
     .pMultisampleState = &multisample_info,
     .pDepthStencilState = &depth_stencil_info,
     .pColorBlendState = &color_blend_info,
-    // TODO: set this to make e.g. the viewport and scissor test dynamic.
     .pDynamicState = nullptr,
     .layout = pipeline_layout,
     .renderPass = render_pass,
@@ -390,7 +230,7 @@ std::unordered_map<Geometry const*, GeometryCacheEntry> geometry_cache;
 void upload_geometry(
   VkPhysicalDevice physical_device,
   VkDevice device,
-  std::unique_ptr<RenderDevice>& render_device,
+  std::shared_ptr<RenderDevice> render_device,
   VkShaderModule shader_vert,
   VkShaderModule shader_frag,
   VkRenderPass render_pass,
@@ -464,67 +304,12 @@ void draw_geometry(
 #undef main
 #endif
 
-using u32 = std::uint32_t;
-using u64 = std::uint64_t;
-
-float vertices[] = {
-  -1, -1,  3,   1, 0, 0,  0, 0,
-   1, -1,  3,   0, 1, 0,  1, 0,
-   1,  1,  3,   0, 0, 1,  1, 1,
-  -1,  1,  3,   1, 1, 0,  0, 1
-};
-
-u16 indices[] = {
-  0, 1, 2,
-  2, 3, 0
-};
-
-const auto triangle = Geometry{
-  IndexBuffer{
-    IndexDataType::UInt16,
-    std::vector<u8>{
-      (u8*)indices,
-      (u8*)indices + sizeof(indices)
-    }
-  },
-  std::vector<VertexBuffer>{VertexBuffer{
-    VertexBufferLayout{
-      .stride = sizeof(float) * 8,
-      .attributes = std::vector<VertexBufferLayout::Attribute>{
-        {
-          .index = 0,
-          .data_type = VertexDataType::Float32,
-          .components = 3,
-          .normalized = false,
-          .offset = 0
-        },
-        {
-          .index = 1,
-          .data_type = VertexDataType::Float32,
-          .components = 3,
-          .normalized = false,
-          .offset = sizeof(float) * 3
-        },
-        {
-          .index = 2,
-          .data_type = VertexDataType::Float32,
-          .components = 2,
-          .normalized = false,
-          .offset = sizeof(float) * 6
-        }
-      }
-    },
-    std::vector<u8>{
-      (u8*)vertices,
-      (u8*)vertices + sizeof(vertices)
-    }
-  }}
-};
-
 // glslangValidator -S vert -V100 --vn triangle_vert -o triangle.vert.h triangle.vert.glsl
 // glslangValidator -S frag -V100 --vn triangle_frag -o triangle.frag.h triangle.frag.glsl
-#include "triangle.vert.h"
-#include "triangle.frag.h"
+#include "shader/triangle.vert.h"
+#include "shader/triangle.frag.h"
+#include "shader/output.vert.h"
+#include "shader/output.frag.h"
 
 u32 queue_family_graphics;
 u32 queue_family_transfer;
@@ -827,6 +612,256 @@ auto sdl_create_surface(
   return VK_NULL_HANDLE;
 }
 
+static float vertices[] = {
+  -1, -1,  3,   1, 0, 0,  0, 0,
+   1, -1,  3,   0, 1, 0,  1, 0,
+   1,  1,  3,   0, 0, 1,  1, 1,
+  -1,  1,  3,   1, 1, 0,  0, 1
+};
+
+static u16 indices[] = {
+  0, 1, 2,
+  2, 3, 0
+};
+
+static const auto fullscreen_quad = Geometry{
+  IndexBuffer{
+    IndexDataType::UInt16,
+    std::vector<u8>{
+      (u8*)indices,
+      (u8*)indices + sizeof(indices)
+    }
+  },
+  std::vector<VertexBuffer>{VertexBuffer{
+    VertexBufferLayout{
+      .stride = sizeof(float) * 8,
+      .attributes = std::vector<VertexBufferLayout::Attribute>{
+        {
+          .index = 0,
+          .data_type = VertexDataType::Float32,
+          .components = 3,
+          .normalized = false,
+          .offset = 0
+        },
+        {
+          .index = 1,
+          .data_type = VertexDataType::Float32,
+          .components = 2,
+          .normalized = false,
+          .offset = sizeof(float) * 6
+        }
+      }
+    },
+    std::vector<u8>{
+      (u8*)vertices,
+      (u8*)vertices + sizeof(vertices)
+    }
+  }}
+};
+
+struct ScreenRenderer {
+  ScreenRenderer(VkPhysicalDevice physical_device, VkDevice device)
+    : physical_device(physical_device), device(device) {}
+
+  void Initialize(std::shared_ptr<RenderDevice> render_device) {
+    this->render_device = render_device;
+    CreatePipelineLayoutAndBindGroup();
+    CreateUniformBuffer();
+    CreateSampler();
+    CreateShaderModules();
+  }
+
+  void Render(
+    VkCommandBuffer command_buffer,
+    std::unique_ptr<RenderTarget>& render_target,
+    std::unique_ptr<RenderPass>& render_pass,
+    std::shared_ptr<GPUTexture>& texture
+  ) {
+    bind_group->Bind(1, texture, sampler);
+
+    auto render_pass_ = (VulkanRenderPass*)render_pass.get();
+    auto& clear_values = render_pass_->GetClearValues();
+
+    auto render_pass_begin_info = VkRenderPassBeginInfo{
+      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+      .pNext = nullptr,
+      .renderPass = render_pass_->Handle(),
+      .framebuffer = (VkFramebuffer)render_target->handle(),
+      .renderArea = VkRect2D{
+        .offset = VkOffset2D{
+          .x = 0,
+          .y = 0
+        },
+        .extent = VkExtent2D{
+          .width = 1600,
+          .height = 900
+        }
+      },
+      .clearValueCount = (u32)clear_values.size(),
+      .pClearValues = clear_values.data()
+    };
+
+    // Just for fun~
+    render_pass->SetClearColor(0, 1, 0, 0, 1);
+
+    vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+    // TODO: is it a good idea to upload the geometry while recording the command buffer?
+    upload_geometry(
+      physical_device,
+      device,
+      render_device,
+      (VkShaderModule)shader_vert->Handle(),
+      (VkShaderModule)shader_frag->Handle(),
+      render_pass_->Handle(),
+      (VkPipelineLayout)pipeline_layout->Handle(),
+      &fullscreen_quad
+    );
+
+    draw_geometry(
+      command_buffer,
+      (VkPipelineLayout)pipeline_layout->Handle(),
+      (VkDescriptorSet)bind_group->Handle(),
+      &fullscreen_quad
+    );
+
+    vkCmdEndRenderPass(command_buffer);
+  }
+
+//private:
+  void CreatePipelineLayoutAndBindGroup() {
+    bind_group_layout = render_device->CreateBindGroupLayout({
+      {
+        .binding = 0,
+        .type = BindGroupLayout::Entry::Type::UniformBuffer
+      },
+      {
+        .binding = 1,
+        .type = BindGroupLayout::Entry::Type::ImageWithSampler
+      }
+      });
+    bind_group = bind_group_layout->Instantiate();
+
+    pipeline_layout = render_device->CreatePipelineLayout({ bind_group_layout });
+  }
+
+  // TODO: get rid of this once we reworked the shader
+  void CreateUniformBuffer() {
+    auto transform = Matrix4::perspective_dx(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0);
+
+    ubo = render_device->CreateBufferWithData(
+      Aura::Buffer::Usage::UniformBuffer,
+      &transform,
+      sizeof(transform)
+    );
+    bind_group->Bind(0, ubo, BindGroupLayout::Entry::Type::UniformBuffer);
+  }
+
+  // TODO: specify a sampler inside the shader if possible
+  void CreateSampler() {
+    sampler = render_device->CreateSampler({
+      .mag_filter = Sampler::FilterMode::Nearest,
+      .min_filter = Sampler::FilterMode::Nearest
+    });
+  }
+
+  void CreateShaderModules() {
+    shader_vert = render_device->CreateShaderModule(output_vert, sizeof(output_vert));
+    shader_frag = render_device->CreateShaderModule(output_frag, sizeof(output_frag));
+  }
+
+  VkPhysicalDevice physical_device;
+  VkDevice device;
+  std::shared_ptr<RenderDevice> render_device;
+
+  // TODO: clean this up a bit...
+  std::unique_ptr<PipelineLayout> pipeline_layout;
+  std::shared_ptr<BindGroupLayout> bind_group_layout;
+  std::unique_ptr<BindGroup> bind_group;
+  std::unique_ptr<Buffer> ubo;
+  std::unique_ptr<Sampler> sampler;
+  std::unique_ptr<ShaderModule> shader_vert;
+  std::unique_ptr<ShaderModule> shader_frag;
+};
+
+struct Application {
+  Application(
+    VkInstance instance,
+    VkPhysicalDevice physical_device,
+    VkDevice device,
+    VkSwapchainKHR swapchain
+  )   : instance(instance)
+      , physical_device(physical_device)
+      , device(device)
+      , swapchain(swapchain)
+      , screen_renderer(physical_device, device) {
+  }
+
+  void Initialize() {
+    CreateRenderDevice();
+    CreateSwapChainRenderTargets();
+    screen_renderer.Initialize(render_device);
+    renderer.Initialize(physical_device, device, render_device);
+  }
+
+  void Render(
+    std::array<VkCommandBuffer, 2>& command_buffers,
+    GameObject* scene,
+    u32 image_id
+  ) {
+    renderer.Render(command_buffers, scene);
+    screen_renderer.Render(command_buffers[1], render_targets[image_id], render_pass, renderer.color_texture);
+  }
+
+//private:
+  void CreateRenderDevice() {
+    render_device = CreateVulkanRenderDevice({
+      .instance = instance,
+      .physical_device = physical_device,
+      .device = device
+    });
+  }
+
+  void CreateSwapChainRenderTargets() {
+    u32 swapchain_image_count;
+    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, nullptr);
+
+    auto swapchain_images = std::vector<VkImage>{};
+    swapchain_images.resize(swapchain_image_count);
+    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, swapchain_images.data());
+
+    for (auto swapchain_image : swapchain_images) {
+      auto texture = (std::shared_ptr<GPUTexture>)render_device->CreateTexture2DFromSwapchainImage(
+        1600,
+        900,
+        GPUTexture::Format::B8G8R8A8_SRGB,
+        (void*)swapchain_image
+      );
+
+      auto render_target = render_device->CreateRenderTarget({ texture });
+
+      render_targets.push_back(std::move(render_target));
+    }
+
+    render_pass = render_targets[0]->CreateRenderPass({ RenderPass::Descriptor{
+      //.load_op = RenderPass::LoadOp::DontCare,
+      .layout_src = GPUTexture::Layout::Undefined,
+      .layout_dst = GPUTexture::Layout::PresentSrc
+    }});
+  }
+
+  VkInstance instance;
+  VkPhysicalDevice physical_device;
+  VkDevice device;
+  VkSwapchainKHR swapchain;
+  std::shared_ptr<RenderDevice> render_device;
+  std::vector<std::unique_ptr<RenderTarget>> render_targets;
+  std::unique_ptr<RenderPass> render_pass;
+
+  ScreenRenderer screen_renderer;
+  Renderer renderer;
+};
+
 int main(int argc, char** argv) {
   (void)argc;
   (void)argv;
@@ -834,7 +869,7 @@ int main(int argc, char** argv) {
   SDL_Init(SDL_INIT_VIDEO);
 
   auto window = SDL_CreateWindow(
-    "Aurora VR3",
+    "Aurora",
     SDL_WINDOWPOS_CENTERED,
     SDL_WINDOWPOS_CENTERED,
     1600,
@@ -877,326 +912,12 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  auto render_device = CreateVulkanRenderDevice({
-    .instance = instance,
-    .physical_device = physical_device,
-    .device = device
-    });
+  auto app = Application{instance, physical_device, device, swapchain};
 
-  VkRenderPass render_pass;
+  app.Initialize();
 
-  {
-    auto attachments = std::vector<VkAttachmentDescription>{
-      // Color Attachment
-      {
-        .flags = 0,
-        .format = VK_FORMAT_B8G8R8A8_SRGB,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-      },
-      // Depth Attachment
-      {
-        .flags = 0,
-        .format = VK_FORMAT_D32_SFLOAT,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-      }
-    };
-
-    auto refs = std::vector<VkAttachmentReference>{
-      // Color Attachment reference
-      {
-        .attachment = 0,
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-      },
-      // Depth Attachment reference
-      {
-        .attachment = 1,
-        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-      }
-    };
-
-    auto render_pass_subpass = VkSubpassDescription{
-      .flags = 0,
-      .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-      .inputAttachmentCount = 0,
-      .pInputAttachments = nullptr,
-      .colorAttachmentCount = 1,
-      .pColorAttachments = &refs[0],
-      .pResolveAttachments = nullptr,
-      .pDepthStencilAttachment = &refs[1],
-      .preserveAttachmentCount = 0,
-      .pPreserveAttachments = nullptr
-    };
-
-    auto render_pass_info = VkRenderPassCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .attachmentCount = (u32)attachments.size(),
-      .pAttachments = attachments.data(),
-      .subpassCount = 1,
-      .pSubpasses = &render_pass_subpass,
-      .dependencyCount = 0,
-      .pDependencies = nullptr
-    };
-
-    if (vkCreateRenderPass(device, &render_pass_info, nullptr, &render_pass) != VK_SUCCESS) {
-      std::puts("Failed to create the render pass :(");
-      return -1;
-    }
-  }
-
-  auto textures = std::vector<std::unique_ptr<GPUTexture>>{};
-  auto render_targets = std::vector<std::unique_ptr<RenderTarget>>{};
-
-  auto depth_texture = render_device->CreateTexture2D(
-    1600, 900, GPUTexture::Format::DEPTH_F32, GPUTexture::Usage::DepthStencilAttachment);
-
-  {
-    u32 swapchain_image_count;
-    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, nullptr);
-
-    auto swapchain_images = std::vector<VkImage>{};
-    swapchain_images.resize(swapchain_image_count);
-    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, swapchain_images.data());
-
-    for (auto swapchain_image : swapchain_images) {
-      auto texture = render_device->CreateTexture2DFromSwapchainImage(
-        1600,
-        900,
-        GPUTexture::Format::B8G8R8B8_SRGB,
-        (void*)swapchain_image
-      );
-
-      auto render_target = render_device->CreateRenderTarget({ texture.get() }, depth_texture.get());
-
-      render_targets.push_back(std::move(render_target));
-      textures.push_back(std::move(texture)); // keep texture alive
-    }
-  }
-
-  auto descriptor_set_layout = VkDescriptorSetLayout{};
-
-  // Create descriptor set layout
-  {
-    auto descriptor_set_layout_bindings = std::vector<VkDescriptorSetLayoutBinding>{
-      {
-        .binding = 0,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1, // number of "locations" in the binding?
-        .stageFlags = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = nullptr
-      },
-      {
-        // TODO: can this be zero too since we have a different descriptor type?
-        .binding = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-        .descriptorCount = 1, // number of "locations" in the binding?
-        .stageFlags = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = nullptr
-      }
-    };
-
-    auto descriptor_set_layout_info = VkDescriptorSetLayoutCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .bindingCount = (u32)descriptor_set_layout_bindings.size(),
-      .pBindings = descriptor_set_layout_bindings.data()
-    };
-
-    if (vkCreateDescriptorSetLayout(device, &descriptor_set_layout_info, nullptr, &descriptor_set_layout) != VK_SUCCESS) {
-      Assert(false, "Vulkan: failed to create descriptor set layout");
-    }
-  }
-
-  auto pipeline_layout = VkPipelineLayout{};
-
-  // Create pipeline layout info
-  {
-    auto pipeline_layout_info = VkPipelineLayoutCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .setLayoutCount = 1,
-      .pSetLayouts = &descriptor_set_layout,
-      .pushConstantRangeCount = 0,
-      .pPushConstantRanges = nullptr
-    };
-
-    if (vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout) != VK_SUCCESS) {
-      Assert(false, "Vulkan: failed to create pipeline layout :(");
-    }
-  }
-
-  auto descriptor_set = VkDescriptorSet{};
-
-  // Create descriptor pool and descriptor set
-  {
-    // TODO: how do people typically handle descriptor pools in their engines?
-    auto descriptor_pool = VkDescriptorPool{};
-    auto descriptor_pool_sizes = std::vector<VkDescriptorPoolSize>{
-      {
-        .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1024
-      },
-      {
-        .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-        .descriptorCount = 1024
-      }
-    };
-    auto descriptor_pool_info = VkDescriptorPoolCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .maxSets = 1024,
-      .poolSizeCount = (u32)descriptor_pool_sizes.size(),
-      .pPoolSizes = descriptor_pool_sizes.data()
-    };
-
-    if (vkCreateDescriptorPool(device, &descriptor_pool_info, nullptr, &descriptor_pool) != VK_SUCCESS) {
-      Assert(false, "Vulkan: failed to create descriptor pool");
-    }
-
-    auto descriptor_set_info = VkDescriptorSetAllocateInfo{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-      .pNext = nullptr,
-      .descriptorPool = descriptor_pool,
-      .descriptorSetCount = 1,
-      .pSetLayouts = &descriptor_set_layout
-    };
-
-    if (vkAllocateDescriptorSets(device, &descriptor_set_info, &descriptor_set) != VK_SUCCESS) {
-      Assert(false, "Vulkan: failed to allocate descriptor set");
-    }
-  }
-
-  std::unique_ptr<Buffer> ubo;
-  float angle = 0;
-  Matrix4 transform = Matrix4::rotation_z(angle);
-
-  // Create our example uniform buffer and bind it to our descriptor set
-  {
-    ubo = render_device->CreateBufferWithData(Aura::Buffer::Usage::UniformBuffer, &transform, sizeof(transform));
-
-    auto buffer_info = VkDescriptorBufferInfo{
-      .buffer = (VkBuffer)ubo->Handle(),
-      .offset = 0,
-      .range = VK_WHOLE_SIZE
-    };
-
-    auto descriptor_set_write = VkWriteDescriptorSet{
-      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-      .pNext = nullptr,
-      .dstSet = descriptor_set,
-      .dstBinding = 0,
-      .dstArrayElement = 0,
-      .descriptorCount = 1,
-      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-      .pImageInfo = nullptr,
-      .pBufferInfo = &buffer_info,
-      .pTexelBufferView = nullptr
-    };
-
-    vkUpdateDescriptorSets(device, 1, &descriptor_set_write, 0, nullptr);
-  }
-
-  std::unique_ptr<GPUTexture> texture;
-  std::unique_ptr<Buffer> texture_buffer; // texture staging buffer...
-
-  // Create an example texture and bind it to our descriptor set
-  {
-    auto girl_texture = Texture::load("girl.png");
-
-    // TODO: maybe add usage CopyDst?
-    texture = render_device->CreateTexture2D(girl_texture->width(), girl_texture->height(), GPUTexture::Format::B8G8R8B8_SRGB, GPUTexture::Usage::Sampled | GPUTexture::Usage::CopyDst);
-    texture_buffer = render_device->CreateBuffer(Aura::Buffer::Usage::CopySrc, sizeof(u32) * girl_texture->width() * girl_texture->height());
-
-    // Upload some data to our staging buffer...
-    // u32* data = new u32[64*64]; // todo: this leaks...
-    // for (int i = 0; i < 64*64; i++) {
-    //   data[i] = 0xFFFF0000;
-    // }
-    texture_buffer->Update(girl_texture->data(), girl_texture->width() * girl_texture->height() * sizeof(u32));
-
-    auto sampler_info = VkSamplerCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .magFilter = VK_FILTER_LINEAR,
-      .minFilter = VK_FILTER_LINEAR,
-      .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-      .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-      .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-      .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-      .mipLodBias = 0,
-      .anisotropyEnable = VK_FALSE,
-      .compareEnable = VK_FALSE,
-      .compareOp = VK_COMPARE_OP_NEVER,
-      .minLod = 0,
-      .maxLod = 0,
-      .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
-      .unnormalizedCoordinates = VK_FALSE
-    };
-
-    auto sampler = VkSampler{};
-
-    if (vkCreateSampler(device, &sampler_info, nullptr, &sampler) != VK_SUCCESS) {
-      Assert(false, "Vulkan: failed to create sampler for texture :(");
-    }
-
-    auto image_info = VkDescriptorImageInfo{
-      .sampler = sampler,
-      .imageView = (VkImageView)texture->handle(),
-      .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL // TODO
-    };
-
-    auto descriptor_set_write = VkWriteDescriptorSet{
-      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-      .pNext = nullptr,
-      .dstSet = descriptor_set,
-      .dstBinding = 1,
-      .dstArrayElement = 0,
-      .descriptorCount = 1,
-      .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-      .pImageInfo = &image_info
-    };
-
-    vkUpdateDescriptorSets(device, 1, &descriptor_set_write, 0, nullptr);
-  }
-
-  VkCommandPool command_pool;
-  VkCommandBuffer command_buffer;
-  auto command_buffer_begin_info = VkCommandBufferBeginInfo{
-    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-    .pNext = nullptr,
-    // For now we'll re-record the command buffer every time it is submitted.
-    .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    // This is only necessary for secondary command buffers
-    .pInheritanceInfo = nullptr
-  };
-  auto command_buffer_submit_info = VkSubmitInfo{
-    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-    .pNext = nullptr,
-    .waitSemaphoreCount = 0,
-    .pWaitSemaphores = nullptr,
-    .pWaitDstStageMask = nullptr,
-    .commandBufferCount = 1,
-    .pCommandBuffers = &command_buffer,
-    .signalSemaphoreCount = 0,
-    .pSignalSemaphores = nullptr
-  };
+  auto command_pool = VkCommandPool{};
+  auto command_buffers = std::array<VkCommandBuffer, 2>{};
 
   { 
     auto command_pool_info = VkCommandPoolCreateInfo{
@@ -1216,10 +937,10 @@ int main(int argc, char** argv) {
       .pNext = nullptr,
       .commandPool = command_pool,
       .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-      .commandBufferCount = 1
+      .commandBufferCount = command_buffers.size()
     };
 
-    if (vkAllocateCommandBuffers(device, &command_buffer_info, &command_buffer) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(device, &command_buffer_info, command_buffers.data()) != VK_SUCCESS) {
       std::puts("Failed to create a command buffer :(");
       return -1;
     }
@@ -1247,96 +968,92 @@ int main(int argc, char** argv) {
     }
   }
 
-  auto shader_vert_ = render_device->CreateShaderModule(triangle_vert, sizeof(triangle_vert));
-  auto shader_frag_ = render_device->CreateShaderModule(triangle_frag, sizeof(triangle_frag));
-  auto shader_vert = (VkShaderModule)shader_vert_->Handle();
-  auto shader_frag = (VkShaderModule)shader_frag_->Handle();
-
   auto event = SDL_Event{};
+  auto scene = new GameObject{};
+  scene->add_child(GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf"));
+  //scene->add_child(GLTFLoader{}.parse("cube.gltf"));
+  scene->children()[0]->transform().position() = Vector3{ 0, 0, 5 };
+  //scene->children()[1]->transform().position() = Vector3{ 2, 1, 3 };
+
+  auto camera = new GameObject{};
+  camera->add_component<PerspectiveCamera>();
+  camera->transform().position().z() = -3;
+  scene->add_child(camera);
+  scene->add_component<Scene>(camera);
+
+  float time = 0.0;
+  float x = 0;
+  float y = 0;
+  float z = 0;
 
   while (true) {
-    // Update uniforms
-    angle += 0.01;
-    transform = Matrix4::perspective_dx(45/180.0*3.141592, 1600.0/900, 0.01, 100.0) * Matrix4::rotation_z(angle);
-    ubo->Update(&transform);
+    auto state = SDL_GetKeyboardState(nullptr);
+    auto const& camera_local = camera->transform().local();
+
+    // TODO: make camera controls consistent with OpenGL renderer - different projection matrix to blame?
+
+    if (state[SDL_SCANCODE_W]) {
+      camera->transform().position() += camera_local[2].xyz() * 0.05;
+    }
+
+    if (state[SDL_SCANCODE_S]) {
+      camera->transform().position() -= camera_local[2].xyz() * 0.05;
+    }
+
+    if (state[SDL_SCANCODE_A]) {
+      camera->transform().position() -= camera_local[0].xyz() * 0.05;
+    }
+
+    if (state[SDL_SCANCODE_D]) {
+      camera->transform().position() += camera_local[0].xyz() * 0.05;
+    }
+
+    if (state[SDL_SCANCODE_UP])    x -= 0.01;
+    if (state[SDL_SCANCODE_DOWN])  x += 0.01;
+    if (state[SDL_SCANCODE_LEFT])  y -= 0.01;
+    if (state[SDL_SCANCODE_RIGHT]) y += 0.01;
+    if (state[SDL_SCANCODE_M])     z += 0.01;
+    if (state[SDL_SCANCODE_N])     z -= 0.01;
+
+    camera->transform().rotation().set_euler(x, y, z);
+
+    time += 0.01;
+    //scene->children()[1]->transform().position().x() = std::sinf(time);
 
     u32 swapchain_image_id;
 
-    // TODO: wait for this? why would we need to? Vsync?
+    const auto command_buffer_begin_info = VkCommandBufferBeginInfo{
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+      .pNext = nullptr,
+      .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+      .pInheritanceInfo = nullptr
+    };
+
+    const auto command_buffer_submit_info = VkSubmitInfo{
+      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .pNext = nullptr,
+      .waitSemaphoreCount = 0,
+      .pWaitSemaphores = nullptr,
+      .pWaitDstStageMask = nullptr,
+      .commandBufferCount = command_buffers.size(),
+      .pCommandBuffers = command_buffers.data(),
+      .signalSemaphoreCount = 0,
+      .pSignalSemaphores = nullptr
+    };
+
     vkResetFences(device, 1, &fence);
     vkAcquireNextImageKHR(device, swapchain, u64(-1), VK_NULL_HANDLE, fence, &swapchain_image_id);
     vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
 
-    auto& render_target = render_targets[swapchain_image_id];
+    vkBeginCommandBuffer(command_buffers[1], &command_buffer_begin_info);
+    vkBeginCommandBuffer(command_buffers[0], &command_buffer_begin_info);
 
-    const auto clear_values = std::vector<VkClearValue>{
-      {
-        .color = VkClearColorValue{
-          .float32 = { 0.01, 0.01, 0.01, 1 }
-        }
-      },
-      {
-        .depthStencil = VkClearDepthStencilValue{
-          .depth = 1
-        }
-      }
-    };
+    app.Render(command_buffers, scene, swapchain_image_id);
 
-    auto render_pass_begin_info = VkRenderPassBeginInfo{
-      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-      .pNext = nullptr,
-      .renderPass = render_pass,
-      .framebuffer = (VkFramebuffer)render_target->handle(),
-      .renderArea = VkRect2D{
-        .offset = VkOffset2D{
-          .x = 0,
-          .y = 0
-        },
-        .extent = VkExtent2D{
-          .width = 1600,
-          .height = 900
-        }
-      },
-      .clearValueCount = (u32)clear_values.size(),
-      .pClearValues = clear_values.data()
-    };
-
-    vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
-
-    // TODO: copy image only once instead of every frame.
-    // Also maybe insert a (memory?) barrier to make sure the image is uploaded before we render it.
-    auto region = VkBufferImageCopy{
-      .bufferOffset = 0,
-      .bufferRowLength = texture->width(),
-      .bufferImageHeight = texture->height(),
-      .imageSubresource = VkImageSubresourceLayers{
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .mipLevel = 0,
-        .baseArrayLayer = 0,
-        .layerCount = 1
-      },
-      .imageOffset = VkOffset3D{
-        .x = 0,
-        .y = 0,
-        .z = 0
-      },
-      .imageExtent = VkExtent3D{
-        .width = texture->width(),
-        .height = texture->height(),
-        .depth = 1
-      }
-    };
-    vkCmdCopyBufferToImage(command_buffer, (VkBuffer)texture_buffer->Handle(), (VkImage)texture->handle2(), VK_IMAGE_LAYOUT_UNDEFINED, 1, &region);
-
-    vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-    {
-      // TODO: is it a good idea to upload the geometry while recording the command buffer?
-      upload_geometry(physical_device, device, render_device, shader_vert, shader_frag, render_pass, pipeline_layout, &triangle);
-      draw_geometry(command_buffer, pipeline_layout, descriptor_set, &triangle);
-    }
-    vkCmdEndRenderPass(command_buffer);
+    // Output render to screen
     
-    vkEndCommandBuffer(command_buffer);
+    vkEndCommandBuffer(command_buffers[1]);
+    vkEndCommandBuffer(command_buffers[0]);
     
     vkResetFences(device, 1, &fence);
     vkQueueSubmit(queue_graphics, 1, &command_buffer_submit_info, fence);

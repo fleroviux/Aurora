@@ -156,7 +156,8 @@ private:
 
   static auto GetImageAspectFromFormat(Format format) -> VkImageAspectFlags {
     switch (format) {
-      case Format::B8G8R8B8_SRGB:
+      case Format::R8G8B8A8_SRGB:
+      case Format::B8G8R8A8_SRGB:
         return VK_IMAGE_ASPECT_COLOR_BIT;
       case Format::DEPTH_F32:
         return VK_IMAGE_ASPECT_DEPTH_BIT;
