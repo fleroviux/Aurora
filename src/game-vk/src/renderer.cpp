@@ -163,21 +163,20 @@ void Renderer::RenderObject(
   // Update object transform UBO
   object_data.ubo->Update(&object->transform().world());
 
-  // Bind texture from material test (ugh)
-  //auto& texture = material->get_texture_slots()[0];
-  //if (texture) {
-  //  auto& texture_data = texture_cache[texture.get()];
-  //  GetTexture(command_buffers[0], texture); // upload if not uploaded yet
-  //  object_data.bind_group->Bind(2, texture_data.texture, texture_data.sampler);
-  //}
   auto texture_slots = material->get_texture_slots();
+
   for (int i = 0; i < texture_slots.size(); i++) {
     auto& texture = texture_slots[i];
     if (texture) {
-      // TODO: fix this ugly mess
-      GetTexture(command_buffers[0], texture);
+      auto match = texture_cache.find(texture.get());
 
-      auto& data = texture_cache[texture.get()];
+      if (match == texture_cache.end()) {
+        UploadTexture(command_buffers[0], texture);
+        match = texture_cache.find(texture.get());
+      }
+
+      auto& data = match->second;
+
       object_data.bind_group->Bind(2 + i, data.texture, data.sampler);
     }
   }
@@ -226,83 +225,79 @@ void Renderer::RenderObject(
   vkCmdDrawIndexed(command_buffers[1], index_count, 1, 0, 0, 0);
 }
 
-auto Renderer::GetTexture(
+void Renderer::UploadTexture(
   VkCommandBuffer command_buffer,
   std::shared_ptr<Texture>& texture
-) -> std::unique_ptr<GPUTexture>& {
-  auto& texture_data = texture_cache[texture.get()];
+) {
+  auto width = texture->width();
+  auto height = texture->height();
+  auto& data = texture_cache[texture.get()];
 
-  if (!texture_data.valid) {
-    auto width = texture->width();
-    auto height = texture->height();
+  data.texture = render_device->CreateTexture2D(
+    width,
+    height,
+    GPUTexture::Format::R8G8B8A8_SRGB,
+    GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled
+  );
 
-    texture_data.texture = render_device->CreateTexture2D(
-      width,
-      height,
-      GPUTexture::Format::R8G8B8A8_SRGB,
-      GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled
-    );
-    texture_data.buffer = render_device->CreateBufferWithData(
-      Buffer::Usage::CopySrc,
-      texture->data(),
-      sizeof(u32) * width * height
-    );
-    texture_data.sampler = render_device->CreateSampler({
-      .address_mode_u = Sampler::AddressMode::Repeat,
-      .address_mode_v = Sampler::AddressMode::Repeat,
-      .min_filter = Sampler::FilterMode::Linear,
-      .mag_filter = Sampler::FilterMode::Linear,
-      .mip_filter = Sampler::FilterMode::Linear
-    });
-    texture_data.valid = true;
+  data.buffer = render_device->CreateBufferWithData(
+    Buffer::Usage::CopySrc,
+    texture->data(),
+    sizeof(u32) * width * height
+  );
 
-    auto region = VkBufferImageCopy{
-      .bufferOffset = 0,
-      .bufferRowLength = width,
-      .bufferImageHeight = height,
-      .imageSubresource = VkImageSubresourceLayers{
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .mipLevel = 0,
-        .baseArrayLayer = 0,
-        .layerCount = 1
-      },
-      .imageOffset = VkOffset3D{
-        .x = 0,
-        .y = 0,
-        .z = 0
-      },
-      .imageExtent = VkExtent3D{
-        .width = width,
-        .height = height,
-        .depth = 1
-      }
-    };
+  data.sampler = render_device->CreateSampler({
+    .address_mode_u = Sampler::AddressMode::Repeat,
+    .address_mode_v = Sampler::AddressMode::Repeat,
+    .min_filter = Sampler::FilterMode::Linear,
+    .mag_filter = Sampler::FilterMode::Linear,
+    .mip_filter = Sampler::FilterMode::Linear
+  });
 
-    TransitionImageLayout(
-      command_buffer,
-      texture_data.texture,
-      GPUTexture::Layout::Undefined,
-      GPUTexture::Layout::CopyDst
-    );
+  auto region = VkBufferImageCopy{
+    .bufferOffset = 0,
+    .bufferRowLength = width,
+    .bufferImageHeight = height,
+    .imageSubresource = VkImageSubresourceLayers{
+      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .mipLevel = 0,
+      .baseArrayLayer = 0,
+      .layerCount = 1
+    },
+    .imageOffset = VkOffset3D{
+      .x = 0,
+      .y = 0,
+      .z = 0
+    },
+    .imageExtent = VkExtent3D{
+      .width = width,
+      .height = height,
+      .depth = 1
+    }
+  };
 
-    vkCmdCopyBufferToImage(
-      command_buffer,
-      (VkBuffer)texture_data.buffer->Handle(),
-      (VkImage)texture_data.texture->handle2(),
-      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-      1,
-      &region
-    );
+  TransitionImageLayout(
+    command_buffer,
+    data.texture,
+    GPUTexture::Layout::Undefined,
+    GPUTexture::Layout::CopyDst
+  );
 
-    TransitionImageLayout(
-      command_buffer,
-      texture_data.texture,
-      GPUTexture::Layout::CopyDst,
-      GPUTexture::Layout::ShaderReadOnly
-    );
-  }
+  vkCmdCopyBufferToImage(
+    command_buffer,
+    (VkBuffer)data.buffer->Handle(),
+    (VkImage)data.texture->handle2(),
+    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    1,
+    &region
+  );
 
-  return texture_data.texture;
+  TransitionImageLayout(
+    command_buffer,
+    data.texture,
+    GPUTexture::Layout::CopyDst,
+    GPUTexture::Layout::ShaderReadOnly
+  );
 }
 
 void Renderer::TransitionImageLayout(
@@ -338,24 +333,21 @@ void Renderer::TransitionImageLayout(
 
     src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  }
-  else if (old_layout == GPUTexture::Layout::CopyDst && new_layout == GPUTexture::Layout::ShaderReadOnly) {
+  } else if (old_layout == GPUTexture::Layout::CopyDst && new_layout == GPUTexture::Layout::ShaderReadOnly) {
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
     // TODO: what if a texture is read from the vertex shader?
     src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  }
-  else if (old_layout == GPUTexture::Layout::ColorAttachment && new_layout == GPUTexture::Layout::ShaderReadOnly) {
+  } else if (old_layout == GPUTexture::Layout::ColorAttachment && new_layout == GPUTexture::Layout::ShaderReadOnly) {
     barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
     // TODO: what if a texture is read from the vertex shader?
     src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  }
-  else {
+  } else {
     Assert(false, "Vulkan: unhandled image layout transition: {} to {}", (u32)old_layout, (u32)new_layout);
   }
 

@@ -34,10 +34,10 @@ struct Renderer {
     Mesh* mesh
   );
 
-  auto GetTexture(
+  void UploadTexture(
     VkCommandBuffer command_buffer,
     std::shared_ptr<Texture>& texture
-  ) -> std::unique_ptr<GPUTexture>&;
+  );
 
   void TransitionImageLayout(
     VkCommandBuffer command_buffer,
@@ -86,7 +86,6 @@ struct Renderer {
   } camera_data;
 
   struct TextureData {
-    bool valid = false;
     std::unique_ptr<GPUTexture> texture;
     std::unique_ptr<Sampler> sampler;
     std::unique_ptr<Buffer> buffer;
