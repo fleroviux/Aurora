@@ -25,7 +25,10 @@ void Renderer::Initialize(
   CreateRenderTarget();
 }
 
-void Renderer::Render(VkCommandBuffer command_buffer, GameObject* scene) {
+void Renderer::Render(
+  std::array<VkCommandBuffer, 2>& command_buffers,
+  GameObject* scene
+) {
   const std::function<void(GameObject*)> traverse = [&](GameObject* object) {
     if (!object->visible()) {
       return;
@@ -42,7 +45,7 @@ void Renderer::Render(VkCommandBuffer command_buffer, GameObject* scene) {
     auto mesh = object->get_component<Mesh>();
 
     if (mesh && mesh->visible) {
-      RenderObject(command_buffer, object, mesh);
+      RenderObject(command_buffers, object, mesh);
     }
 
     for (auto child : object->children()) traverse(child);
@@ -73,18 +76,26 @@ void Renderer::Render(VkCommandBuffer command_buffer, GameObject* scene) {
   };
 
   vkCmdBeginRenderPass(
-    command_buffer,
+    command_buffers[1],
     &render_pass_begin_info,
     VK_SUBPASS_CONTENTS_INLINE
   );
 
   traverse(scene);
 
-  vkCmdEndRenderPass(command_buffer);
+  vkCmdEndRenderPass(command_buffers[1]);
+
+  // TODO: use a subpass dependency to transition image layout.
+  TransitionImageLayout(
+    command_buffers[1],
+    color_texture,
+    GPUTexture::Layout::ColorAttachment,
+    GPUTexture::Layout::ShaderReadOnly
+  );
 }
 
 void Renderer::RenderObject(
-  VkCommandBuffer command_buffer,
+  std::array<VkCommandBuffer, 2>& command_buffers,
   GameObject* object,
   Mesh* mesh
 ) {
@@ -153,7 +164,7 @@ void Renderer::RenderObject(
   auto& texture = material->get_texture_slots()[0];
   if (texture) {
     auto& texture_data = texture_cache[texture.get()];
-    GetTexture(command_buffer, texture); // upload if not uploaded yet
+    GetTexture(command_buffers[0], texture); // upload if not uploaded yet
     object_data.bind_group->Bind(2, texture_data.texture, texture_data.sampler);
   }
 
@@ -165,10 +176,10 @@ void Renderer::RenderObject(
     vbo_handles.push_back((VkBuffer)vbo->Handle());
     vbo_offsets.push_back(0);
   }
-  vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object_data.pipeline);
-  vkCmdBindVertexBuffers(command_buffer, 0, vbo_handles.size(), vbo_handles.data(), vbo_offsets.data());
+  vkCmdBindPipeline(command_buffers[1], VK_PIPELINE_BIND_POINT_GRAPHICS, object_data.pipeline);
+  vkCmdBindVertexBuffers(command_buffers[1], 0, vbo_handles.size(), vbo_handles.data(), vbo_offsets.data());
   vkCmdBindDescriptorSets(
-    command_buffer,
+    command_buffers[1],
     VK_PIPELINE_BIND_POINT_GRAPHICS,
     (VkPipelineLayout)object_data.pipeline_layout->Handle(),
     0,
@@ -192,13 +203,13 @@ void Renderer::RenderObject(
   }
 
   vkCmdBindIndexBuffer(
-    command_buffer,
+    command_buffers[1],
     (VkBuffer)object_data.ibo->Handle(),
     0,
     index_type
   );
 
-  vkCmdDrawIndexed(command_buffer, index_count, 1, 0, 0, 0);
+  vkCmdDrawIndexed(command_buffers[1], index_count, 1, 0, 0, 0);
 }
 
 auto Renderer::GetTexture(

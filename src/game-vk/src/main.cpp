@@ -698,68 +698,6 @@ auto sdl_create_surface(
   return VK_NULL_HANDLE;
 }
 
-void transition_image_layout(
-  VkCommandBuffer command_buffer,
-  VkImage image,
-  VkImageLayout old_layout,
-  VkImageLayout new_layout
-) {
-  auto barrier = VkImageMemoryBarrier{
-    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-    .srcAccessMask = 0, // TODO
-    .dstAccessMask = 0,  // TODO
-    .oldLayout = old_layout,
-    .newLayout = new_layout,
-    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-    .image = image,
-    .subresourceRange = VkImageSubresourceRange{
-      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-      .baseMipLevel = 0,
-      .levelCount = 1,
-      .baseArrayLayer = 0,
-      .layerCount = 1
-    }
-  };
-
-  auto src_stage = VkPipelineStageFlags{};
-  auto dst_stage = VkPipelineStageFlags{};
-
-  if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-    src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  } else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    // TODO: what if a texture is read from the vertex shader?
-    src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  } else if (old_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-    barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    // TODO: what if a texture is read from the vertex shader?
-    src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  } else {
-    Assert(false, "Vulkan: unhandled image layout transition: {} to {}", old_layout, new_layout);
-  }
-
-  vkCmdPipelineBarrier(
-    command_buffer,
-    src_stage,
-    dst_stage,
-    0,
-    0, nullptr,
-    0, nullptr,
-    1, &barrier
-  );
-}
-
 static float vertices[] = {
   -1, -1,  3,   1, 0, 0,  0, 0,
    1, -1,  3,   0, 1, 0,  1, 0,
@@ -952,19 +890,13 @@ struct Application {
     renderer.Initialize(physical_device, device, render_device);
   }
 
-  void Render(VkCommandBuffer command_buffer, GameObject* scene, u32 image_id) {
-    renderer.Render(command_buffer, scene);
-
-    // TODO: use a subpass dependency to transition image layout.
-    auto& texture = renderer.color_texture;
-    transition_image_layout(
-      command_buffer,
-      (VkImage)texture->handle2(),
-      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    );
-
-    screen_renderer.Render(command_buffer, render_targets[image_id], render_pass, texture);
+  void Render(
+    std::array<VkCommandBuffer, 2>& command_buffers,
+    GameObject* scene,
+    u32 image_id
+  ) {
+    renderer.Render(command_buffers, scene);
+    screen_renderer.Render(command_buffers[1], render_targets[image_id], render_pass, renderer.color_texture);
   }
 
 //private:
@@ -1070,27 +1002,8 @@ int main(int argc, char** argv) {
 
   app.Initialize();
 
-  VkCommandPool command_pool;
-  VkCommandBuffer command_buffer;
-  auto command_buffer_begin_info = VkCommandBufferBeginInfo{
-    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-    .pNext = nullptr,
-    // For now we'll re-record the command buffer every time it is submitted.
-    .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    // This is only necessary for secondary command buffers
-    .pInheritanceInfo = nullptr
-  };
-  auto command_buffer_submit_info = VkSubmitInfo{
-    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-    .pNext = nullptr,
-    .waitSemaphoreCount = 0,
-    .pWaitSemaphores = nullptr,
-    .pWaitDstStageMask = nullptr,
-    .commandBufferCount = 1,
-    .pCommandBuffers = &command_buffer,
-    .signalSemaphoreCount = 0,
-    .pSignalSemaphores = nullptr
-  };
+  auto command_pool = VkCommandPool{};
+  auto command_buffers = std::array<VkCommandBuffer, 2>{};
 
   { 
     auto command_pool_info = VkCommandPoolCreateInfo{
@@ -1110,10 +1023,10 @@ int main(int argc, char** argv) {
       .pNext = nullptr,
       .commandPool = command_pool,
       .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-      .commandBufferCount = 1
+      .commandBufferCount = command_buffers.size()
     };
 
-    if (vkAllocateCommandBuffers(device, &command_buffer_info, &command_buffer) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(device, &command_buffer_info, command_buffers.data()) != VK_SUCCESS) {
       std::puts("Failed to create a command buffer :(");
       return -1;
     }
@@ -1142,7 +1055,6 @@ int main(int argc, char** argv) {
   }
 
   auto event = SDL_Event{};
-  //auto scene = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf");
   auto scene = new GameObject{};
   scene->add_child(GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf"));
   //scene->add_child(GLTFLoader{}.parse("cube.gltf"));
@@ -1196,17 +1108,38 @@ int main(int argc, char** argv) {
 
     u32 swapchain_image_id;
 
+    const auto command_buffer_begin_info = VkCommandBufferBeginInfo{
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+      .pNext = nullptr,
+      .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+      .pInheritanceInfo = nullptr
+    };
+
+    const auto command_buffer_submit_info = VkSubmitInfo{
+      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .pNext = nullptr,
+      .waitSemaphoreCount = 0,
+      .pWaitSemaphores = nullptr,
+      .pWaitDstStageMask = nullptr,
+      .commandBufferCount = command_buffers.size(),
+      .pCommandBuffers = command_buffers.data(),
+      .signalSemaphoreCount = 0,
+      .pSignalSemaphores = nullptr
+    };
+
     vkResetFences(device, 1, &fence);
     vkAcquireNextImageKHR(device, swapchain, u64(-1), VK_NULL_HANDLE, fence, &swapchain_image_id);
     vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
 
-    vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
+    vkBeginCommandBuffer(command_buffers[1], &command_buffer_begin_info);
+    vkBeginCommandBuffer(command_buffers[0], &command_buffer_begin_info);
 
-    app.Render(command_buffer, scene, swapchain_image_id);
+    app.Render(command_buffers, scene, swapchain_image_id);
 
     // Output render to screen
     
-    vkEndCommandBuffer(command_buffer);
+    vkEndCommandBuffer(command_buffers[1]);
+    vkEndCommandBuffer(command_buffers[0]);
     
     vkResetFences(device, 1, &fence);
     vkQueueSubmit(queue_graphics, 1, &command_buffer_submit_info, fence);

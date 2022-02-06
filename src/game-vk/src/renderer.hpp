@@ -22,11 +22,14 @@ struct Renderer {
     std::shared_ptr<RenderDevice> render_device
   );
 
-  void Render(VkCommandBuffer command_buffer, GameObject* scene);
+  void Render(
+    std::array<VkCommandBuffer, 2>& command_buffers,
+    GameObject* scene
+  );
 
 //private:
   void RenderObject(
-    VkCommandBuffer command_buffer,
+    std::array<VkCommandBuffer, 2>& command_buffers,
     GameObject* object,
     Mesh* mesh
   );
