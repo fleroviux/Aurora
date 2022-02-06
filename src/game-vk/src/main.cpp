@@ -20,88 +20,6 @@ using namespace Aura;
 #include <aurora/integer.hpp>
 #include <vulkan/vulkan.h>
 
-auto get_vk_format_from_attribute(
-  VertexBufferLayout::Attribute const& attribute
-) -> VkFormat {
-  const auto components = attribute.components;
-  const bool normalized = attribute.normalized;
-
-  switch (attribute.data_type) {
-    case VertexDataType::SInt8: {
-      if (normalized) {
-        if (components == 1) return VK_FORMAT_R8_SNORM;
-        if (components == 2) return VK_FORMAT_R8G8_SNORM;
-        if (components == 3) return VK_FORMAT_R8G8B8_SNORM;
-        if (components == 4) return VK_FORMAT_R8G8B8A8_SNORM;
-      } else {
-        if (components == 1) return VK_FORMAT_R8_SINT;
-        if (components == 2) return VK_FORMAT_R8G8_SINT;
-        if (components == 3) return VK_FORMAT_R8G8B8_SINT;
-        if (components == 4) return VK_FORMAT_R8G8B8A8_SINT;
-      } 
-      break;
-    }
-    case VertexDataType::UInt8: {
-      if (normalized) {
-        if (components == 1) return VK_FORMAT_R8_UNORM;
-        if (components == 2) return VK_FORMAT_R8G8_UNORM;
-        if (components == 3) return VK_FORMAT_R8G8B8_UNORM;
-        if (components == 4) return VK_FORMAT_R8G8B8A8_UNORM;
-      } else {
-        if (components == 1) return VK_FORMAT_R8_UINT;
-        if (components == 2) return VK_FORMAT_R8G8_UINT;
-        if (components == 3) return VK_FORMAT_R8G8B8_UINT;
-        if (components == 4) return VK_FORMAT_R8G8B8A8_UINT;
-      }
-      break;
-    }
-    case VertexDataType::SInt16: {
-      if (normalized) {
-        if (components == 1) return VK_FORMAT_R16_SNORM;
-        if (components == 2) return VK_FORMAT_R16G16_SNORM;
-        if (components == 3) return VK_FORMAT_R16G16B16_SNORM;
-        if (components == 4) return VK_FORMAT_R16G16B16A16_SNORM;
-      } else {
-        if (components == 1) return VK_FORMAT_R16_SINT;
-        if (components == 2) return VK_FORMAT_R16G16_SINT;
-        if (components == 3) return VK_FORMAT_R16G16B16_SINT;
-        if (components == 4) return VK_FORMAT_R16G16B16A16_SINT;
-      }
-      break;
-    }
-    case VertexDataType::UInt16: {
-      if (normalized) {
-        if (components == 1) return VK_FORMAT_R16_UNORM;
-        if (components == 2) return VK_FORMAT_R16G16_UNORM;
-        if (components == 3) return VK_FORMAT_R16G16B16_UNORM;
-        if (components == 4) return VK_FORMAT_R16G16B16A16_UNORM;
-      } else {
-        if (components == 1) return VK_FORMAT_R16_UINT;
-        if (components == 2) return VK_FORMAT_R16G16_UINT;
-        if (components == 3) return VK_FORMAT_R16G16B16_UINT;
-        if (components == 4) return VK_FORMAT_R16G16B16A16_UINT;
-      }
-      break;
-    }
-    case VertexDataType::Float16: {
-      if (components == 1) return VK_FORMAT_R16_SFLOAT;
-      if (components == 2) return VK_FORMAT_R16G16_SFLOAT;
-      if (components == 3) return VK_FORMAT_R16G16B16_SFLOAT;
-      if (components == 4) return VK_FORMAT_R16G16B16A16_SFLOAT;
-      break;
-    }
-    case VertexDataType::Float32: {
-      if (components == 1) return VK_FORMAT_R32_SFLOAT;
-      if (components == 2) return VK_FORMAT_R32G32_SFLOAT;
-      if (components == 3) return VK_FORMAT_R32G32B32_SFLOAT;
-      if (components == 4) return VK_FORMAT_R32G32B32A32_SFLOAT;
-      break;
-    }
-  }
-
-  Assert(false, "Vulkan: failed to map vertex attribute to VkFormat");
-}
-
 void configure_pipeline_geometry(
   VkGraphicsPipelineCreateInfo& pipeline,
   Geometry const* geometry
@@ -124,7 +42,7 @@ void configure_pipeline_geometry(
       attributes->push_back(VkVertexInputAttributeDescription{
         .location = u32(attribute.index),
         .binding = binding,
-        .format = get_vk_format_from_attribute(attribute),
+        .format = Renderer::GetVkFormatFromAttribute(attribute),
         .offset = u32(attribute.offset)
       });
     }
@@ -204,8 +122,6 @@ auto create_pipeline(
     .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
     .pNext = nullptr,
     .flags = 0,
-    // TODO: viewports and scissors are ignored if viewport or scissor state is dynarmic.
-    // We probably actually want to have it dynamic because fuck recreating pipelines when the resolution changes.
     .viewportCount = 1,
     .pViewports = &viewport,
     .scissorCount = 1,
@@ -217,11 +133,10 @@ auto create_pipeline(
     .pNext = nullptr,
     .flags = 0,
     .depthClampEnable = VK_FALSE,
-    .rasterizerDiscardEnable = VK_FALSE, // the fuck does this do????
+    .rasterizerDiscardEnable = VK_FALSE,
     .polygonMode = VK_POLYGON_MODE_FILL,
     .cullMode = VK_CULL_MODE_NONE,
     .depthBiasEnable = VK_FALSE,
-    // probably don't need to set this if depth bias is disabled.
     .depthBiasConstantFactor = 0,
     .depthBiasClamp = 0,
     .depthBiasSlopeFactor = 0,
@@ -268,7 +183,7 @@ auto create_pipeline(
     .logicOp = VK_LOGIC_OP_NO_OP,
     .attachmentCount = 1,
     .pAttachments = &color_blend_attachment_info,
-    .blendConstants = {0, 0, 0, 0} // probably don't need to set this unless needed.
+    .blendConstants = {0, 0, 0, 0}
   };
 
   auto pipeline_info = VkGraphicsPipelineCreateInfo{
@@ -283,7 +198,6 @@ auto create_pipeline(
     .pMultisampleState = &multisample_info,
     .pDepthStencilState = &depth_stencil_info,
     .pColorBlendState = &color_blend_info,
-    // TODO: set this to make e.g. the viewport and scissor test dynamic.
     .pDynamicState = nullptr,
     .layout = pipeline_layout,
     .renderPass = render_pass,

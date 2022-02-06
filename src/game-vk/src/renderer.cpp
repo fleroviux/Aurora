@@ -106,7 +106,7 @@ void Renderer::RenderObject(
 
   if (!object_data.valid) {
     // Create bind group layout, pipeline layout and bind group.
-    object_data.bind_group_layout = render_device->CreateBindGroupLayout({
+    auto bindings = std::vector<BindGroupLayout::Entry>{
       {
         .binding = 0,
         .type = BindGroupLayout::Entry::Type::UniformBuffer
@@ -115,11 +115,14 @@ void Renderer::RenderObject(
         .binding = 1,
         .type = BindGroupLayout::Entry::Type::UniformBuffer
       },
-      {
-        .binding = 2,
+    };
+    for (int i = 0; i < 32; i++) {
+      bindings.push_back({
+        .binding = (u32)bindings.size(),
         .type = BindGroupLayout::Entry::Type::ImageWithSampler
-      }
-    });
+      });
+    }
+    object_data.bind_group_layout = render_device->CreateBindGroupLayout(bindings);
     object_data.pipeline_layout = render_device->CreatePipelineLayout({ object_data.bind_group_layout });
     object_data.bind_group = object_data.bind_group_layout->Instantiate();
     object_data.bind_group->Bind(0, camera_data.ubo, BindGroupLayout::Entry::Type::UniformBuffer);
@@ -161,11 +164,22 @@ void Renderer::RenderObject(
   object_data.ubo->Update(&object->transform().world());
 
   // Bind texture from material test (ugh)
-  auto& texture = material->get_texture_slots()[0];
-  if (texture) {
-    auto& texture_data = texture_cache[texture.get()];
-    GetTexture(command_buffers[0], texture); // upload if not uploaded yet
-    object_data.bind_group->Bind(2, texture_data.texture, texture_data.sampler);
+  //auto& texture = material->get_texture_slots()[0];
+  //if (texture) {
+  //  auto& texture_data = texture_cache[texture.get()];
+  //  GetTexture(command_buffers[0], texture); // upload if not uploaded yet
+  //  object_data.bind_group->Bind(2, texture_data.texture, texture_data.sampler);
+  //}
+  auto texture_slots = material->get_texture_slots();
+  for (int i = 0; i < texture_slots.size(); i++) {
+    auto& texture = texture_slots[i];
+    if (texture) {
+      // TODO: fix this ugly mess
+      GetTexture(command_buffers[0], texture);
+
+      auto& data = texture_cache[texture.get()];
+      object_data.bind_group->Bind(2 + i, data.texture, data.sampler);
+    }
   }
 
   // TODO: creating a std::vector everytime is slow. make this faster.

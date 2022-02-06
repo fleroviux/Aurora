@@ -33,19 +33,24 @@ struct Renderer {
     GameObject* object,
     Mesh* mesh
   );
+
   auto GetTexture(
     VkCommandBuffer command_buffer,
     std::shared_ptr<Texture>& texture
   ) -> std::unique_ptr<GPUTexture>&;
+
   void TransitionImageLayout(
     VkCommandBuffer command_buffer,
     AnyPtr<GPUTexture> texture,
     GPUTexture::Layout old_layout,
     GPUTexture::Layout new_layout
   );
+
   void CreateCameraUniformBlock();
   void UpdateCameraUniformBlock(GameObject* camera);
+
   void CreateRenderTarget();
+
   auto CreatePipeline(
     std::shared_ptr<Geometry>& geometry,
     std::unique_ptr<PipelineLayout>& pipeline_layout,
