@@ -21,10 +21,15 @@ void Renderer::Initialize(
   this->physical_device = physical_device;
   this->device = device;
   this->render_device = render_device;
+  CreateCameraUniformBlock();
   CreateRenderTarget();
 }
 
 void Renderer::Render(VkCommandBuffer command_buffer, GameObject* scene) {
+  //// TODO: check that scene component and camera exist.
+  //const auto scene_component = scene->get_component<Scene>();
+  //const auto camera = scene_component->camera;
+
   const std::function<void(GameObject*)> traverse = [&](GameObject* object) {
     if (!object->visible()) {
       return;
@@ -46,6 +51,9 @@ void Renderer::Render(VkCommandBuffer command_buffer, GameObject* scene) {
 
     for (auto child : object->children()) traverse(child);
   };
+
+  // TODO: verify that scene component exists and camera is non-null.
+  UpdateCameraUniformBlock(scene->get_component<Scene>()->camera);
 
   auto render_pass_ = (VulkanRenderPass*)render_pass.get();
   auto& clear_values = render_pass_->GetClearValues();
@@ -94,14 +102,19 @@ void Renderer::RenderObject(
       {
         .binding = 0,
         .type = BindGroupLayout::Entry::Type::UniformBuffer
-      }
+      },
+      {
+        .binding = 1,
+        .type = BindGroupLayout::Entry::Type::UniformBuffer
+      },
     });
     object_data.pipeline_layout = render_device->CreatePipelineLayout({ object_data.bind_group_layout });
     object_data.bind_group = object_data.bind_group_layout->Instantiate();
+    object_data.bind_group->Bind(0, camera_data.ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
     // Create some dummy uniform buffer and bind it to the bind group
     object_data.ubo = render_device->CreateBuffer(Buffer::Usage::UniformBuffer, sizeof(Matrix4));
-    object_data.bind_group->Bind(0, object_data.ubo, BindGroupLayout::Entry::Type::UniformBuffer);
+    object_data.bind_group->Bind(1, object_data.ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
     // Create shader modules
     object_data.shader_vert = render_device->CreateShaderModule(surface_vert, sizeof(surface_vert));
@@ -133,9 +146,7 @@ void Renderer::RenderObject(
   }
 
   // Update object transform UBO
-  auto projection = Matrix4::perspective_dx(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0);
-  auto transform = projection * object->transform().world();
-  object_data.ubo->Update(&transform);
+  object_data.ubo->Update(&object->transform().world());
 
   // TODO: creating a std::vector everytime is slow. make this faster.
   auto descriptor_set = (VkDescriptorSet)object_data.bind_group->Handle();
@@ -179,6 +190,35 @@ void Renderer::RenderObject(
   );
 
   vkCmdDrawIndexed(command_buffer, index_count, 1, 0, 0, 0);
+}
+
+void Renderer::CreateCameraUniformBlock() {
+  auto layout = UniformBlockLayout{};
+  layout.add<Matrix4>("projection");
+  layout.add<Matrix4>("view");
+
+  camera_data.data = UniformBlock{ layout };
+  camera_data.projection = &camera_data.data.get<Matrix4>("projection");
+  camera_data.view = &camera_data.data.get<Matrix4>("view");
+  camera_data.ubo = render_device->CreateBuffer(Buffer::Usage::UniformBuffer, camera_data.data.size());
+}
+
+void Renderer::UpdateCameraUniformBlock(GameObject* camera) {
+  if (camera->has_component<PerspectiveCamera>()) {
+    // TODO: switch to using an OpenGL style projection matrix?
+    auto cam = camera->get_component<PerspectiveCamera>();
+    *camera_data.projection = Matrix4::perspective_dx(
+      cam->field_of_view, cam->aspect_ratio, cam->near, cam->far);
+  } else if (camera->has_component<OrthographicCamera>()) {
+    Assert(false, "Renderer: orthographic camera not supported");
+  } else {
+    Assert(false, "Renderer: camera does not hold a camera component");
+  }
+
+  // TODO: optimize the camera view matrix calculation.
+  *camera_data.view = camera->transform().world().inverse();
+
+  camera_data.ubo->Update(camera_data.data.data(), camera_data.data.size());
 }
 
 void Renderer::CreateRenderTarget() {
@@ -418,7 +458,7 @@ auto Renderer::GetVkFormatFromAttribute(
         if (components == 1) return VK_FORMAT_R8_SINT;
         if (components == 2) return VK_FORMAT_R8G8_SINT;
         if (components == 3) return VK_FORMAT_R8G8B8_SINT;
-        if (components == 4) return VK_FORMAT_R8G8B8A8_SINT;
+        if (components == 4) return VK_FORMAT_R8G8B8A8_SINT; 
       } 
       break;
     }

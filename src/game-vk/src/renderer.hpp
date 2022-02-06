@@ -5,7 +5,10 @@
 #pragma once
 
 #include <aurora/gal/backend/vulkan.hpp>
+#include <aurora/renderer/component/camera.hpp>
 #include <aurora/renderer/component/mesh.hpp>
+#include <aurora/renderer/component/scene.hpp>
+#include <aurora/renderer/uniform_block.hpp>
 #include <aurora/scene/game_object.hpp>
 #include <unordered_map>
 
@@ -26,6 +29,8 @@ struct Renderer {
     GameObject* object,
     Mesh* mesh
   );
+  void CreateCameraUniformBlock();
+  void UpdateCameraUniformBlock(GameObject* camera);
   void CreateRenderTarget();
   auto CreatePipeline(
     std::shared_ptr<Geometry>& geometry,
@@ -53,6 +58,13 @@ struct Renderer {
   std::shared_ptr<GPUTexture> depth_texture;
   std::unique_ptr<RenderTarget> render_target;
   std::unique_ptr<RenderPass> render_pass;
+
+  struct CameraData {
+    UniformBlock data;
+    Matrix4* projection;
+    Matrix4* view;
+    std::unique_ptr<Buffer> ubo;
+  } camera_data;
 
   struct ObjectData {
     bool valid = false;

@@ -4,7 +4,9 @@
  */
 
 #include <aurora/gal/backend/vulkan.hpp>
+#include <aurora/renderer/component/camera.hpp>
 #include <aurora/renderer/component/mesh.hpp>
+#include <aurora/renderer/component/scene.hpp>
 #include <aurora/scene/game_object.hpp>
 
 #include "../../gal/src/vulkan/render_pass.hpp"
@@ -815,202 +817,6 @@ void transition_image_layout(
   );
 }
 
-struct QuadRenderer {
-  QuadRenderer(VkPhysicalDevice physical_device, VkDevice device)
-      : physical_device(physical_device), device(device) {}
-
-  void Initialize(std::shared_ptr<RenderDevice> render_device) {
-    this->render_device = render_device;
-    CreateRenderTarget();
-    CreatePipelineLayoutAndBindGroup();
-    CreateUniformBuffer();
-    CreateSampledTexture();
-    CreateShaderModules();
-  }
-
-  void Render(
-    VkCommandBuffer command_buffer
-  ) {
-    UploadTexture(command_buffer);
-
-    auto render_pass_ = (VulkanRenderPass*)render_pass.get();
-    auto& clear_values = render_pass_->GetClearValues();
-
-    auto render_pass_begin_info = VkRenderPassBeginInfo{
-      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-      .pNext = nullptr,
-      .renderPass = render_pass_->Handle(),
-      .framebuffer = (VkFramebuffer)render_target->handle(),
-      .renderArea = VkRect2D{
-        .offset = VkOffset2D{
-          .x = 0,
-          .y = 0
-        },
-        .extent = VkExtent2D{
-          .width = 1600,
-          .height = 900
-        }
-      },
-      .clearValueCount = (u32)clear_values.size(),
-      .pClearValues = clear_values.data()
-    };
-
-    vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-
-    // TODO: is it a good idea to upload the geometry while recording the command buffer?
-    upload_geometry(
-      physical_device,
-      device,
-      render_device,
-      (VkShaderModule)shader_vert->Handle(),
-      (VkShaderModule)shader_frag->Handle(),
-      render_pass_->Handle(),
-      (VkPipelineLayout)pipeline_layout->Handle(),
-      &triangle
-    );
-
-    draw_geometry(
-      command_buffer,
-      (VkPipelineLayout)pipeline_layout->Handle(),
-      (VkDescriptorSet)bind_group->Handle(),
-      &triangle
-    );
-    
-    vkCmdEndRenderPass(command_buffer);
-
-    // TODO: use render subpass dependency to transition image layout
-    transition_image_layout(command_buffer, (VkImage)color_texture->handle2(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-  }
-
-//private:
-  void CreateRenderTarget() {
-    color_texture = render_device->CreateTexture2D(1600, 900, GPUTexture::Format::B8G8R8A8_SRGB, GPUTexture::Usage::ColorAttachment | GPUTexture::Usage::Sampled);
-    depth_texture = render_device->CreateTexture2D(1600, 900, GPUTexture::Format::DEPTH_F32, GPUTexture::Usage::DepthStencilAttachment);
-    render_target = render_device->CreateRenderTarget({ color_texture }, depth_texture);
-    render_pass = render_target->CreateRenderPass();
-  }
-
-  void CreatePipelineLayoutAndBindGroup() {
-    bind_group_layout = render_device->CreateBindGroupLayout({
-      {
-        .binding = 0,
-        .type = BindGroupLayout::Entry::Type::UniformBuffer
-      },
-      {
-        .binding = 1,
-        .type = BindGroupLayout::Entry::Type::ImageWithSampler
-      }
-    });
-    bind_group = bind_group_layout->Instantiate();
-
-    pipeline_layout = render_device->CreatePipelineLayout({ bind_group_layout });
-  }
-
-  void CreateUniformBuffer() {
-    auto transform = Matrix4::perspective_dx(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0);
-
-    ubo = render_device->CreateBufferWithData(
-      Aura::Buffer::Usage::UniformBuffer,
-      &transform,
-      sizeof(transform)
-    );
-    bind_group->Bind(0, ubo, BindGroupLayout::Entry::Type::UniformBuffer);
-  }
-
-  void CreateSampledTexture() {
-    auto girl = Texture::load("girl.png");
-    auto width = girl->width();
-    auto height = girl->height();
-
-    texture = render_device->CreateTexture2D(
-      width,
-      height,
-      GPUTexture::Format::R8G8B8A8_SRGB,
-      GPUTexture::Usage::Sampled | GPUTexture::Usage::CopyDst
-    );
-    texture_buffer = render_device->CreateBuffer(
-      Aura::Buffer::Usage::CopySrc,
-      sizeof(u32) * width * height
-    );
-    texture_buffer->Update(girl->data(), width * height * sizeof(u32));
-    texture_sampler = render_device->CreateSampler({});
-
-    bind_group->Bind(1, texture, texture_sampler);
-  }
-
-  void CreateShaderModules() {
-    shader_vert = render_device->CreateShaderModule(triangle_vert, sizeof(triangle_vert));
-    shader_frag = render_device->CreateShaderModule(triangle_frag, sizeof(triangle_frag));
-  }
-
-  void UploadTexture(VkCommandBuffer command_buffer) {
-    if (!did_upload_texture) {
-      // make the texture ready for being written to
-      transition_image_layout(
-        command_buffer,
-        (VkImage)texture->handle2(),
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-      );
-
-      auto region = VkBufferImageCopy{
-        .bufferOffset = 0,
-        .bufferRowLength = texture->width(),
-        .bufferImageHeight = texture->height(),
-        .imageSubresource = VkImageSubresourceLayers{
-          .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-          .mipLevel = 0,
-          .baseArrayLayer = 0,
-          .layerCount = 1
-        },
-        .imageOffset = VkOffset3D{
-          .x = 0,
-          .y = 0,
-          .z = 0
-        },
-        .imageExtent = VkExtent3D{
-          .width = texture->width(),
-          .height = texture->height(),
-          .depth = 1
-        }
-      };
-
-      vkCmdCopyBufferToImage(command_buffer, (VkBuffer)texture_buffer->Handle(), (VkImage)texture->handle2(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-      // make the texture ready for being read in a shader
-      transition_image_layout(
-        command_buffer,
-        (VkImage)texture->handle2(),
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-      );
-
-      did_upload_texture = true;
-    }
-  }
-
-  VkPhysicalDevice physical_device;
-  VkDevice device;
-  std::shared_ptr<RenderDevice> render_device;
-
-  std::shared_ptr<GPUTexture> color_texture;
-  std::shared_ptr<GPUTexture> depth_texture;
-  std::unique_ptr<RenderTarget> render_target;
-  std::unique_ptr<RenderPass> render_pass;
-
-  // TODO: clean this up a bit...
-  std::unique_ptr<PipelineLayout> pipeline_layout;
-  std::shared_ptr<BindGroupLayout> bind_group_layout;
-  std::unique_ptr<BindGroup> bind_group;
-  std::unique_ptr<Buffer> ubo;
-  std::unique_ptr<GPUTexture> texture;
-  std::unique_ptr<Buffer> texture_buffer;
-  std::unique_ptr<Sampler> texture_sampler;
-  std::unique_ptr<ShaderModule> shader_vert;
-  std::unique_ptr<ShaderModule> shader_frag;
-  bool did_upload_texture = false;
-};
-
 static const auto fullscreen_quad = Geometry{
   IndexBuffer{
     IndexDataType::UInt16,
@@ -1181,21 +987,17 @@ struct Application {
       , physical_device(physical_device)
       , device(device)
       , swapchain(swapchain)
-      , quad_renderer(physical_device, device)
       , screen_renderer(physical_device, device) {
   }
 
   void Initialize() {
     CreateRenderDevice();
     CreateSwapChainRenderTargets();
-    quad_renderer.Initialize(render_device);
     screen_renderer.Initialize(render_device);
     renderer.Initialize(physical_device, device, render_device);
   }
 
   void Render(VkCommandBuffer command_buffer, GameObject* scene, u32 image_id) {
-    quad_renderer.Render(command_buffer);
-
     renderer.Render(command_buffer, scene);
 
     // TODO: use a subpass dependency to transition image layout.
@@ -1255,7 +1057,6 @@ struct Application {
   std::vector<std::unique_ptr<RenderTarget>> render_targets;
   std::unique_ptr<RenderPass> render_pass;
 
-  QuadRenderer quad_renderer;
   ScreenRenderer screen_renderer;
   Renderer renderer;
 };
@@ -1267,7 +1068,7 @@ int main(int argc, char** argv) {
   SDL_Init(SDL_INIT_VIDEO);
 
   auto window = SDL_CreateWindow(
-    "Zephyr",
+    "Aurora",
     SDL_WINDOWPOS_CENTERED,
     SDL_WINDOWPOS_CENTERED,
     1600,
@@ -1393,9 +1194,48 @@ int main(int argc, char** argv) {
   scene->children()[0]->transform().position() = Vector3{ 0, 0, 5 };
   scene->children()[1]->transform().position() = Vector3{ 2, 1, 3 };
 
+  auto camera = new GameObject{};
+  camera->add_component<PerspectiveCamera>();
+  camera->transform().position().z() = -3;
+  scene->add_child(camera);
+  scene->add_component<Scene>(camera);
+
   float time = 0.0;
+  float x = 0;
+  float y = 0;
+  float z = 0;
 
   while (true) {
+    auto state = SDL_GetKeyboardState(nullptr);
+    auto const& camera_local = camera->transform().local();
+
+    // TODO: make camera controls consistent with OpenGL renderer - different projection matrix to blame?
+
+    if (state[SDL_SCANCODE_W]) {
+      camera->transform().position() += camera_local[2].xyz() * 0.05;
+    }
+
+    if (state[SDL_SCANCODE_S]) {
+      camera->transform().position() -= camera_local[2].xyz() * 0.05;
+    }
+
+    if (state[SDL_SCANCODE_A]) {
+      camera->transform().position() -= camera_local[0].xyz() * 0.05;
+    }
+
+    if (state[SDL_SCANCODE_D]) {
+      camera->transform().position() += camera_local[0].xyz() * 0.05;
+    }
+
+    if (state[SDL_SCANCODE_UP])    x -= 0.01;
+    if (state[SDL_SCANCODE_DOWN])  x += 0.01;
+    if (state[SDL_SCANCODE_LEFT])  y -= 0.01;
+    if (state[SDL_SCANCODE_RIGHT]) y += 0.01;
+    if (state[SDL_SCANCODE_M])     z += 0.01;
+    if (state[SDL_SCANCODE_N])     z -= 0.01;
+
+    camera->transform().rotation().set_euler(x, y, z);
+
     time += 0.01;
     scene->children()[1]->transform().position().x() = std::sinf(time);
 
