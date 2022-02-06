@@ -8,6 +8,7 @@
 #include <aurora/renderer/component/camera.hpp>
 #include <aurora/renderer/component/mesh.hpp>
 #include <aurora/renderer/component/scene.hpp>
+#include <aurora/renderer/texture.hpp>
 #include <aurora/renderer/uniform_block.hpp>
 #include <aurora/scene/game_object.hpp>
 #include <unordered_map>
@@ -28,6 +29,16 @@ struct Renderer {
     VkCommandBuffer command_buffer,
     GameObject* object,
     Mesh* mesh
+  );
+  auto GetTexture(
+    VkCommandBuffer command_buffer,
+    std::shared_ptr<Texture>& texture
+  ) -> std::unique_ptr<GPUTexture>&;
+  void TransitionImageLayout(
+    VkCommandBuffer command_buffer,
+    AnyPtr<GPUTexture> texture,
+    GPUTexture::Layout old_layout,
+    GPUTexture::Layout new_layout
   );
   void CreateCameraUniformBlock();
   void UpdateCameraUniformBlock(GameObject* camera);
@@ -66,6 +77,13 @@ struct Renderer {
     std::unique_ptr<Buffer> ubo;
   } camera_data;
 
+  struct TextureData {
+    bool valid = false;
+    std::unique_ptr<GPUTexture> texture;
+    std::unique_ptr<Sampler> sampler;
+    std::unique_ptr<Buffer> buffer;
+  };
+
   struct ObjectData {
     bool valid = false;
 
@@ -81,6 +99,7 @@ struct Renderer {
     VkPipeline pipeline;
   };
 
+  std::unordered_map<Texture*, TextureData> texture_cache;
   std::unordered_map<GameObject*, ObjectData> object_cache;
 };
 

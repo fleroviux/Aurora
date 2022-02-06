@@ -89,7 +89,7 @@ void Renderer::RenderObject(
   Mesh* mesh
 ) {
   auto& geometry = mesh->geometry;
-  //auto& material = mesh->material;
+  auto& material = mesh->material;
 
   auto& object_data = object_cache[object];
 
@@ -104,6 +104,10 @@ void Renderer::RenderObject(
         .binding = 1,
         .type = BindGroupLayout::Entry::Type::UniformBuffer
       },
+      {
+        .binding = 2,
+        .type = BindGroupLayout::Entry::Type::ImageWithSampler
+      }
     });
     object_data.pipeline_layout = render_device->CreatePipelineLayout({ object_data.bind_group_layout });
     object_data.bind_group = object_data.bind_group_layout->Instantiate();
@@ -144,6 +148,14 @@ void Renderer::RenderObject(
 
   // Update object transform UBO
   object_data.ubo->Update(&object->transform().world());
+
+  // Bind texture from material test (ugh)
+  auto& texture = material->get_texture_slots()[0];
+  if (texture) {
+    auto& texture_data = texture_cache[texture.get()];
+    GetTexture(command_buffer, texture); // upload if not uploaded yet
+    object_data.bind_group->Bind(2, texture_data.texture, texture_data.sampler);
+  }
 
   // TODO: creating a std::vector everytime is slow. make this faster.
   auto descriptor_set = (VkDescriptorSet)object_data.bind_group->Handle();
@@ -187,6 +199,150 @@ void Renderer::RenderObject(
   );
 
   vkCmdDrawIndexed(command_buffer, index_count, 1, 0, 0, 0);
+}
+
+auto Renderer::GetTexture(
+  VkCommandBuffer command_buffer,
+  std::shared_ptr<Texture>& texture
+) -> std::unique_ptr<GPUTexture>& {
+  auto& texture_data = texture_cache[texture.get()];
+
+  if (!texture_data.valid) {
+    auto width = texture->width();
+    auto height = texture->height();
+
+    texture_data.texture = render_device->CreateTexture2D(
+      width,
+      height,
+      GPUTexture::Format::R8G8B8A8_SRGB,
+      GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled
+    );
+    texture_data.buffer = render_device->CreateBufferWithData(
+      Buffer::Usage::CopySrc,
+      texture->data(),
+      sizeof(u32) * width * height
+    );
+    texture_data.sampler = render_device->CreateSampler({
+      .address_mode_u = Sampler::AddressMode::Repeat,
+      .address_mode_v = Sampler::AddressMode::Repeat,
+      .min_filter = Sampler::FilterMode::Linear,
+      .mag_filter = Sampler::FilterMode::Linear,
+      .mip_filter = Sampler::FilterMode::Linear
+    });
+    texture_data.valid = true;
+
+    auto region = VkBufferImageCopy{
+      .bufferOffset = 0,
+      .bufferRowLength = width,
+      .bufferImageHeight = height,
+      .imageSubresource = VkImageSubresourceLayers{
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .mipLevel = 0,
+        .baseArrayLayer = 0,
+        .layerCount = 1
+      },
+      .imageOffset = VkOffset3D{
+        .x = 0,
+        .y = 0,
+        .z = 0
+      },
+      .imageExtent = VkExtent3D{
+        .width = width,
+        .height = height,
+        .depth = 1
+      }
+    };
+
+    TransitionImageLayout(
+      command_buffer,
+      texture_data.texture,
+      GPUTexture::Layout::Undefined,
+      GPUTexture::Layout::CopyDst
+    );
+
+    vkCmdCopyBufferToImage(
+      command_buffer,
+      (VkBuffer)texture_data.buffer->Handle(),
+      (VkImage)texture_data.texture->handle2(),
+      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      1,
+      &region
+    );
+
+    TransitionImageLayout(
+      command_buffer,
+      texture_data.texture,
+      GPUTexture::Layout::CopyDst,
+      GPUTexture::Layout::ShaderReadOnly
+    );
+  }
+
+  return texture_data.texture;
+}
+
+void Renderer::TransitionImageLayout(
+  VkCommandBuffer command_buffer,
+  AnyPtr<GPUTexture> texture,
+  GPUTexture::Layout old_layout,
+  GPUTexture::Layout new_layout
+) {
+  auto barrier = VkImageMemoryBarrier{
+    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    .srcAccessMask = 0,
+    .dstAccessMask = 0,
+    .oldLayout = (VkImageLayout)old_layout,
+    .newLayout = (VkImageLayout)new_layout,
+    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .image = (VkImage)texture->handle2(),
+    .subresourceRange = VkImageSubresourceRange{
+      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .baseMipLevel = 0,
+      .levelCount = 1,
+      .baseArrayLayer = 0,
+      .layerCount = 1
+    }
+  };
+
+  auto src_stage = VkPipelineStageFlags{};
+  auto dst_stage = VkPipelineStageFlags{};
+
+  if (old_layout == GPUTexture::Layout::Undefined && new_layout == GPUTexture::Layout::CopyDst) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+    src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  }
+  else if (old_layout == GPUTexture::Layout::CopyDst && new_layout == GPUTexture::Layout::ShaderReadOnly) {
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    // TODO: what if a texture is read from the vertex shader?
+    src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  }
+  else if (old_layout == GPUTexture::Layout::ColorAttachment && new_layout == GPUTexture::Layout::ShaderReadOnly) {
+    barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    // TODO: what if a texture is read from the vertex shader?
+    src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  }
+  else {
+    Assert(false, "Vulkan: unhandled image layout transition: {} to {}", (u32)old_layout, (u32)new_layout);
+  }
+
+  vkCmdPipelineBarrier(
+    command_buffer,
+    src_stage,
+    dst_stage,
+    0,
+    0, nullptr,
+    0, nullptr,
+    1, &barrier
+  );
 }
 
 void Renderer::CreateCameraUniformBlock() {
