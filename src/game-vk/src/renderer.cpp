@@ -2,6 +2,8 @@
  * Copyright (C) 2022 fleroviux
  */
 
+#include <shaderc/shaderc.hpp>
+
 #include "renderer.hpp"
 
 // Include test shaders
@@ -132,32 +134,37 @@ void Renderer::RenderObject(
     object_data.bind_group->Bind(1, object_data.ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
     // Create shader modules
-    object_data.shader_vert = render_device->CreateShaderModule(surface_vert, sizeof(surface_vert));
-    object_data.shader_frag = render_device->CreateShaderModule(surface_frag, sizeof(surface_frag));
-
-    // Upload index buffer
-    object_data.ibo = render_device->CreateBufferWithData(
-      Buffer::Usage::IndexBuffer,
-      geometry->index_buffer.view<u8>()
-    );
-
-    // Upload vertex buffers
-    for (auto const& buffer : geometry->buffers) {
-      object_data.vbos.push_back(render_device->CreateBufferWithData(
-        Buffer::Usage::VertexBuffer,
-        buffer.view<u8>()
-      ));
+    //object_data.shader_vert = render_device->CreateShaderModule(surface_vert, sizeof(surface_vert));
+    //object_data.shader_frag = render_device->CreateShaderModule(surface_frag, sizeof(surface_frag));
+    auto program_key = ProgramKey{typeid(*material), material->get_compile_options()};
+    if (program_cache.find(program_key) == program_cache.end()) {
+      CompileShaderProgram(material);
     }
+    auto& program_data = program_cache[program_key];
 
-    // Create pipeline
-    object_data.pipeline = CreatePipeline(
-      geometry,
-      object_data.pipeline_layout,
-      object_data.shader_vert,
-      object_data.shader_frag
-    );
+// Upload index buffer
+object_data.ibo = render_device->CreateBufferWithData(
+  Buffer::Usage::IndexBuffer,
+  geometry->index_buffer.view<u8>()
+);
 
-    object_data.valid = true;
+// Upload vertex buffers
+for (auto const& buffer : geometry->buffers) {
+  object_data.vbos.push_back(render_device->CreateBufferWithData(
+    Buffer::Usage::VertexBuffer,
+    buffer.view<u8>()
+  ));
+}
+
+// Create pipeline
+object_data.pipeline = CreatePipeline(
+  geometry,
+  object_data.pipeline_layout,
+  program_data.shader_vert,
+  program_data.shader_frag
+);
+
+object_data.valid = true;
   }
 
   // Update object transform UBO
@@ -210,7 +217,8 @@ void Renderer::RenderObject(
   if (index_buffer.data_type() == IndexDataType::UInt16) {
     index_type = VK_INDEX_TYPE_UINT16;
     index_count = index_buffer.size() / sizeof(u16);
-  } else {
+  }
+  else {
     index_type = VK_INDEX_TYPE_UINT32;
     index_count = index_buffer.size() / sizeof(u32);
   }
@@ -223,6 +231,101 @@ void Renderer::RenderObject(
   );
 
   vkCmdDrawIndexed(command_buffers[1], index_count, 1, 0, 0, 0);
+}
+
+void Renderer::CompileShaderProgram(std::shared_ptr<Material>& material) {
+  auto compiler = shaderc::Compiler{};
+  auto options = shaderc::CompileOptions{};
+
+  options.SetOptimizationLevel(shaderc_optimization_level_performance);
+
+  auto compile_options = material->get_compile_options();
+  auto& compile_option_names = material->get_compile_option_names();
+
+  for (size_t i = 0; i < compile_option_names.size(); i++) {
+    if (compile_options & (1 << i)) {
+      options.AddMacroDefinition(compile_option_names[i]);
+    }
+  }
+
+  // TODO: use real shader source from material.
+
+  auto glsl_vert = R"(
+#version 450
+
+layout(set = 0, binding = 0) uniform Camera {
+  mat4 u_projection;
+  mat4 u_view;
+};
+
+layout(set = 0, binding = 1) uniform Model {
+  mat4 u_model;
+};
+
+layout(location = 0) in vec3 a_position;
+layout(location = 1) in vec3 a_normal;
+layout(location = 2) in vec2 a_uv;
+
+layout(location = 0) out vec3 v_normal;
+layout(location = 1) out vec2 v_uv;
+
+void main() {
+  v_normal = a_normal;
+  v_uv = a_uv;
+
+  // TODO: use a u_modelview matrix to save one multiplication.
+  gl_Position = u_projection * u_view * u_model * vec4(a_position, 1.0);
+}
+)";
+
+  auto glsl_frag = R"(
+#version 450
+
+layout(set = 0, binding = 2) uniform sampler2D u_albedo_map; 
+
+layout(location = 0) in vec3 v_normal;
+layout(location = 1) in vec2 v_uv;
+
+layout(location = 0) out vec4 frag_color;
+
+void main() {
+#if defined(ENABLE_ALBEDO_MAP)
+  frag_color = texture(u_albedo_map, v_uv);
+#else
+  frag_color = vec4(1.0, 0.0, 1.0, 1.0);
+#endif
+}
+)";
+
+  auto result_vert = compiler.CompileGlslToSpv(
+    glsl_vert,
+    shaderc_shader_kind::shaderc_vertex_shader,
+    "main.vert",
+    options
+  );
+
+  if (result_vert.GetCompilationStatus() != shaderc_compilation_status_success) {
+    Log<Error>("Renderer: failed to compile vertex shader:\n{}", result_vert.GetErrorMessage());
+  }
+
+  auto result_frag = compiler.CompileGlslToSpv(
+    glsl_frag,
+    shaderc_shader_kind::shaderc_fragment_shader,
+    "main.frag",
+    options
+  );
+
+  if (result_frag.GetCompilationStatus() != shaderc_compilation_status_success) {
+    Log<Error>("Renderer: failed to compile fragment shader:\n{}", result_vert.GetErrorMessage());
+  }
+
+  auto spirv_vert = std::vector<u32>{ result_vert.cbegin(), result_vert.cend() };
+  auto spirv_frag = std::vector<u32>{ result_frag.cbegin(), result_frag.cend() };
+
+  auto program_key = ProgramKey{typeid(*material), material->get_compile_options()};
+  auto& data = program_cache[program_key];
+  data.shader_vert = render_device->CreateShaderModule(spirv_vert.data(), spirv_vert.size() * sizeof(u32));
+  data.shader_frag = render_device->CreateShaderModule(spirv_frag.data(), spirv_frag.size() * sizeof(u32));
 }
 
 void Renderer::UploadTexture(

@@ -7,3 +7,15 @@
 [submodule "external/json"]
 	path = external/json
 	url = https://github.com/nlohmann/json
+[submodule "external/shaderc"]
+	path = external/shaderc
+	url = git@github.com:google/shaderc.git
+[submodule "external/SPIRV-Tools"]
+	path = external/SPIRV-Tools
+	url = git@github.com:KhronosGroup/SPIRV-Tools.git
+[submodule "external/SPIRV-Headers"]
+	path = external/SPIRV-Headers
+	url = git@github.com:KhronosGroup/SPIRV-Headers.git
+[submodule "external/glslang"]
+	path = external/glslang
+	url = git@github.com:KhronosGroup/glslang.git

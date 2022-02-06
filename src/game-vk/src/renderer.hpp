@@ -11,7 +11,10 @@
 #include <aurora/renderer/texture.hpp>
 #include <aurora/renderer/uniform_block.hpp>
 #include <aurora/scene/game_object.hpp>
+#include <type_traits>
+#include <typeindex>
 #include <unordered_map>
+#include <utility>
 
 namespace Aura {
 
@@ -28,11 +31,15 @@ struct Renderer {
   );
 
 //private:
+  using ProgramKey = std::pair<std::type_index, u32>;
+
   void RenderObject(
     std::array<VkCommandBuffer, 2>& command_buffers,
     GameObject* object,
     Mesh* mesh
   );
+
+  void CompileShaderProgram(std::shared_ptr<Material>& material);
 
   void UploadTexture(
     VkCommandBuffer command_buffer,
@@ -85,6 +92,11 @@ struct Renderer {
     std::unique_ptr<Buffer> ubo;
   } camera_data;
 
+  struct ProgramData {
+    std::unique_ptr<ShaderModule> shader_vert;
+    std::unique_ptr<ShaderModule> shader_frag;
+  };
+
   struct TextureData {
     std::unique_ptr<GPUTexture> texture;
     std::unique_ptr<Sampler> sampler;
@@ -98,14 +110,13 @@ struct Renderer {
     std::shared_ptr<BindGroupLayout> bind_group_layout;
     std::unique_ptr<PipelineLayout> pipeline_layout;
     std::unique_ptr<BindGroup> bind_group;
-    std::unique_ptr<ShaderModule> shader_vert;
-    std::unique_ptr<ShaderModule> shader_frag;
     std::unique_ptr<Buffer> ubo;
     std::unique_ptr<Buffer> ibo;
     std::vector<std::unique_ptr<Buffer>> vbos;
     VkPipeline pipeline;
   };
 
+  std::unordered_map<ProgramKey, ProgramData, pair_hash> program_cache;
   std::unordered_map<Texture*, TextureData> texture_cache;
   std::unordered_map<GameObject*, ObjectData> object_cache;
 };
