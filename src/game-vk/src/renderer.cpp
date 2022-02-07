@@ -113,6 +113,10 @@ void Renderer::RenderObject(
         .binding = 1,
         .type = BindGroupLayout::Entry::Type::UniformBuffer
       },
+      {
+        .binding = 2,
+        .type = BindGroupLayout::Entry::Type::UniformBuffer
+      }
     };
     for (int i = 0; i < 32; i++) {
       bindings.push_back({
@@ -130,37 +134,35 @@ void Renderer::RenderObject(
     object_data.bind_group->Bind(1, object_data.ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
     // Create shader modules
-    //object_data.shader_vert = render_device->CreateShaderModule(surface_vert, sizeof(surface_vert));
-    //object_data.shader_frag = render_device->CreateShaderModule(surface_frag, sizeof(surface_frag));
     auto program_key = ProgramKey{typeid(*material), material->get_compile_options()};
     if (program_cache.find(program_key) == program_cache.end()) {
       CompileShaderProgram(material);
     }
     auto& program_data = program_cache[program_key];
 
-// Upload index buffer
-object_data.ibo = render_device->CreateBufferWithData(
-  Buffer::Usage::IndexBuffer,
-  geometry->index_buffer.view<u8>()
-);
+    // Upload index buffer
+    object_data.ibo = render_device->CreateBufferWithData(
+      Buffer::Usage::IndexBuffer,
+      geometry->index_buffer.view<u8>()
+    );
 
-// Upload vertex buffers
-for (auto const& buffer : geometry->buffers) {
-  object_data.vbos.push_back(render_device->CreateBufferWithData(
-    Buffer::Usage::VertexBuffer,
-    buffer.view<u8>()
-  ));
-}
+    // Upload vertex buffers
+    for (auto const& buffer : geometry->buffers) {
+      object_data.vbos.push_back(render_device->CreateBufferWithData(
+        Buffer::Usage::VertexBuffer,
+        buffer.view<u8>()
+      ));
+    }
 
-// Create pipeline
-object_data.pipeline = CreatePipeline(
-  geometry,
-  object_data.pipeline_layout,
-  program_data.shader_vert,
-  program_data.shader_frag
-);
+    // Create pipeline
+    object_data.pipeline = CreatePipeline(
+      geometry,
+      object_data.pipeline_layout,
+      program_data.shader_vert,
+      program_data.shader_frag
+    );
 
-object_data.valid = true;
+    object_data.valid = true;
   }
 
   // Update object transform UBO
@@ -180,9 +182,18 @@ object_data.valid = true;
 
       auto& data = match->second;
 
-      object_data.bind_group->Bind(2 + i, data.texture, data.sampler);
+      object_data.bind_group->Bind(3 + i, data.texture, data.sampler);
     }
   }
+
+  // Update and bind material UBO
+  auto& uniforms = material->get_uniforms();
+  if (material_ubo.find(material.get()) == material_ubo.end()) {
+    material_ubo[material.get()] = render_device->CreateBuffer(Buffer::Usage::UniformBuffer, uniforms.size());
+  }
+  auto& ubo = material_ubo[material.get()];
+  ubo->Update(uniforms.data(), uniforms.size());
+  object_data.bind_group->Bind(2, ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
   // TODO: creating a std::vector everytime is slow. make this faster.
   auto descriptor_set = (VkDescriptorSet)object_data.bind_group->Handle();
@@ -213,8 +224,7 @@ object_data.valid = true;
   if (index_buffer.data_type() == IndexDataType::UInt16) {
     index_type = VK_INDEX_TYPE_UINT16;
     index_count = index_buffer.size() / sizeof(u16);
-  }
-  else {
+  } else {
     index_type = VK_INDEX_TYPE_UINT32;
     index_count = index_buffer.size() / sizeof(u32);
   }
@@ -510,8 +520,8 @@ void Renderer::CreateRenderTarget() {
   render_target = render_device->CreateRenderTarget({ color_texture }, depth_texture);
   render_pass = render_target->CreateRenderPass();
 
-  render_pass->SetClearColor(0, 0.1, 0.1, 0.1, 1);
-  render_pass->SetClearDepth(1);
+  render_pass->SetClearColor(0, 0.01, 0.01, 0.01, 1);
+  render_pass->SetClearDepth(1); 
 }
 
 auto Renderer::CreatePipeline(

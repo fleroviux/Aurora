@@ -116,6 +116,7 @@ struct Renderer {
     VkPipeline pipeline;
   };
 
+  std::unordered_map<Material*, std::unique_ptr<Buffer>> material_ubo;
   std::unordered_map<ProgramKey, ProgramData, pair_hash> program_cache;
   std::unordered_map<Texture*, TextureData> texture_cache;
   std::unordered_map<GameObject*, ObjectData> object_cache;

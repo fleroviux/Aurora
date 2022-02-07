@@ -140,21 +140,27 @@ constexpr auto pbr_frag = R"(
     mat4 u_view;
   };
 
-  layout (binding = 1, std140) uniform Material {
+  layout (binding = 1, std140) uniform Object {
     mat4 u_model;
   };
 
-  layout (binding = 2) uniform sampler2D u_diffuse_map;
-  layout (binding = 3) uniform sampler2D u_metalness_map;
-  layout (binding = 4) uniform sampler2D u_roughness_map;
-  layout (binding = 5) uniform sampler2D u_normal_map;
+  layout (binding = 2, std140) uniform Material {
+    mat4 u_dummy; // remove me, for OGL compat.
+    float u_metalness;
+    float u_roughness;
+  };
+
+  layout (binding = 3) uniform sampler2D u_diffuse_map;
+  layout (binding = 4) uniform sampler2D u_metalness_map;
+  layout (binding = 5) uniform sampler2D u_roughness_map;
+  layout (binding = 6) uniform sampler2D u_normal_map;
 
   vec3 sRGBToLinear(vec3 color) {
-    return color;//pow(color, vec3(2.2));
+    return color;
   }
 
   vec3 LinearTosRGB(vec3 color) {
-    return color;//return pow(color, vec3(1.0/2.2));
+    return color;
   }
 
   // Source: https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
@@ -225,8 +231,8 @@ constexpr auto pbr_frag = R"(
 
     diffuse.rgb = sRGBToLinear(diffuse.rgb);
 
-    float metalness = 1.0;//u_metalness;
-    float roughness = 1.0;//u_roughness;
+    float metalness = u_metalness;
+    float roughness = u_roughness;
 
     #if defined(ENABLE_METALNESS_MAP)
       metalness *= texture(u_metalness_map, v_uv).b;
