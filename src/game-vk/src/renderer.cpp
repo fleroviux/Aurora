@@ -140,20 +140,6 @@ void Renderer::RenderObject(
     }
     auto& program_data = program_cache[program_key];
 
-    // Upload index buffer
-    object_data.ibo = render_device->CreateBufferWithData(
-      Buffer::Usage::IndexBuffer,
-      geometry->index_buffer.view<u8>()
-    );
-
-    // Upload vertex buffers
-    for (auto const& buffer : geometry->buffers) {
-      object_data.vbos.push_back(render_device->CreateBufferWithData(
-        Buffer::Usage::VertexBuffer,
-        buffer.view<u8>()
-      ));
-    }
-
     // Create pipeline
     object_data.pipeline = CreatePipeline(
       geometry,
@@ -164,6 +150,26 @@ void Renderer::RenderObject(
 
     object_data.valid = true;
   }
+
+  if (geometry_cache.find(geometry.get()) == geometry_cache.end()) {
+    auto& geometry_data = geometry_cache[geometry.get()];
+
+    // Upload index buffer
+    geometry_data.ibo = render_device->CreateBufferWithData(
+      Buffer::Usage::IndexBuffer,
+      geometry->index_buffer.view<u8>()
+    );
+
+    // Upload vertex buffers
+    for (auto const& buffer : geometry->buffers) {
+      geometry_data.vbos.push_back(render_device->CreateBufferWithData(
+        Buffer::Usage::VertexBuffer,
+        buffer.view<u8>()
+      ));
+    }
+  }
+
+  auto& geometry_data = geometry_cache[geometry.get()];
 
   // Update object transform UBO
   object_data.ubo->Update(&object->transform().world());
@@ -199,7 +205,7 @@ void Renderer::RenderObject(
   auto descriptor_set = (VkDescriptorSet)object_data.bind_group->Handle();
   auto vbo_handles = std::vector<VkBuffer>{};
   auto vbo_offsets = std::vector<VkDeviceSize>{};
-  for (auto& vbo : object_data.vbos) {
+  for (auto& vbo : geometry_data.vbos) {
     vbo_handles.push_back((VkBuffer)vbo->Handle());
     vbo_offsets.push_back(0);
   }
@@ -231,7 +237,7 @@ void Renderer::RenderObject(
 
   vkCmdBindIndexBuffer(
     command_buffers[1],
-    (VkBuffer)object_data.ibo->Handle(),
+    (VkBuffer)geometry_data.ibo->Handle(),
     0,
     index_type
   );
@@ -254,55 +260,6 @@ void Renderer::CompileShaderProgram(std::shared_ptr<Material>& material) {
     }
   }
 
-  // TODO: use real shader source from material.
-
-  auto glsl_vert = R"(
-#version 450
-
-layout(set = 0, binding = 0) uniform Camera {
-  mat4 u_projection;
-  mat4 u_view;
-};
-
-layout(set = 0, binding = 1) uniform Model {
-  mat4 u_model;
-};
-
-layout(location = 0) in vec3 a_position;
-layout(location = 1) in vec3 a_normal;
-layout(location = 2) in vec2 a_uv;
-
-layout(location = 0) out vec3 v_normal;
-layout(location = 1) out vec2 v_uv;
-
-void main() {
-  v_normal = a_normal;
-  v_uv = a_uv;
-
-  // TODO: use a u_modelview matrix to save one multiplication.
-  gl_Position = u_projection * u_view * u_model * vec4(a_position, 1.0);
-}
-)";
-
-  auto glsl_frag = R"(
-#version 450
-
-layout(set = 0, binding = 2) uniform sampler2D u_albedo_map; 
-
-layout(location = 0) in vec3 v_normal;
-layout(location = 1) in vec2 v_uv;
-
-layout(location = 0) out vec4 frag_color;
-
-void main() {
-#if defined(ENABLE_ALBEDO_MAP)
-  frag_color = texture(u_albedo_map, v_uv);
-#else
-  frag_color = vec4(1.0, 0.0, 1.0, 1.0);
-#endif
-}
-)";
-
   auto result_vert = compiler.CompileGlslToSpv(
     material->get_vert_shader(),
     shaderc_shader_kind::shaderc_vertex_shader,
@@ -324,7 +281,7 @@ void main() {
 
   auto status_frag = result_frag.GetCompilationStatus();
   if (status_frag != shaderc_compilation_status_success) {
-    Log<Error>("Renderer: failed to compile fragment shader ({}):\n{}", status_frag, result_vert.GetErrorMessage());
+    Log<Error>("Renderer: failed to compile fragment shader ({}):\n{}", status_frag, result_frag.GetErrorMessage());
   }
 
   auto spirv_vert = std::vector<u32>{ result_vert.cbegin(), result_vert.cend() };
