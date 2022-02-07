@@ -6,10 +6,6 @@
 
 #include "renderer.hpp"
 
-// Include test shaders
-#include "shader/surface.vert.h"
-#include "shader/surface.frag.h"
-
 // TODO: remove this hacky include
 #include "../../gal/src/vulkan/render_pass.hpp"
 
@@ -298,25 +294,27 @@ void main() {
 )";
 
   auto result_vert = compiler.CompileGlslToSpv(
-    glsl_vert,
+    material->get_vert_shader(),
     shaderc_shader_kind::shaderc_vertex_shader,
     "main.vert",
     options
   );
 
-  if (result_vert.GetCompilationStatus() != shaderc_compilation_status_success) {
-    Log<Error>("Renderer: failed to compile vertex shader:\n{}", result_vert.GetErrorMessage());
+  auto status_vert = result_vert.GetCompilationStatus();
+  if (status_vert != shaderc_compilation_status_success) {
+    Log<Error>("Renderer: failed to compile vertex shader ({}):\n{}", status_vert, result_vert.GetErrorMessage());
   }
 
   auto result_frag = compiler.CompileGlslToSpv(
-    glsl_frag,
+    material->get_frag_shader(),
     shaderc_shader_kind::shaderc_fragment_shader,
     "main.frag",
     options
   );
 
-  if (result_frag.GetCompilationStatus() != shaderc_compilation_status_success) {
-    Log<Error>("Renderer: failed to compile fragment shader:\n{}", result_vert.GetErrorMessage());
+  auto status_frag = result_frag.GetCompilationStatus();
+  if (status_frag != shaderc_compilation_status_success) {
+    Log<Error>("Renderer: failed to compile fragment shader ({}):\n{}", status_frag, result_vert.GetErrorMessage());
   }
 
   auto spirv_vert = std::vector<u32>{ result_vert.cbegin(), result_vert.cend() };
@@ -512,7 +510,7 @@ void Renderer::CreateRenderTarget() {
   render_target = render_device->CreateRenderTarget({ color_texture }, depth_texture);
   render_pass = render_target->CreateRenderPass();
 
-  render_pass->SetClearColor(0, 1, 0, 0, 1);
+  render_pass->SetClearColor(0, 0.1, 0.1, 0.1, 1);
   render_pass->SetClearDepth(1);
 }
 
