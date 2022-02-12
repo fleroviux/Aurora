@@ -87,6 +87,13 @@ struct RenderDevice {
     void* image_handle
   ) -> std::unique_ptr<GPUTexture> = 0;
 
+  virtual auto CreateTextureCube(
+    u32 width,
+    u32 height,
+    GPUTexture::Format format,
+    GPUTexture::Usage usage
+  ) -> std::unique_ptr<GPUTexture> = 0;
+
   virtual auto CreateSampler(
     Sampler::Config const& config
   ) -> std::unique_ptr<Sampler> = 0;

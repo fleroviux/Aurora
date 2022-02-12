@@ -155,6 +155,8 @@ constexpr auto pbr_frag = R"(
   layout (binding = 5) uniform sampler2D u_roughness_map;
   layout (binding = 6) uniform sampler2D u_normal_map;
 
+  layout (binding = 34) uniform samplerCube u_env_map;
+
   vec3 sRGBToLinear(vec3 color) {
     return color;
   }
@@ -262,6 +264,15 @@ constexpr auto pbr_frag = R"(
     my_light.position = vec4(2.0, 2.0, 2.0, 0.0);
     my_light.color = vec3(10.0);
     result += ShadeDirectLight(geometry, my_light, view_dir);
+
+    // TODO: make environment reflection more physically reflect.
+    {
+      vec3 reflect_dir = reflect(-view_dir, geometry.normal);
+      vec3 f0 = mix(vec3(0.04), geometry.albedo, geometry.metalness);
+      float n_dot_v = dot(view_dir, geometry.normal);
+      float roughness_factor = (1.0 - geometry.roughness) * (1.0 - geometry.roughness);
+      result += texture(u_env_map, reflect_dir).rgb * FresnelSchlick(f0, n_dot_v) * roughness_factor;
+    }
 
     result = ACESFilm(result);
     result = LinearTosRGB(result);

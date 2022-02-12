@@ -970,10 +970,10 @@ int main(int argc, char** argv) {
 
   auto event = SDL_Event{};
   auto scene = new GameObject{};
-  //scene->add_child(GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf"));
-  //scene->add_child(GLTFLoader{}.parse("cube.gltf"));
+  scene->add_child(GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf"));
+  //scene->add_child(GLTFLoader{}.parse("porsche/porsche.gltf"));
   //scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
-  scene->add_child(GLTFLoader{}.parse("behemoth/behemoth.gltf"));
+  //scene->add_child(GLTFLoader{}.parse("behemoth/behemoth.gltf"));
   //scene->children()[0]->transform().position() = Vector3{ 0, 2, 0 };
   //scene->children()[1]->transform().position() = Vector3{ 2, 1, 3 };
 

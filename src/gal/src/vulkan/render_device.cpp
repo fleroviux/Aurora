@@ -67,6 +67,15 @@ struct VulkanRenderDevice final : RenderDevice {
     return VulkanTexture::from_swapchain_image(device, width, height, format, (VkImage)image_handle);
   }
 
+  auto CreateTextureCube(
+    u32 width,
+    u32 height,
+    GPUTexture::Format format,
+    GPUTexture::Usage usage
+  ) -> std::unique_ptr<GPUTexture> override {
+    return VulkanTexture::create_cube(physical_device, device, width, height, format, usage);
+  }
+
   auto CreateSampler(
     Sampler::Config const& config
   ) -> std::unique_ptr<Sampler> override {

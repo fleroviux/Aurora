@@ -26,6 +26,7 @@ struct VulkanTexture final : GPUTexture {
   auto width() const -> u32 override { return width_; }
   auto height() const -> u32 override { return height_; }
   auto depth() const -> u32 override { return depth_; }
+  auto layers() const -> u32 override { return layers_; }
 
   static auto create(
     VkPhysicalDevice physical_device,
@@ -73,6 +74,7 @@ struct VulkanTexture final : GPUTexture {
     texture->width_ = width;
     texture->height_ = height;
     texture->depth_ = 1;
+    texture->layers_ = 1;
     texture->AllocateMemory(physical_device);
     texture->CreateImageView();
 
@@ -96,8 +98,64 @@ struct VulkanTexture final : GPUTexture {
     texture->width_ = width;
     texture->height_ = height;
     texture->depth_ = 1;
+    texture->layers_ = 1;
     texture->image_owned_ = false;
     texture->CreateImageView();
+
+    return texture;
+  }
+
+  static auto create_cube(
+    VkPhysicalDevice physical_device,
+    VkDevice device,
+    u32 width,
+    u32 height,
+    Format format,
+    Usage usage
+  ) -> std::unique_ptr<VulkanTexture> {
+    // TODO: deduplicate this mess :redp2:
+    auto info = VkImageCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+      .imageType = VK_IMAGE_TYPE_2D,
+      .format = (VkFormat)format,
+      .extent = VkExtent3D{
+        .width = width,
+        .height = height,
+        .depth = 1
+      },
+      .mipLevels = 1,
+      .arrayLayers = 6,
+      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .tiling = VK_IMAGE_TILING_OPTIMAL,
+      .usage = (VkImageUsageFlags)usage,
+      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+      .queueFamilyIndexCount = 0,
+      .pQueueFamilyIndices = nullptr,
+      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
+    };
+
+
+    auto image = VkImage{};
+
+    if (vkCreateImage(device, &info, nullptr, &image) != VK_SUCCESS) {
+      Assert(false, "VulkanTexture: failed to create image");
+    }
+
+    auto texture = std::make_unique<VulkanTexture>();
+
+    texture->device_ = device;
+    texture->image_ = image;
+    texture->grade_ = Grade::_2D;
+    texture->format_ = format;
+    texture->usage_ = usage;
+    texture->width_ = width;
+    texture->height_ = height;
+    texture->depth_ = 1;
+    texture->layers_ = 1;
+    texture->AllocateMemory(physical_device);
+    texture->CreateImageViewCube();
 
     return texture;
   }
@@ -126,7 +184,6 @@ private:
   }
 
   void CreateImageView() {
-    // TODO: select right aspect mask depending on texture format?
     auto info = VkImageViewCreateInfo{
       .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
       .pNext = nullptr,
@@ -146,6 +203,35 @@ private:
         .levelCount = 1,
         .baseArrayLayer = 0,
         .layerCount = 1
+      }
+    };
+
+    if (vkCreateImageView(device_, &info, nullptr, &image_view_) != VK_SUCCESS) {
+      Assert(false, "VulkanTexture: failed to create image view");
+    }
+  }
+
+  void CreateImageViewCube() {
+    // TODO: deduplicate this mess :redp2:
+    auto info = VkImageViewCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .image = image_,
+      .viewType = VK_IMAGE_VIEW_TYPE_CUBE,
+      .format = (VkFormat)format_,
+      .components = VkComponentMapping{
+        .r = VK_COMPONENT_SWIZZLE_R,
+        .g = VK_COMPONENT_SWIZZLE_G,
+        .b = VK_COMPONENT_SWIZZLE_B,
+        .a = VK_COMPONENT_SWIZZLE_A,
+      },
+      .subresourceRange = VkImageSubresourceRange{
+        .aspectMask = GetImageAspectFromFormat(format()),
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 6
       }
     };
 
@@ -176,6 +262,7 @@ private:
   u32 width_;
   u32 height_;
   u32 depth_;
+  u32 layers_;
   bool image_owned_ = true;
 };
 

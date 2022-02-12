@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <array>
 #include <aurora/gal/backend/vulkan.hpp>
 #include <aurora/renderer/component/camera.hpp>
 #include <aurora/renderer/component/mesh.hpp>
@@ -46,12 +47,19 @@ struct Renderer {
     std::shared_ptr<Texture>& texture
   );
 
+  void UploadTextureCube(
+    VkCommandBuffer command_buffer,
+    std::array<std::shared_ptr<Texture>, 6>& textures
+  );
+
   void TransitionImageLayout(
     VkCommandBuffer command_buffer,
     AnyPtr<GPUTexture> texture,
     GPUTexture::Layout old_layout,
     GPUTexture::Layout new_layout
   );
+
+  void CreateExampleCubeMap(VkCommandBuffer command_buffer);
 
   void CreateCameraUniformBlock();
   void UpdateCameraUniformBlock(GameObject* camera);
@@ -119,6 +127,9 @@ struct Renderer {
     std::unique_ptr<Buffer> ubo;
     VkPipeline pipeline;
   };
+
+  bool uploaded_example_cubemap = false;
+  Texture* cubemap_handle = nullptr;
 
   std::unordered_map<Material*, std::unique_ptr<Buffer>> material_ubo;
   std::unordered_map<Geometry*, GeometryData> geometry_cache;

@@ -49,6 +49,11 @@ void Renderer::Render(
     for (auto child : object->children()) traverse(child);
   };
 
+  if (!uploaded_example_cubemap) {
+    CreateExampleCubeMap(command_buffers[0]);
+    uploaded_example_cubemap = true;
+  }
+
   // TODO: verify that scene component exists and camera is non-null.
   UpdateCameraUniformBlock(scene->get_component<Scene>()->camera);
 
@@ -191,6 +196,9 @@ void Renderer::RenderObject(
       object_data.bind_group->Bind(3 + i, data.texture, data.sampler);
     }
   }
+
+  auto& cube_entry = texture_cache[cubemap_handle];
+  object_data.bind_group->Bind(34, cube_entry.texture, cube_entry.sampler);
 
   // Update and bind material UBO
   auto& uniforms = material->get_uniforms();
@@ -368,6 +376,84 @@ void Renderer::UploadTexture(
   );
 }
 
+void Renderer::UploadTextureCube(
+  VkCommandBuffer command_buffer,
+  std::array<std::shared_ptr<Texture>, 6>& textures
+) {
+  // TODO: fix the texture caching.
+  auto width = textures[0]->width();
+  auto height = textures[0]->height();
+  auto& data = texture_cache[textures[0].get()];
+
+  data.texture = render_device->CreateTextureCube(
+    width,
+    height,
+    GPUTexture::Format::R8G8B8A8_SRGB,
+    GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled
+  );
+
+  auto face_size = sizeof(u32) * width * height;
+
+  data.buffer = render_device->CreateBuffer(Buffer::Usage::CopySrc, face_size * 6);
+
+  for (int i = 0; i < 6; i++) {
+    data.buffer->Update(textures[i]->data(), face_size, face_size * i);
+  }
+
+  data.sampler = render_device->CreateSampler({
+    .address_mode_u = Sampler::AddressMode::Repeat,
+    .address_mode_v = Sampler::AddressMode::Repeat,
+    .min_filter = Sampler::FilterMode::Linear,
+    .mag_filter = Sampler::FilterMode::Linear,
+    .mip_filter = Sampler::FilterMode::Linear
+  });
+
+  auto region = VkBufferImageCopy{
+    .bufferOffset = 0,
+    .bufferRowLength = width,
+    .bufferImageHeight = height,
+    .imageSubresource = VkImageSubresourceLayers{
+      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .mipLevel = 0,
+      .baseArrayLayer = 0,
+      .layerCount = 6
+    },
+    .imageOffset = VkOffset3D{
+      .x = 0,
+      .y = 0,
+      .z = 0
+    },
+    .imageExtent = VkExtent3D{
+      .width = width,
+      .height = height,
+      .depth = 1
+    }
+  };
+
+  TransitionImageLayout(
+    command_buffer,
+    data.texture,
+    GPUTexture::Layout::Undefined,
+    GPUTexture::Layout::CopyDst
+  );
+
+  vkCmdCopyBufferToImage(
+    command_buffer,
+    (VkBuffer)data.buffer->Handle(),
+    (VkImage)data.texture->handle2(),
+    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    1,
+    &region
+  );
+
+  TransitionImageLayout(
+    command_buffer,
+    data.texture,
+    GPUTexture::Layout::CopyDst,
+    GPUTexture::Layout::ShaderReadOnly
+  );
+}
+
 void Renderer::TransitionImageLayout(
   VkCommandBuffer command_buffer,
   AnyPtr<GPUTexture> texture,
@@ -428,6 +514,21 @@ void Renderer::TransitionImageLayout(
     0, nullptr,
     1, &barrier
   );
+}
+
+void Renderer::CreateExampleCubeMap(VkCommandBuffer command_buffer) {
+  std::shared_ptr<Texture> nx = Texture::load("env/nx.png");
+  std::shared_ptr<Texture> ny = Texture::load("env/ny.png");
+  std::shared_ptr<Texture> nz = Texture::load("env/nz.png");
+  std::shared_ptr<Texture> px = Texture::load("env/px.png");
+  std::shared_ptr<Texture> py = Texture::load("env/py.png");
+  std::shared_ptr<Texture> pz = Texture::load("env/pz.png");
+
+  std::array<std::shared_ptr<Texture>, 6> textures{ px, nx, py, ny, pz, nz };
+
+  UploadTextureCube(command_buffer, textures);
+
+  cubemap_handle = textures[0].get();
 }
 
 void Renderer::CreateCameraUniformBlock() {
