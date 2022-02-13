@@ -668,63 +668,39 @@ struct ScreenRenderer {
   }
 
   void Render(
-    VkCommandBuffer command_buffer,
+    std::unique_ptr<CommandBuffer>& command_buffer,
     std::unique_ptr<RenderTarget>& render_target,
     std::unique_ptr<RenderPass>& render_pass,
     std::shared_ptr<GPUTexture>& texture
   ) {
     bind_group->Bind(1, texture, sampler);
 
-    auto render_pass_ = (VulkanRenderPass*)render_pass.get();
-    auto& clear_values = render_pass_->GetClearValues();
-
-    auto render_pass_begin_info = VkRenderPassBeginInfo{
-      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-      .pNext = nullptr,
-      .renderPass = render_pass_->Handle(),
-      .framebuffer = (VkFramebuffer)render_target->handle(),
-      .renderArea = VkRect2D{
-        .offset = VkOffset2D{
-          .x = 0,
-          .y = 0
-        },
-        .extent = VkExtent2D{
-          .width = 1600,
-          .height = 900
-        }
-      },
-      .clearValueCount = (u32)clear_values.size(),
-      .pClearValues = clear_values.data()
-    };
-
-    // Just for fun~
     render_pass->SetClearColor(0, 1, 0, 0, 1);
 
-    vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    command_buffer->BeginRenderPass(render_target, render_pass);
 
-    // TODO: is it a good idea to upload the geometry while recording the command buffer?
     upload_geometry(
       physical_device,
       device,
       render_device,
       (VkShaderModule)shader_vert->Handle(),
       (VkShaderModule)shader_frag->Handle(),
-      render_pass_->Handle(),
+      ((VulkanRenderPass*)render_pass.get())->Handle(),
       (VkPipelineLayout)pipeline_layout->Handle(),
       &fullscreen_quad
     );
 
     draw_geometry(
-      command_buffer,
+      (VkCommandBuffer)command_buffer->Handle(),
       (VkPipelineLayout)pipeline_layout->Handle(),
       (VkDescriptorSet)bind_group->Handle(),
       &fullscreen_quad
     );
 
-    vkCmdEndRenderPass(command_buffer);
+    command_buffer->EndRenderPass();
   }
 
-//private:
+private:
   void CreatePipelineLayoutAndBindGroup() {
     bind_group_layout = render_device->CreateBindGroupLayout({
       {
@@ -802,11 +778,12 @@ struct Application {
 
   void Render(
     std::array<VkCommandBuffer, 2>& command_buffers,
+    std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers_,
     GameObject* scene,
     u32 image_id
   ) {
     renderer.Render(command_buffers, scene);
-    screen_renderer.Render(command_buffers[1], render_targets[image_id], render_pass, renderer.color_texture);
+    screen_renderer.Render(command_buffers_[1], render_targets[image_id], render_pass, renderer.color_texture);
   }
 
 //private:
@@ -912,35 +889,20 @@ int main(int argc, char** argv) {
 
   app.Initialize();
 
-  auto command_pool = VkCommandPool{};
+  auto& render_device = app.render_device;
+
+  auto command_pool = render_device->CreateCommandPool(
+    queue_family_graphics,
+    CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer
+  );
+
+  auto test_command_buffers = std::array<std::unique_ptr<CommandBuffer>, 2>{};
+  test_command_buffers[0] = render_device->CreateCommandBuffer(command_pool);
+  test_command_buffers[1] = render_device->CreateCommandBuffer(command_pool);
+
   auto command_buffers = std::array<VkCommandBuffer, 2>{};
-
-  { 
-    auto command_pool_info = VkCommandPoolCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-      .queueFamilyIndex = queue_family_graphics
-    };
-
-    if (vkCreateCommandPool(device, &command_pool_info, nullptr, &command_pool) != VK_SUCCESS) {
-      std::puts("Failed to a create a command pool :(");
-      return -1;
-    }
-
-    auto command_buffer_info = VkCommandBufferAllocateInfo{
-      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-      .pNext = nullptr,
-      .commandPool = command_pool,
-      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-      .commandBufferCount = command_buffers.size()
-    };
-
-    if (vkAllocateCommandBuffers(device, &command_buffer_info, command_buffers.data()) != VK_SUCCESS) {
-      std::puts("Failed to create a command buffer :(");
-      return -1;
-    }
-  }
+  command_buffers[0] = (VkCommandBuffer)test_command_buffers[0]->Handle();
+  command_buffers[1] = (VkCommandBuffer)test_command_buffers[1]->Handle();
 
   // TODO: move this closer to the device creation logic?
   auto queue_graphics = VkQueue{};
@@ -1037,14 +999,19 @@ int main(int argc, char** argv) {
 
     u32 swapchain_image_id;
 
-    const auto command_buffer_begin_info = VkCommandBufferBeginInfo{
-      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-      .pNext = nullptr,
-      .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-      .pInheritanceInfo = nullptr
-    };
+    vkResetFences(device, 1, &fence);
+    vkAcquireNextImageKHR(device, swapchain, u64(-1), VK_NULL_HANDLE, fence, &swapchain_image_id);
+    vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
 
-    const auto command_buffer_submit_info = VkSubmitInfo{
+    test_command_buffers[0]->Begin(CommandBuffer::OneTimeSubmit::Yes);
+    test_command_buffers[1]->Begin(CommandBuffer::OneTimeSubmit::Yes);
+
+    app.Render(command_buffers, test_command_buffers, scene, swapchain_image_id);
+
+    test_command_buffers[0]->End();
+    test_command_buffers[1]->End();
+
+    const auto submit_info = VkSubmitInfo{
       .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
       .pNext = nullptr,
       .waitSemaphoreCount = 0,
@@ -1057,21 +1024,7 @@ int main(int argc, char** argv) {
     };
 
     vkResetFences(device, 1, &fence);
-    vkAcquireNextImageKHR(device, swapchain, u64(-1), VK_NULL_HANDLE, fence, &swapchain_image_id);
-    vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
-
-    vkBeginCommandBuffer(command_buffers[1], &command_buffer_begin_info);
-    vkBeginCommandBuffer(command_buffers[0], &command_buffer_begin_info);
-
-    app.Render(command_buffers, scene, swapchain_image_id);
-
-    // Output render to screen
-    
-    vkEndCommandBuffer(command_buffers[1]);
-    vkEndCommandBuffer(command_buffers[0]);
-    
-    vkResetFences(device, 1, &fence);
-    vkQueueSubmit(queue_graphics, 1, &command_buffer_submit_info, fence);
+    vkQueueSubmit(queue_graphics, 1, &submit_info, fence);
     vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
 
     auto result = VkResult{};

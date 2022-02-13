@@ -6,6 +6,8 @@
 
 #include "bind_group.hpp"
 #include "buffer.hpp"
+#include "command_buffer.hpp"
+#include "command_pool.hpp"
 #include "pipeline_layout.hpp"
 #include "render_target.hpp"
 #include "sampler.hpp"
@@ -99,6 +101,20 @@ struct VulkanRenderDevice final : RenderDevice {
     std::vector<std::shared_ptr<BindGroupLayout>> const& bind_groups
   ) -> std::unique_ptr<PipelineLayout> override {
     return std::make_unique<VulkanPipelineLayout>(device, bind_groups);
+  }
+
+  // TODO: better handle queue families
+  auto CreateCommandPool(
+    u32 queue_family,
+    CommandPool::Usage usage
+  ) -> std::shared_ptr<CommandPool> override {
+    return std::make_shared<VulkanCommandPool>(device, queue_family, usage);
+  }
+
+  auto CreateCommandBuffer(
+    std::shared_ptr<CommandPool> pool
+  ) -> std::unique_ptr<CommandBuffer> override {
+    return std::make_unique<VulkanCommandBuffer>(device, pool);
   }
 
 private:

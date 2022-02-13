@@ -113,7 +113,6 @@ struct Renderer {
   } camera_data;
 
   struct GeometryData {
-    std::unique_ptr<Buffer> ubo;
     std::unique_ptr<Buffer> ibo;
     std::vector<std::unique_ptr<Buffer>> vbos;
   };

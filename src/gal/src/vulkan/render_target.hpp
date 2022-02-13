@@ -31,6 +31,9 @@ struct VulkanRenderTarget final : RenderTarget {
       first_attachment = depth_stencil_attachment.get();
     }
 
+    width_ = first_attachment->width();
+    height_ = first_attachment->height();
+
     render_pass = CreateRenderPass();
 
     for (auto& texture : color_attachments) {
@@ -48,8 +51,8 @@ struct VulkanRenderTarget final : RenderTarget {
       .renderPass = ((VulkanRenderPass*)render_pass.get())->Handle(),
       .attachmentCount = (u32)image_views.size(),
       .pAttachments = image_views.data(),
-      .width = first_attachment->width(),
-      .height = first_attachment->height(),
+      .width = width(),
+      .height = height(),
       .layers = 1
     };
 
@@ -63,6 +66,8 @@ struct VulkanRenderTarget final : RenderTarget {
   }
 
   auto handle() -> void* override { return (void*)framebuffer; }
+  auto width() -> u32 override { return width_; }
+  auto height() -> u32 override { return height_; }
 
   auto CreateRenderPass(
     std::vector<RenderPass::Descriptor> const& color_descriptors = {{}},
@@ -83,6 +88,8 @@ private:
   std::unique_ptr<RenderPass> render_pass;
   std::vector<std::shared_ptr<GPUTexture>> color_attachments;
   std::shared_ptr<GPUTexture> depth_stencil_attachment;
+  u32 width_;
+  u32 height_;
 };
 
 } // namespace Aura

@@ -13,6 +13,8 @@ struct RenderTarget {
   virtual ~RenderTarget() = default;
 
   virtual auto handle() -> void* = 0;
+  virtual auto width()  -> u32 = 0;
+  virtual auto height() -> u32 = 0;
   
   virtual auto CreateRenderPass(
     std::vector<RenderPass::Descriptor> const& color_descriptors = {{}},

@@ -6,6 +6,8 @@
 
 #include <aurora/gal/bind_group.hpp>
 #include <aurora/gal/buffer.hpp>
+#include <aurora/gal/command_buffer.hpp>
+#include <aurora/gal/command_pool.hpp>
 #include <aurora/gal/pipeline_layout.hpp>
 #include <aurora/gal/render_target.hpp>
 #include <aurora/gal/sampler.hpp>
@@ -110,6 +112,16 @@ struct RenderDevice {
   virtual auto CreatePipelineLayout(
     std::vector<std::shared_ptr<BindGroupLayout>> const& bind_groups
   ) -> std::unique_ptr<PipelineLayout> = 0;
+
+  // TODO: better handle queue families
+  virtual auto CreateCommandPool(
+    u32 queue_family,
+    CommandPool::Usage usage
+  ) -> std::shared_ptr<CommandPool> = 0;
+
+  virtual auto CreateCommandBuffer(
+    std::shared_ptr<CommandPool> pool
+  ) -> std::unique_ptr<CommandBuffer> = 0;
 };
 
 } // namespace Aura
