@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <vector>
 
 namespace Aura {
 
@@ -14,6 +15,8 @@ struct ArrayView {
   using const_iterator = T const*;
 
   constexpr ArrayView(T* data, size_t size) : data_(data), size_(size) {}
+
+  ArrayView(std::vector<T>& vec) : data_(vec.data()), size_(vec.size()) {}
 
   constexpr auto cbegin() const -> const_iterator {
     return data();

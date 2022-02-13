@@ -85,6 +85,30 @@ struct VulkanCommandBuffer final : CommandBuffer {
     vkCmdEndRenderPass(buffer);
   }
 
+  void BindGraphicsPipeline(void* handle) override {
+    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)handle);
+  }
+
+  void BindVertexBuffers(
+    ArrayView<std::unique_ptr<Buffer>> buffers,
+    u32 first_binding = 0
+  ) override {
+    VkBuffer buffer_handles[32];
+
+    const VkDeviceSize buffer_offsets[32] = { 0 };
+
+    Assert(buffers.size() < 32,
+      "VulkanCommandBuffer: can't bind more than 32 vertex buffers at once");
+
+    for (int i = 0; i < buffers.size(); i++) {
+      buffer_handles[i] = (VkBuffer)buffers[i]->Handle();
+    }
+
+    vkCmdBindVertexBuffers(buffer, first_binding, buffers.size(), buffer_handles, buffer_offsets);
+  }
+
+  
+
 private:
   VkDevice device;
   VkCommandBuffer buffer;

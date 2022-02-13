@@ -264,26 +264,28 @@ void upload_geometry(
 }
 
 void draw_geometry(
-  VkCommandBuffer command_buffer,
+  std::unique_ptr<CommandBuffer>& command_buffer,
   VkPipelineLayout pipeline_layout,
   VkDescriptorSet descriptor_set,
   Geometry const* geometry
 ) {
-  auto const& entry = geometry_cache[geometry];
+  auto& entry = geometry_cache[geometry];
   auto const& index_buffer = geometry->index_buffer;
 
-  vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entry.pipeline);
-  vkCmdBindVertexBuffers(command_buffer, 0, entry.vk_vbos.size(), entry.vk_vbos.data(), entry.vk_vbo_offs.data());
-  vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
+  auto command_buffer_ = (VkCommandBuffer)command_buffer->Handle();
+
+  command_buffer->BindGraphicsPipeline(entry.pipeline);
+  command_buffer->BindVertexBuffers(entry.vbos);
+  vkCmdBindDescriptorSets(command_buffer_, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
 
   switch (index_buffer.data_type()) {
     case IndexDataType::UInt16:
-      vkCmdBindIndexBuffer(command_buffer, (VkBuffer)entry.ibo->Handle(), 0, VK_INDEX_TYPE_UINT16);
-      vkCmdDrawIndexed(command_buffer, index_buffer.size()/sizeof(u16), 1, 0, 0, 0);
+      vkCmdBindIndexBuffer(command_buffer_, (VkBuffer)entry.ibo->Handle(), 0, VK_INDEX_TYPE_UINT16);
+      vkCmdDrawIndexed(command_buffer_, index_buffer.size()/sizeof(u16), 1, 0, 0, 0);
       break;
     case IndexDataType::UInt32:
-      vkCmdBindIndexBuffer(command_buffer, (VkBuffer)entry.ibo->Handle(), 0, VK_INDEX_TYPE_UINT32);
-      vkCmdDrawIndexed(command_buffer, index_buffer.size()/sizeof(u32), 1, 0, 0, 0);
+      vkCmdBindIndexBuffer(command_buffer_, (VkBuffer)entry.ibo->Handle(), 0, VK_INDEX_TYPE_UINT32);
+      vkCmdDrawIndexed(command_buffer_, index_buffer.size()/sizeof(u32), 1, 0, 0, 0);
       break;
   }
 }
@@ -691,7 +693,7 @@ struct ScreenRenderer {
     );
 
     draw_geometry(
-      (VkCommandBuffer)command_buffer->Handle(),
+      command_buffer,
       (VkPipelineLayout)pipeline_layout->Handle(),
       (VkDescriptorSet)bind_group->Handle(),
       &fullscreen_quad
@@ -929,12 +931,11 @@ int main(int argc, char** argv) {
   auto event = SDL_Event{};
   auto scene = new GameObject{};
   scene->add_child(GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf"));
-  //scene->add_child(GLTFLoader{}.parse("porsche/porsche.gltf"));
-  //scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
+  scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
   //scene->add_child(GLTFLoader{}.parse("behemoth/behemoth.gltf"));
-  //scene->children()[0]->transform().position() = Vector3{ 0, 2, 0 };
-  //scene->children()[1]->transform().position() = Vector3{ 2, 1, 3 };
-
+  scene->children()[0]->transform().rotation().set_euler(0, M_PI * 0.5, 0);
+  scene->children()[0]->transform().position() = Vector3{ 0, 2, 0 };
+  
   // test 1000 damaged helmets at once
   //auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf")->children()[0];
   //auto& geometry = helmet->get_component<Mesh>()->geometry;
