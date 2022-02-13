@@ -12,10 +12,12 @@
 #include <aurora/renderer/texture.hpp>
 #include <aurora/renderer/uniform_block.hpp>
 #include <aurora/scene/game_object.hpp>
+#include <aurora/any_ptr.hpp>
 #include <type_traits>
 #include <typeindex>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace Aura {
 
@@ -40,7 +42,7 @@ struct Renderer {
     Mesh* mesh
   );
 
-  void CompileShaderProgram(std::shared_ptr<Material>& material);
+  void CompileShaderProgram(AnyPtr<Material> material);
 
   void UploadTexture(
     VkCommandBuffer command_buffer,
@@ -66,15 +68,17 @@ struct Renderer {
 
   void CreateRenderTarget();
 
+  void CreateBindGroupAndPipelineLayout();
+
   auto CreatePipeline(
-    std::shared_ptr<Geometry>& geometry,
+    AnyPtr<Geometry> geometry,
     std::unique_ptr<PipelineLayout>& pipeline_layout,
     std::unique_ptr<ShaderModule>& shader_vert,
     std::unique_ptr<ShaderModule>& shader_frag
   ) -> VkPipeline;
 
   static void BuildPipelineGeometryInfo(
-    std::shared_ptr<Geometry>& geometry,
+    Geometry* geometry,
     std::vector<VkVertexInputBindingDescription>& bindings,
     std::vector<VkVertexInputAttributeDescription>& attributes
   );
@@ -92,6 +96,9 @@ struct Renderer {
   std::shared_ptr<GPUTexture> depth_texture;
   std::unique_ptr<RenderTarget> render_target;
   std::unique_ptr<RenderPass> render_pass;
+
+  std::shared_ptr<BindGroupLayout> bind_group_layout;
+  std::unique_ptr<PipelineLayout> pipeline_layout;
 
   struct CameraData {
     UniformBlock data;
@@ -121,8 +128,6 @@ struct Renderer {
     bool valid = false;
 
     // TODO: move this stuff to the appropriate places.
-    std::shared_ptr<BindGroupLayout> bind_group_layout;
-    std::unique_ptr<PipelineLayout> pipeline_layout;
     std::unique_ptr<BindGroup> bind_group;
     std::unique_ptr<Buffer> ubo;
     VkPipeline pipeline;

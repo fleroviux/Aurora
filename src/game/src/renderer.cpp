@@ -21,6 +21,7 @@ void Renderer::Initialize(
   this->render_device = render_device;
   CreateCameraUniformBlock();
   CreateRenderTarget();
+  CreateBindGroupAndPipelineLayout();
 }
 
 void Renderer::Render(
@@ -32,8 +33,6 @@ void Renderer::Render(
       return;
     }
 
-    // Update object transform:
-    // TODO: we possibly do not update the camera transform in time.
     auto& transform = object->transform();
     if (transform.auto_update()) {
       transform.update_local();
@@ -48,14 +47,6 @@ void Renderer::Render(
 
     for (auto child : object->children()) traverse(child);
   };
-
-  if (!uploaded_example_cubemap) {
-    CreateExampleCubeMap(command_buffers[0]);
-    uploaded_example_cubemap = true;
-  }
-
-  // TODO: verify that scene component exists and camera is non-null.
-  UpdateCameraUniformBlock(scene->get_component<Scene>()->camera);
 
   auto render_pass_ = (VulkanRenderPass*)render_pass.get();
   auto& clear_values = render_pass_->GetClearValues();
@@ -77,6 +68,14 @@ void Renderer::Render(
     .clearValueCount = (u32)clear_values.size(),
     .pClearValues = clear_values.data()
   };
+
+  if (!uploaded_example_cubemap) {
+    CreateExampleCubeMap(command_buffers[0]);
+    uploaded_example_cubemap = true;
+  }
+
+  // TODO: verify that scene component exists and camera is non-null.
+  UpdateCameraUniformBlock(scene->get_component<Scene>()->camera);
 
   vkCmdBeginRenderPass(
     command_buffers[1],
@@ -108,30 +107,7 @@ void Renderer::RenderObject(
   auto& object_data = object_cache[object];
 
   if (!object_data.valid) {
-    // Create bind group layout, pipeline layout and bind group.
-    auto bindings = std::vector<BindGroupLayout::Entry>{
-      {
-        .binding = 0,
-        .type = BindGroupLayout::Entry::Type::UniformBuffer
-      },
-      {
-        .binding = 1,
-        .type = BindGroupLayout::Entry::Type::UniformBuffer
-      },
-      {
-        .binding = 2,
-        .type = BindGroupLayout::Entry::Type::UniformBuffer
-      }
-    };
-    for (int i = 0; i < 32; i++) {
-      bindings.push_back({
-        .binding = (u32)bindings.size(),
-        .type = BindGroupLayout::Entry::Type::ImageWithSampler
-      });
-    }
-    object_data.bind_group_layout = render_device->CreateBindGroupLayout(bindings);
-    object_data.pipeline_layout = render_device->CreatePipelineLayout({ object_data.bind_group_layout });
-    object_data.bind_group = object_data.bind_group_layout->Instantiate();
+    object_data.bind_group = bind_group_layout->Instantiate();
     object_data.bind_group->Bind(0, camera_data.ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
     // Create some dummy uniform buffer and bind it to the bind group
@@ -148,7 +124,7 @@ void Renderer::RenderObject(
     // Create pipeline
     object_data.pipeline = CreatePipeline(
       geometry,
-      object_data.pipeline_layout,
+      pipeline_layout,
       program_data.shader_vert,
       program_data.shader_frag
     );
@@ -222,7 +198,7 @@ void Renderer::RenderObject(
   vkCmdBindDescriptorSets(
     command_buffers[1],
     VK_PIPELINE_BIND_POINT_GRAPHICS,
-    (VkPipelineLayout)object_data.pipeline_layout->Handle(),
+    (VkPipelineLayout)pipeline_layout->Handle(),
     0,
     1,
     &descriptor_set,
@@ -253,7 +229,7 @@ void Renderer::RenderObject(
   vkCmdDrawIndexed(command_buffers[1], index_count, 1, 0, 0, 0);
 }
 
-void Renderer::CompileShaderProgram(std::shared_ptr<Material>& material) {
+void Renderer::CompileShaderProgram(AnyPtr<Material> material) {
   auto compiler = shaderc::Compiler{};
   auto options = shaderc::CompileOptions{};
 
@@ -582,8 +558,35 @@ void Renderer::CreateRenderTarget() {
   render_pass->SetClearDepth(1); 
 }
 
+void Renderer::CreateBindGroupAndPipelineLayout() {
+  auto bindings = std::vector<BindGroupLayout::Entry>{
+    {
+      .binding = 0,
+      .type = BindGroupLayout::Entry::Type::UniformBuffer
+    },
+    {
+      .binding = 1,
+      .type = BindGroupLayout::Entry::Type::UniformBuffer
+    },
+    {
+      .binding = 2,
+      .type = BindGroupLayout::Entry::Type::UniformBuffer
+    }
+  };
+
+  for (int i = 0; i < 32; i++) {
+    bindings.push_back({
+      .binding = (u32)bindings.size(),
+      .type = BindGroupLayout::Entry::Type::ImageWithSampler
+    });
+  }
+
+  bind_group_layout = render_device->CreateBindGroupLayout(bindings);
+  pipeline_layout = render_device->CreatePipelineLayout({ bind_group_layout });
+}
+
 auto Renderer::CreatePipeline(
-  std::shared_ptr<Geometry>& geometry,
+  AnyPtr<Geometry> geometry,
   std::unique_ptr<PipelineLayout>& pipeline_layout,
   std::unique_ptr<ShaderModule>& shader_vert,
   std::unique_ptr<ShaderModule>& shader_frag
@@ -705,7 +708,7 @@ auto Renderer::CreatePipeline(
 
   auto bindings = std::vector<VkVertexInputBindingDescription>{};
   auto attributes = std::vector<VkVertexInputAttributeDescription>{};
-  BuildPipelineGeometryInfo(geometry, bindings, attributes);
+  BuildPipelineGeometryInfo(geometry.get(), bindings, attributes);
 
   auto vertex_input_state_info = VkPipelineVertexInputStateCreateInfo{
     .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -755,7 +758,7 @@ auto Renderer::CreatePipeline(
 }
 
 void Renderer::BuildPipelineGeometryInfo(
-  std::shared_ptr<Geometry>& geometry,
+  Geometry* geometry,
   std::vector<VkVertexInputBindingDescription>& bindings,
   std::vector<VkVertexInputAttributeDescription>& attributes
 ) {

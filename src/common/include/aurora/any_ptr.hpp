@@ -28,6 +28,10 @@ struct AnyPtr {
     return ptr;
   }
 
+  auto operator*() -> T& {
+    return *ptr;
+  }
+
 private:
   T* ptr;
 };
