@@ -652,7 +652,7 @@ auto Renderer::CreatePipeline(
     .depthClampEnable = VK_FALSE,
     .rasterizerDiscardEnable = VK_FALSE,
     .polygonMode = VK_POLYGON_MODE_FILL,
-    .cullMode = VK_CULL_MODE_NONE,
+    .cullMode = VK_CULL_MODE_FRONT_BIT,
     .depthBiasEnable = VK_FALSE,
     .depthBiasConstantFactor = 0,
     .depthBiasClamp = 0,
