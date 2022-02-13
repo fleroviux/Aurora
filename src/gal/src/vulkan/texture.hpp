@@ -153,7 +153,7 @@ struct VulkanTexture final : GPUTexture {
     texture->width_ = width;
     texture->height_ = height;
     texture->depth_ = 1;
-    texture->layers_ = 1;
+    texture->layers_ = 6;
     texture->AllocateMemory(physical_device);
     texture->CreateImageViewCube();
 

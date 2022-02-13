@@ -474,7 +474,7 @@ void Renderer::TransitionImageLayout(
       .baseMipLevel = 0,
       .levelCount = 1,
       .baseArrayLayer = 0,
-      .layerCount = 1
+      .layerCount = texture->layers()
     }
   };
 
