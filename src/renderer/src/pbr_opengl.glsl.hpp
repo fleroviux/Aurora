@@ -4,29 +4,29 @@
 
 #pragma once
 
-constexpr auto pbr_vert = R"(
-  #version 450
-
+constexpr auto pbr_vert = R"(\
   layout (location = 0) in vec3 a_position;
   layout (location = 1) in vec3 a_normal;
   layout (location = 2) in vec2 a_uv;
   layout (location = 3) in vec3 a_color;
 
   layout (binding = 0, std140) uniform Camera {
-    mat4 u_projection;
     mat4 u_view;
+    mat4 u_projection;
   };
 
   layout (binding = 1, std140) uniform Material {
     mat4 u_model;
+    float u_metalness;
+    float u_roughness;
   };
 
-  layout(location = 0) out vec3 v_world_position;
-  layout(location = 1) out vec3 v_world_normal;
-  layout(location = 2) out vec3 v_view_position;
-  layout(location = 3) out vec3 v_color;
-  layout(location = 4) out vec2 v_uv;
-  layout(location = 5) out vec3 v_normal;
+  out vec3 v_world_position;
+  out vec3 v_world_normal;
+  out vec3 v_view_position;
+  out vec3 v_color;
+  out vec2 v_uv;
+  out vec3 v_normal;
 
   void main() {
     vec4 world_position = u_model * vec4(a_position, 1.0);
@@ -44,9 +44,7 @@ constexpr auto pbr_vert = R"(
   }
 )";
 
-constexpr auto pbr_frag = R"(
-  #version 450
-
+constexpr auto pbr_frag = R"(\
   #define PI  3.14159265358
   #define TAU 6.28318530717
 
@@ -128,41 +126,35 @@ constexpr auto pbr_frag = R"(
 
   layout (location = 0) out vec4 frag_color;
 
-  layout(location = 0) in vec3 v_world_position;
-  layout(location = 1) in vec3 v_world_normal;
-  layout(location = 2) in vec3 v_view_position;
-  layout(location = 3) in vec3 v_color;
-  layout(location = 4) in vec2 v_uv;
-  layout(location = 5) in vec3 v_normal;
+  in vec3 v_world_position;
+  in vec3 v_world_normal;
+  in vec3 v_view_position;
+  in vec3 v_color;
+  in vec2 v_uv;
+  in vec3 v_normal;
 
   layout (binding = 0, std140) uniform Camera {
-    mat4 u_projection;
     mat4 u_view;
+    mat4 u_projection;
   };
 
-  layout (binding = 1, std140) uniform Object {
+  layout (binding = 1, std140) uniform Material {
     mat4 u_model;
-  };
-
-  layout (binding = 2, std140) uniform Material {
-    mat4 u_dummy; // remove me, for OGL compat.
     float u_metalness;
     float u_roughness;
   };
 
-  layout (binding = 3) uniform sampler2D u_diffuse_map;
-  layout (binding = 4) uniform sampler2D u_metalness_map;
-  layout (binding = 5) uniform sampler2D u_roughness_map;
-  layout (binding = 6) uniform sampler2D u_normal_map;
-
-  layout (binding = 34) uniform samplerCube u_env_map;
+  layout (binding = 0) uniform sampler2D u_diffuse_map;
+  layout (binding = 1) uniform sampler2D u_metalness_map;
+  layout (binding = 2) uniform sampler2D u_roughness_map;
+  layout (binding = 3) uniform sampler2D u_normal_map;
 
   vec3 sRGBToLinear(vec3 color) {
-    return color;
+    return pow(color, vec3(2.2));
   }
 
   vec3 LinearTosRGB(vec3 color) {
-    return color;
+    return pow(color, vec3(1.0/2.2));
   }
 
   // Source: https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
@@ -177,11 +169,7 @@ constexpr auto pbr_frag = R"(
   }
 
   vec3 PerturbNormal() {
-    // TODO: fix this gross hack: do not use sRGB texture for normal map!
-    vec3 texel = texture(u_normal_map, v_uv).xyz;
-    texel = pow(texel, vec3(1.0/2.2));
-
-    vec3 tbn_normal = texel * 2.0 - 1.0;
+    vec3 tbn_normal = texture(u_normal_map, v_uv).xyz * 2.0 - 1.0;
 
     vec2 dUVdx = dFdx(v_uv);
     vec2 dUVdy = dFdy(v_uv);
@@ -264,15 +252,6 @@ constexpr auto pbr_frag = R"(
     my_light.position = vec4(2.0, 2.0, 2.0, 0.0);
     my_light.color = vec3(10.0);
     result += ShadeDirectLight(geometry, my_light, view_dir);
-
-    // TODO: make environment reflection more physically reflect.
-    {
-      vec3 reflect_dir = reflect(-view_dir, geometry.normal);
-      vec3 f0 = mix(vec3(0.04), geometry.albedo, geometry.metalness);
-      float n_dot_v = dot(view_dir, geometry.normal);
-      float roughness_factor = (1.0 - geometry.roughness) * (1.0 - geometry.roughness);
-      result += texture(u_env_map, reflect_dir).rgb * FresnelSchlick(f0, n_dot_v) * roughness_factor;
-    }
 
     result = ACESFilm(result);
     result = LinearTosRGB(result);

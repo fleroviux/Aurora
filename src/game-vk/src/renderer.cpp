@@ -2,11 +2,9 @@
  * Copyright (C) 2022 fleroviux
  */
 
-#include "renderer.hpp"
+#include <shaderc/shaderc.hpp>
 
-// Include test shaders
-#include "shader/surface.vert.h"
-#include "shader/surface.frag.h"
+#include "renderer.hpp"
 
 // TODO: remove this hacky include
 #include "../../gal/src/vulkan/render_pass.hpp"
@@ -50,6 +48,11 @@ void Renderer::Render(
 
     for (auto child : object->children()) traverse(child);
   };
+
+  if (!uploaded_example_cubemap) {
+    CreateExampleCubeMap(command_buffers[0]);
+    uploaded_example_cubemap = true;
+  }
 
   // TODO: verify that scene component exists and camera is non-null.
   UpdateCameraUniformBlock(scene->get_component<Scene>()->camera);
@@ -115,6 +118,10 @@ void Renderer::RenderObject(
         .binding = 1,
         .type = BindGroupLayout::Entry::Type::UniformBuffer
       },
+      {
+        .binding = 2,
+        .type = BindGroupLayout::Entry::Type::UniformBuffer
+      }
     };
     for (int i = 0; i < 32; i++) {
       bindings.push_back({
@@ -132,61 +139,81 @@ void Renderer::RenderObject(
     object_data.bind_group->Bind(1, object_data.ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
     // Create shader modules
-    object_data.shader_vert = render_device->CreateShaderModule(surface_vert, sizeof(surface_vert));
-    object_data.shader_frag = render_device->CreateShaderModule(surface_frag, sizeof(surface_frag));
+    auto program_key = ProgramKey{typeid(*material), material->get_compile_options()};
+    if (program_cache.find(program_key) == program_cache.end()) {
+      CompileShaderProgram(material);
+    }
+    auto& program_data = program_cache[program_key];
+
+    // Create pipeline
+    object_data.pipeline = CreatePipeline(
+      geometry,
+      object_data.pipeline_layout,
+      program_data.shader_vert,
+      program_data.shader_frag
+    );
+
+    object_data.valid = true;
+  }
+
+  if (geometry_cache.find(geometry.get()) == geometry_cache.end()) {
+    auto& geometry_data = geometry_cache[geometry.get()];
 
     // Upload index buffer
-    object_data.ibo = render_device->CreateBufferWithData(
+    geometry_data.ibo = render_device->CreateBufferWithData(
       Buffer::Usage::IndexBuffer,
       geometry->index_buffer.view<u8>()
     );
 
     // Upload vertex buffers
     for (auto const& buffer : geometry->buffers) {
-      object_data.vbos.push_back(render_device->CreateBufferWithData(
+      geometry_data.vbos.push_back(render_device->CreateBufferWithData(
         Buffer::Usage::VertexBuffer,
         buffer.view<u8>()
       ));
     }
-
-    // Create pipeline
-    object_data.pipeline = CreatePipeline(
-      geometry,
-      object_data.pipeline_layout,
-      object_data.shader_vert,
-      object_data.shader_frag
-    );
-
-    object_data.valid = true;
   }
+
+  auto& geometry_data = geometry_cache[geometry.get()];
 
   // Update object transform UBO
   object_data.ubo->Update(&object->transform().world());
 
-  // Bind texture from material test (ugh)
-  //auto& texture = material->get_texture_slots()[0];
-  //if (texture) {
-  //  auto& texture_data = texture_cache[texture.get()];
-  //  GetTexture(command_buffers[0], texture); // upload if not uploaded yet
-  //  object_data.bind_group->Bind(2, texture_data.texture, texture_data.sampler);
-  //}
   auto texture_slots = material->get_texture_slots();
+
   for (int i = 0; i < texture_slots.size(); i++) {
     auto& texture = texture_slots[i];
     if (texture) {
-      // TODO: fix this ugly mess
-      GetTexture(command_buffers[0], texture);
+      auto match = texture_cache.find(texture.get());
 
-      auto& data = texture_cache[texture.get()];
-      object_data.bind_group->Bind(2 + i, data.texture, data.sampler);
+      if (match == texture_cache.end()) {
+        UploadTexture(command_buffers[0], texture);
+        match = texture_cache.find(texture.get());
+      }
+
+      auto& data = match->second;
+
+      object_data.bind_group->Bind(3 + i, data.texture, data.sampler);
     }
   }
+
+  auto& cube_entry = texture_cache[cubemap_handle];
+  object_data.bind_group->Bind(34, cube_entry.texture, cube_entry.sampler);
+
+  // Update and bind material UBO
+  auto& uniforms = material->get_uniforms();
+  if (material_ubo.find(material.get()) == material_ubo.end()) {
+    material_ubo[material.get()] = render_device->CreateBuffer(Buffer::Usage::UniformBuffer, uniforms.size());
+  }
+  auto& ubo = material_ubo[material.get()];
+  ubo->Update(uniforms.data(), uniforms.size());
+  object_data.bind_group->Bind(2, ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
   // TODO: creating a std::vector everytime is slow. make this faster.
   auto descriptor_set = (VkDescriptorSet)object_data.bind_group->Handle();
   auto vbo_handles = std::vector<VkBuffer>{};
   auto vbo_offsets = std::vector<VkDeviceSize>{};
-  for (auto& vbo : object_data.vbos) {
+  for (auto& vbo : geometry_data.vbos) {
     vbo_handles.push_back((VkBuffer)vbo->Handle());
     vbo_offsets.push_back(0);
   }
@@ -218,7 +245,7 @@ void Renderer::RenderObject(
 
   vkCmdBindIndexBuffer(
     command_buffers[1],
-    (VkBuffer)object_data.ibo->Handle(),
+    (VkBuffer)geometry_data.ibo->Handle(),
     0,
     index_type
   );
@@ -226,83 +253,205 @@ void Renderer::RenderObject(
   vkCmdDrawIndexed(command_buffers[1], index_count, 1, 0, 0, 0);
 }
 
-auto Renderer::GetTexture(
-  VkCommandBuffer command_buffer,
-  std::shared_ptr<Texture>& texture
-) -> std::unique_ptr<GPUTexture>& {
-  auto& texture_data = texture_cache[texture.get()];
+void Renderer::CompileShaderProgram(std::shared_ptr<Material>& material) {
+  auto compiler = shaderc::Compiler{};
+  auto options = shaderc::CompileOptions{};
 
-  if (!texture_data.valid) {
-    auto width = texture->width();
-    auto height = texture->height();
+  options.SetOptimizationLevel(shaderc_optimization_level_performance);
 
-    texture_data.texture = render_device->CreateTexture2D(
-      width,
-      height,
-      GPUTexture::Format::R8G8B8A8_SRGB,
-      GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled
-    );
-    texture_data.buffer = render_device->CreateBufferWithData(
-      Buffer::Usage::CopySrc,
-      texture->data(),
-      sizeof(u32) * width * height
-    );
-    texture_data.sampler = render_device->CreateSampler({
-      .address_mode_u = Sampler::AddressMode::Repeat,
-      .address_mode_v = Sampler::AddressMode::Repeat,
-      .min_filter = Sampler::FilterMode::Linear,
-      .mag_filter = Sampler::FilterMode::Linear,
-      .mip_filter = Sampler::FilterMode::Linear
-    });
-    texture_data.valid = true;
+  auto compile_options = material->get_compile_options();
+  auto& compile_option_names = material->get_compile_option_names();
 
-    auto region = VkBufferImageCopy{
-      .bufferOffset = 0,
-      .bufferRowLength = width,
-      .bufferImageHeight = height,
-      .imageSubresource = VkImageSubresourceLayers{
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .mipLevel = 0,
-        .baseArrayLayer = 0,
-        .layerCount = 1
-      },
-      .imageOffset = VkOffset3D{
-        .x = 0,
-        .y = 0,
-        .z = 0
-      },
-      .imageExtent = VkExtent3D{
-        .width = width,
-        .height = height,
-        .depth = 1
-      }
-    };
-
-    TransitionImageLayout(
-      command_buffer,
-      texture_data.texture,
-      GPUTexture::Layout::Undefined,
-      GPUTexture::Layout::CopyDst
-    );
-
-    vkCmdCopyBufferToImage(
-      command_buffer,
-      (VkBuffer)texture_data.buffer->Handle(),
-      (VkImage)texture_data.texture->handle2(),
-      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-      1,
-      &region
-    );
-
-    TransitionImageLayout(
-      command_buffer,
-      texture_data.texture,
-      GPUTexture::Layout::CopyDst,
-      GPUTexture::Layout::ShaderReadOnly
-    );
+  for (size_t i = 0; i < compile_option_names.size(); i++) {
+    if (compile_options & (1 << i)) {
+      options.AddMacroDefinition(compile_option_names[i]);
+    }
   }
 
-  return texture_data.texture;
+  auto result_vert = compiler.CompileGlslToSpv(
+    material->get_vert_shader(),
+    shaderc_shader_kind::shaderc_vertex_shader,
+    "main.vert",
+    options
+  );
+
+  auto status_vert = result_vert.GetCompilationStatus();
+  if (status_vert != shaderc_compilation_status_success) {
+    Log<Error>("Renderer: failed to compile vertex shader ({}):\n{}", status_vert, result_vert.GetErrorMessage());
+  }
+
+  auto result_frag = compiler.CompileGlslToSpv(
+    material->get_frag_shader(),
+    shaderc_shader_kind::shaderc_fragment_shader,
+    "main.frag",
+    options
+  );
+
+  auto status_frag = result_frag.GetCompilationStatus();
+  if (status_frag != shaderc_compilation_status_success) {
+    Log<Error>("Renderer: failed to compile fragment shader ({}):\n{}", status_frag, result_frag.GetErrorMessage());
+  }
+
+  auto spirv_vert = std::vector<u32>{ result_vert.cbegin(), result_vert.cend() };
+  auto spirv_frag = std::vector<u32>{ result_frag.cbegin(), result_frag.cend() };
+
+  auto program_key = ProgramKey{typeid(*material), material->get_compile_options()};
+  auto& data = program_cache[program_key];
+  data.shader_vert = render_device->CreateShaderModule(spirv_vert.data(), spirv_vert.size() * sizeof(u32));
+  data.shader_frag = render_device->CreateShaderModule(spirv_frag.data(), spirv_frag.size() * sizeof(u32));
+}
+
+void Renderer::UploadTexture(
+  VkCommandBuffer command_buffer,
+  std::shared_ptr<Texture>& texture
+) {
+  auto width = texture->width();
+  auto height = texture->height();
+  auto& data = texture_cache[texture.get()];
+
+  data.texture = render_device->CreateTexture2D(
+    width,
+    height,
+    GPUTexture::Format::R8G8B8A8_SRGB,
+    GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled
+  );
+
+  data.buffer = render_device->CreateBufferWithData(
+    Buffer::Usage::CopySrc,
+    texture->data(),
+    sizeof(u32) * width * height
+  );
+
+  data.sampler = render_device->CreateSampler({
+    .address_mode_u = Sampler::AddressMode::Repeat,
+    .address_mode_v = Sampler::AddressMode::Repeat,
+    .min_filter = Sampler::FilterMode::Linear,
+    .mag_filter = Sampler::FilterMode::Linear,
+    .mip_filter = Sampler::FilterMode::Linear
+  });
+
+  auto region = VkBufferImageCopy{
+    .bufferOffset = 0,
+    .bufferRowLength = width,
+    .bufferImageHeight = height,
+    .imageSubresource = VkImageSubresourceLayers{
+      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .mipLevel = 0,
+      .baseArrayLayer = 0,
+      .layerCount = 1
+    },
+    .imageOffset = VkOffset3D{
+      .x = 0,
+      .y = 0,
+      .z = 0
+    },
+    .imageExtent = VkExtent3D{
+      .width = width,
+      .height = height,
+      .depth = 1
+    }
+  };
+
+  TransitionImageLayout(
+    command_buffer,
+    data.texture,
+    GPUTexture::Layout::Undefined,
+    GPUTexture::Layout::CopyDst
+  );
+
+  vkCmdCopyBufferToImage(
+    command_buffer,
+    (VkBuffer)data.buffer->Handle(),
+    (VkImage)data.texture->handle2(),
+    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    1,
+    &region
+  );
+
+  TransitionImageLayout(
+    command_buffer,
+    data.texture,
+    GPUTexture::Layout::CopyDst,
+    GPUTexture::Layout::ShaderReadOnly
+  );
+}
+
+void Renderer::UploadTextureCube(
+  VkCommandBuffer command_buffer,
+  std::array<std::shared_ptr<Texture>, 6>& textures
+) {
+  // TODO: fix the texture caching.
+  auto width = textures[0]->width();
+  auto height = textures[0]->height();
+  auto& data = texture_cache[textures[0].get()];
+
+  data.texture = render_device->CreateTextureCube(
+    width,
+    height,
+    GPUTexture::Format::R8G8B8A8_SRGB,
+    GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled
+  );
+
+  auto face_size = sizeof(u32) * width * height;
+
+  data.buffer = render_device->CreateBuffer(Buffer::Usage::CopySrc, face_size * 6);
+
+  for (int i = 0; i < 6; i++) {
+    data.buffer->Update(textures[i]->data(), face_size, face_size * i);
+  }
+
+  data.sampler = render_device->CreateSampler({
+    .address_mode_u = Sampler::AddressMode::Repeat,
+    .address_mode_v = Sampler::AddressMode::Repeat,
+    .min_filter = Sampler::FilterMode::Linear,
+    .mag_filter = Sampler::FilterMode::Linear,
+    .mip_filter = Sampler::FilterMode::Linear
+  });
+
+  auto region = VkBufferImageCopy{
+    .bufferOffset = 0,
+    .bufferRowLength = width,
+    .bufferImageHeight = height,
+    .imageSubresource = VkImageSubresourceLayers{
+      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .mipLevel = 0,
+      .baseArrayLayer = 0,
+      .layerCount = 6
+    },
+    .imageOffset = VkOffset3D{
+      .x = 0,
+      .y = 0,
+      .z = 0
+    },
+    .imageExtent = VkExtent3D{
+      .width = width,
+      .height = height,
+      .depth = 1
+    }
+  };
+
+  TransitionImageLayout(
+    command_buffer,
+    data.texture,
+    GPUTexture::Layout::Undefined,
+    GPUTexture::Layout::CopyDst
+  );
+
+  vkCmdCopyBufferToImage(
+    command_buffer,
+    (VkBuffer)data.buffer->Handle(),
+    (VkImage)data.texture->handle2(),
+    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    1,
+    &region
+  );
+
+  TransitionImageLayout(
+    command_buffer,
+    data.texture,
+    GPUTexture::Layout::CopyDst,
+    GPUTexture::Layout::ShaderReadOnly
+  );
 }
 
 void Renderer::TransitionImageLayout(
@@ -325,7 +474,7 @@ void Renderer::TransitionImageLayout(
       .baseMipLevel = 0,
       .levelCount = 1,
       .baseArrayLayer = 0,
-      .layerCount = 1
+      .layerCount = texture->layers()
     }
   };
 
@@ -338,24 +487,21 @@ void Renderer::TransitionImageLayout(
 
     src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  }
-  else if (old_layout == GPUTexture::Layout::CopyDst && new_layout == GPUTexture::Layout::ShaderReadOnly) {
+  } else if (old_layout == GPUTexture::Layout::CopyDst && new_layout == GPUTexture::Layout::ShaderReadOnly) {
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
     // TODO: what if a texture is read from the vertex shader?
     src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  }
-  else if (old_layout == GPUTexture::Layout::ColorAttachment && new_layout == GPUTexture::Layout::ShaderReadOnly) {
+  } else if (old_layout == GPUTexture::Layout::ColorAttachment && new_layout == GPUTexture::Layout::ShaderReadOnly) {
     barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
     // TODO: what if a texture is read from the vertex shader?
     src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  }
-  else {
+  } else {
     Assert(false, "Vulkan: unhandled image layout transition: {} to {}", (u32)old_layout, (u32)new_layout);
   }
 
@@ -368,6 +514,21 @@ void Renderer::TransitionImageLayout(
     0, nullptr,
     1, &barrier
   );
+}
+
+void Renderer::CreateExampleCubeMap(VkCommandBuffer command_buffer) {
+  std::shared_ptr<Texture> nx = Texture::load("env/nx.png");
+  std::shared_ptr<Texture> ny = Texture::load("env/ny.png");
+  std::shared_ptr<Texture> nz = Texture::load("env/nz.png");
+  std::shared_ptr<Texture> px = Texture::load("env/px.png");
+  std::shared_ptr<Texture> py = Texture::load("env/py.png");
+  std::shared_ptr<Texture> pz = Texture::load("env/pz.png");
+
+  std::array<std::shared_ptr<Texture>, 6> textures{ px, nx, py, ny, pz, nz };
+
+  UploadTextureCube(command_buffer, textures);
+
+  cubemap_handle = textures[0].get();
 }
 
 void Renderer::CreateCameraUniformBlock() {
@@ -417,8 +578,8 @@ void Renderer::CreateRenderTarget() {
   render_target = render_device->CreateRenderTarget({ color_texture }, depth_texture);
   render_pass = render_target->CreateRenderPass();
 
-  render_pass->SetClearColor(0, 1, 0, 0, 1);
-  render_pass->SetClearDepth(1);
+  render_pass->SetClearColor(0, 0.01, 0.01, 0.01, 1);
+  render_pass->SetClearDepth(1); 
 }
 
 auto Renderer::CreatePipeline(

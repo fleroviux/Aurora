@@ -27,5 +27,5 @@ find_package(SDL2 REQUIRED)
 find_package(Vulkan REQUIRED)
 
 add_executable(Aurora-Game-Vk ${SOURCES} ${HEADERS})
-target_link_libraries(Aurora-Game-Vk PRIVATE Aurora-Renderer ${SDL2_LIBRARY} Aurora-GAL Vulkan::Vulkan nlohmann_json)
+target_link_libraries(Aurora-Game-Vk PRIVATE Aurora-Renderer ${SDL2_LIBRARY} Aurora-GAL Vulkan::Vulkan nlohmann_json shaderc)
 target_include_directories(Aurora-Game-Vk PRIVATE ${SDL2_INCLUDE_DIR})

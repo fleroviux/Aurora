@@ -971,9 +971,12 @@ int main(int argc, char** argv) {
   auto event = SDL_Event{};
   auto scene = new GameObject{};
   scene->add_child(GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf"));
-  //scene->add_child(GLTFLoader{}.parse("cube.gltf"));
-  scene->children()[0]->transform().position() = Vector3{ 0, 0, 5 };
+  //scene->add_child(GLTFLoader{}.parse("porsche/porsche.gltf"));
+  //scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
+  //scene->add_child(GLTFLoader{}.parse("behemoth/behemoth.gltf"));
+  //scene->children()[0]->transform().position() = Vector3{ 0, 2, 0 };
   //scene->children()[1]->transform().position() = Vector3{ 2, 1, 3 };
+
 
   auto camera = new GameObject{};
   camera->add_component<PerspectiveCamera>();
@@ -981,7 +984,7 @@ int main(int argc, char** argv) {
   scene->add_child(camera);
   scene->add_component<Scene>(camera);
 
-  float time = 0.0;
+  //float time = 0.0;
   float x = 0;
   float y = 0;
   float z = 0;
@@ -1017,7 +1020,7 @@ int main(int argc, char** argv) {
 
     camera->transform().rotation().set_euler(x, y, z);
 
-    time += 0.01;
+    //time += 0.01;
     //scene->children()[1]->transform().position().x() = std::sinf(time);
 
     u32 swapchain_image_id;
