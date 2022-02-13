@@ -2,7 +2,9 @@
  * Copyright (C) 2022 fleroviux
  */
 
+#include <algorithm>
 #include <shaderc/shaderc.hpp>
+#include <vector>
 
 #include "renderer.hpp"
 
@@ -28,7 +30,9 @@ void Renderer::Render(
   std::array<VkCommandBuffer, 2>& command_buffers,
   GameObject* scene
 ) {
-  const std::function<void(GameObject*)> traverse = [&](GameObject* object) {
+  std::vector<Renderable> render_list;
+
+  const std::function<void(GameObject*)> record_render_list = [&](GameObject* object) {
     if (!object->visible()) {
       return;
     }
@@ -42,10 +46,13 @@ void Renderer::Render(
     auto mesh = object->get_component<Mesh>();
 
     if (mesh && mesh->visible) {
-      RenderObject(command_buffers, object, mesh);
+      // TODO: is there a faster way to calculate the view-space z-Coordinate?
+      auto view_position = (*camera_data.view) * (transform.world() * transform.position());
+
+      render_list.push_back({object, mesh, view_position.z()});
     }
 
-    for (auto child : object->children()) traverse(child);
+    for (auto child : object->children()) record_render_list(child);
   };
 
   auto render_pass_ = (VulkanRenderPass*)render_pass.get();
@@ -74,6 +81,14 @@ void Renderer::Render(
     uploaded_example_cubemap = true;
   }
 
+  record_render_list(scene);
+
+  // This is going to be super slow :rpog:
+  const auto comparator = [](Renderable& a, Renderable& b) {
+    return a.z < b.z;
+  };
+  std::sort(render_list.begin(), render_list.end(), comparator);
+
   // TODO: verify that scene component exists and camera is non-null.
   UpdateCameraUniformBlock(scene->get_component<Scene>()->camera);
 
@@ -83,7 +98,9 @@ void Renderer::Render(
     VK_SUBPASS_CONTENTS_INLINE
   );
 
-  traverse(scene);
+  for (auto const& renderable : render_list) {
+    RenderObject(command_buffers, renderable.object, renderable.mesh);
+  }
 
   vkCmdEndRenderPass(command_buffers[1]);
 

@@ -17,7 +17,6 @@
 #include <typeindex>
 #include <unordered_map>
 #include <utility>
-#include <vector>
 
 namespace Aura {
 
@@ -35,6 +34,12 @@ struct Renderer {
 
 //private:
   using ProgramKey = std::pair<std::type_index, u32>;
+
+  struct Renderable {
+    GameObject* object;
+    Mesh* mesh;
+    float z;
+  };
 
   void RenderObject(
     std::array<VkCommandBuffer, 2>& command_buffers,
