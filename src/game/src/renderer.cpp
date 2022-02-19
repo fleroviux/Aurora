@@ -177,16 +177,10 @@ void Renderer::RenderObject(
   ubo->Update(uniforms.data(), uniforms.size());
   object_data.bind_group->Bind(2, ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
-  // TODO: creating a std::vector everytime is slow. make this faster.
+  command_buffers[1]->BindGraphicsPipeline(object_data.pipeline);
+  command_buffers[1]->BindVertexBuffers(geometry_data.vbos);
+
   auto descriptor_set = (VkDescriptorSet)object_data.bind_group->Handle();
-  auto vbo_handles = std::vector<VkBuffer>{};
-  auto vbo_offsets = std::vector<VkDeviceSize>{};
-  for (auto& vbo : geometry_data.vbos) {
-    vbo_handles.push_back((VkBuffer)vbo->Handle());
-    vbo_offsets.push_back(0);
-  }
-  vkCmdBindPipeline((VkCommandBuffer)command_buffers[1]->Handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, object_data.pipeline);
-  vkCmdBindVertexBuffers((VkCommandBuffer)command_buffers[1]->Handle(), 0, vbo_handles.size(), vbo_handles.data(), vbo_offsets.data());
   vkCmdBindDescriptorSets(
     (VkCommandBuffer)command_buffers[1]->Handle(),
     VK_PIPELINE_BIND_POINT_GRAPHICS,
