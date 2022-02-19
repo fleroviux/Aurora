@@ -28,7 +28,7 @@ struct Renderer {
   );
 
   void Render(
-    std::array<VkCommandBuffer, 2>& command_buffers,
+    std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers,
     GameObject* scene
   );
 
@@ -42,7 +42,7 @@ struct Renderer {
   };
 
   void RenderObject(
-    std::array<VkCommandBuffer, 2>& command_buffers,
+    std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers,
     GameObject* object,
     Mesh* mesh
   );

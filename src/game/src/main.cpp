@@ -779,13 +779,18 @@ struct Application {
   }
 
   void Render(
-    std::array<VkCommandBuffer, 2>& command_buffers,
-    std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers_,
+    std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers,
     GameObject* scene,
     u32 image_id
   ) {
     renderer.Render(command_buffers, scene);
-    screen_renderer.Render(command_buffers_[1], render_targets[image_id], render_pass, renderer.color_texture);
+
+    screen_renderer.Render(
+      command_buffers[1],
+      render_targets[image_id],
+      render_pass,
+      renderer.color_texture
+    );
   }
 
 //private:
@@ -898,13 +903,9 @@ int main(int argc, char** argv) {
     CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer
   );
 
-  auto test_command_buffers = std::array<std::unique_ptr<CommandBuffer>, 2>{};
-  test_command_buffers[0] = render_device->CreateCommandBuffer(command_pool);
-  test_command_buffers[1] = render_device->CreateCommandBuffer(command_pool);
-
-  auto command_buffers = std::array<VkCommandBuffer, 2>{};
-  command_buffers[0] = (VkCommandBuffer)test_command_buffers[0]->Handle();
-  command_buffers[1] = (VkCommandBuffer)test_command_buffers[1]->Handle();
+  auto command_buffers = std::array<std::unique_ptr<CommandBuffer>, 2>{};
+  command_buffers[0] = render_device->CreateCommandBuffer(command_pool);
+  command_buffers[1] = render_device->CreateCommandBuffer(command_pool);
 
   // TODO: move this closer to the device creation logic?
   auto queue_graphics = VkQueue{};
@@ -933,9 +934,7 @@ int main(int argc, char** argv) {
   scene->add_child(GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf"));
   scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
   //scene->add_child(GLTFLoader{}.parse("behemoth/behemoth.gltf"));
-  scene->children()[0]->transform().rotation().set_euler(0, M_PI * 0.5, 0);
-  scene->children()[0]->transform().position() = Vector3{ 0, 2, 0 };
-  
+
   // test 1000 damaged helmets at once
   //auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf")->children()[0];
   //auto& geometry = helmet->get_component<Mesh>()->geometry;
@@ -959,7 +958,6 @@ int main(int argc, char** argv) {
   scene->add_child(camera);
   scene->add_component<Scene>(camera);
 
-  //float time = 0.0;
   float x = 0;
   float y = 0;
   float z = 0;
@@ -995,31 +993,32 @@ int main(int argc, char** argv) {
 
     camera->transform().rotation().set_euler(x, y, z);
 
-    //time += 0.01;
-    //scene->children()[1]->transform().position().x() = std::sinf(time);
-
     u32 swapchain_image_id;
 
     vkResetFences(device, 1, &fence);
     vkAcquireNextImageKHR(device, swapchain, u64(-1), VK_NULL_HANDLE, fence, &swapchain_image_id);
     vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
 
-    test_command_buffers[0]->Begin(CommandBuffer::OneTimeSubmit::Yes);
-    test_command_buffers[1]->Begin(CommandBuffer::OneTimeSubmit::Yes);
+    command_buffers[0]->Begin(CommandBuffer::OneTimeSubmit::Yes);
+    command_buffers[1]->Begin(CommandBuffer::OneTimeSubmit::Yes);
 
-    app.Render(command_buffers, test_command_buffers, scene, swapchain_image_id);
+    app.Render(command_buffers, scene, swapchain_image_id);
 
-    test_command_buffers[0]->End();
-    test_command_buffers[1]->End();
+    command_buffers[0]->End();
+    command_buffers[1]->End();
 
+    VkCommandBuffer command_buffer_handles[2]{
+      (VkCommandBuffer)command_buffers[0]->Handle(),
+      (VkCommandBuffer)command_buffers[1]->Handle()
+    };
     const auto submit_info = VkSubmitInfo{
       .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
       .pNext = nullptr,
       .waitSemaphoreCount = 0,
       .pWaitSemaphores = nullptr,
       .pWaitDstStageMask = nullptr,
-      .commandBufferCount = command_buffers.size(),
-      .pCommandBuffers = command_buffers.data(),
+      .commandBufferCount = 2,
+      .pCommandBuffers = command_buffer_handles,
       .signalSemaphoreCount = 0,
       .pSignalSemaphores = nullptr
     };

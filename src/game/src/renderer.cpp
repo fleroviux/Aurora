@@ -27,7 +27,7 @@ void Renderer::Initialize(
 }
 
 void Renderer::Render(
-  std::array<VkCommandBuffer, 2>& command_buffers,
+  std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers,
   GameObject* scene
 ) {
   std::vector<Renderable> render_list;
@@ -55,29 +55,8 @@ void Renderer::Render(
     for (auto child : object->children()) record_render_list(child);
   };
 
-  auto render_pass_ = (VulkanRenderPass*)render_pass.get();
-  auto& clear_values = render_pass_->GetClearValues();
-  auto render_pass_begin_info = VkRenderPassBeginInfo{
-    .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-    .pNext = nullptr,
-    .renderPass = render_pass_->Handle(),
-    .framebuffer = (VkFramebuffer)render_target->handle(),
-    .renderArea = VkRect2D{
-      .offset = VkOffset2D{
-        .x = 0,
-        .y = 0
-      },
-      .extent = VkExtent2D{
-        .width = 1600,
-        .height = 900
-      }
-    },
-    .clearValueCount = (u32)clear_values.size(),
-    .pClearValues = clear_values.data()
-  };
-
   if (!uploaded_example_cubemap) {
-    CreateExampleCubeMap(command_buffers[0]);
+    CreateExampleCubeMap((VkCommandBuffer)command_buffers[0]->Handle());
     uploaded_example_cubemap = true;
   }
 
@@ -92,21 +71,17 @@ void Renderer::Render(
   // TODO: verify that scene component exists and camera is non-null.
   UpdateCameraUniformBlock(scene->get_component<Scene>()->camera);
 
-  vkCmdBeginRenderPass(
-    command_buffers[1],
-    &render_pass_begin_info,
-    VK_SUBPASS_CONTENTS_INLINE
-  );
+  command_buffers[1]->BeginRenderPass(render_target, render_pass);
 
   for (auto const& renderable : render_list) {
     RenderObject(command_buffers, renderable.object, renderable.mesh);
   }
 
-  vkCmdEndRenderPass(command_buffers[1]);
+  command_buffers[1]->EndRenderPass();
 
   // TODO: use a subpass dependency to transition image layout.
   TransitionImageLayout(
-    command_buffers[1],
+    (VkCommandBuffer)command_buffers[1]->Handle(),
     color_texture,
     GPUTexture::Layout::ColorAttachment,
     GPUTexture::Layout::ShaderReadOnly
@@ -114,7 +89,7 @@ void Renderer::Render(
 }
 
 void Renderer::RenderObject(
-  std::array<VkCommandBuffer, 2>& command_buffers,
+  std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers,
   GameObject* object,
   Mesh* mesh
 ) {
@@ -180,7 +155,7 @@ void Renderer::RenderObject(
       auto match = texture_cache.find(texture.get());
 
       if (match == texture_cache.end()) {
-        UploadTexture(command_buffers[0], texture);
+        UploadTexture((VkCommandBuffer)command_buffers[0]->Handle(), texture);
         match = texture_cache.find(texture.get());
       }
 
@@ -210,10 +185,10 @@ void Renderer::RenderObject(
     vbo_handles.push_back((VkBuffer)vbo->Handle());
     vbo_offsets.push_back(0);
   }
-  vkCmdBindPipeline(command_buffers[1], VK_PIPELINE_BIND_POINT_GRAPHICS, object_data.pipeline);
-  vkCmdBindVertexBuffers(command_buffers[1], 0, vbo_handles.size(), vbo_handles.data(), vbo_offsets.data());
+  vkCmdBindPipeline((VkCommandBuffer)command_buffers[1]->Handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, object_data.pipeline);
+  vkCmdBindVertexBuffers((VkCommandBuffer)command_buffers[1]->Handle(), 0, vbo_handles.size(), vbo_handles.data(), vbo_offsets.data());
   vkCmdBindDescriptorSets(
-    command_buffers[1],
+    (VkCommandBuffer)command_buffers[1]->Handle(),
     VK_PIPELINE_BIND_POINT_GRAPHICS,
     (VkPipelineLayout)pipeline_layout->Handle(),
     0,
@@ -237,13 +212,13 @@ void Renderer::RenderObject(
   }
 
   vkCmdBindIndexBuffer(
-    command_buffers[1],
+    (VkCommandBuffer)command_buffers[1]->Handle(),
     (VkBuffer)geometry_data.ibo->Handle(),
     0,
     index_type
   );
 
-  vkCmdDrawIndexed(command_buffers[1], index_count, 1, 0, 0, 0);
+  vkCmdDrawIndexed((VkCommandBuffer)command_buffers[1]->Handle(), index_count, 1, 0, 0, 0);
 }
 
 void Renderer::CompileShaderProgram(AnyPtr<Material> material) {
