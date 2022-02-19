@@ -9,8 +9,16 @@
 #include <aurora/gal/render_pass.hpp>
 #include <aurora/any_ptr.hpp>
 #include <aurora/array_view.hpp>
+#include <aurora/integer.hpp>
 
 namespace Aura {
+
+// subset of VkIndexType:
+// https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkIndexType
+enum class IndexDataType {
+  UInt16 = 0,
+  UInt32 = 1
+};
 
 struct CommandBuffer {
   enum class OneTimeSubmit {
@@ -34,6 +42,12 @@ struct CommandBuffer {
     ArrayView<std::unique_ptr<Buffer>> buffers,
     u32 first_binding = 0
   ) = 0;
+  virtual void BindIndexBuffer(
+    AnyPtr<Buffer> buffer,
+    IndexDataType data_type,
+    size_t offset = 0
+  ) = 0;
+  virtual void DrawIndexed(u32 index_count) = 0;
 };
 
 } // namespace Aura

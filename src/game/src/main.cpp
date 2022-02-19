@@ -275,17 +275,16 @@ void draw_geometry(
   auto command_buffer_ = (VkCommandBuffer)command_buffer->Handle();
 
   command_buffer->BindGraphicsPipeline(entry.pipeline);
+  command_buffer->BindIndexBuffer(entry.ibo, index_buffer.data_type());
   command_buffer->BindVertexBuffers(entry.vbos);
   vkCmdBindDescriptorSets(command_buffer_, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
 
   switch (index_buffer.data_type()) {
     case IndexDataType::UInt16:
-      vkCmdBindIndexBuffer(command_buffer_, (VkBuffer)entry.ibo->Handle(), 0, VK_INDEX_TYPE_UINT16);
-      vkCmdDrawIndexed(command_buffer_, index_buffer.size()/sizeof(u16), 1, 0, 0, 0);
+      command_buffer->DrawIndexed(index_buffer.size() / sizeof(u16));
       break;
     case IndexDataType::UInt32:
-      vkCmdBindIndexBuffer(command_buffer_, (VkBuffer)entry.ibo->Handle(), 0, VK_INDEX_TYPE_UINT32);
-      vkCmdDrawIndexed(command_buffer_, index_buffer.size()/sizeof(u32), 1, 0, 0, 0);
+      command_buffer->DrawIndexed(index_buffer.size() / sizeof(u32));
       break;
   }
 }

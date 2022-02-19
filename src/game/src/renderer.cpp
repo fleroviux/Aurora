@@ -177,7 +177,10 @@ void Renderer::RenderObject(
   ubo->Update(uniforms.data(), uniforms.size());
   object_data.bind_group->Bind(2, ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
+  auto& index_buffer = geometry->index_buffer;
+
   command_buffers[1]->BindGraphicsPipeline(object_data.pipeline);
+  command_buffers[1]->BindIndexBuffer(geometry_data.ibo, index_buffer.data_type());
   command_buffers[1]->BindVertexBuffers(geometry_data.vbos);
 
   auto descriptor_set = (VkDescriptorSet)object_data.bind_group->Handle();
@@ -192,27 +195,14 @@ void Renderer::RenderObject(
     nullptr
   );
 
-  auto& index_buffer = geometry->index_buffer;
-
-  auto index_type = VkIndexType{};
-  auto index_count = 0UL;
-
-  if (index_buffer.data_type() == IndexDataType::UInt16) {
-    index_type = VK_INDEX_TYPE_UINT16;
-    index_count = index_buffer.size() / sizeof(u16);
-  } else {
-    index_type = VK_INDEX_TYPE_UINT32;
-    index_count = index_buffer.size() / sizeof(u32);
+  switch (index_buffer.data_type()) {
+    case IndexDataType::UInt16:
+      command_buffers[1]->DrawIndexed(index_buffer.size() / sizeof(u16));
+      break;
+    case IndexDataType::UInt32:
+      command_buffers[1]->DrawIndexed(index_buffer.size() / sizeof(u32));
+      break;
   }
-
-  vkCmdBindIndexBuffer(
-    (VkCommandBuffer)command_buffers[1]->Handle(),
-    (VkBuffer)geometry_data.ibo->Handle(),
-    0,
-    index_type
-  );
-
-  vkCmdDrawIndexed((VkCommandBuffer)command_buffers[1]->Handle(), index_count, 1, 0, 0, 0);
 }
 
 void Renderer::CompileShaderProgram(AnyPtr<Material> material) {

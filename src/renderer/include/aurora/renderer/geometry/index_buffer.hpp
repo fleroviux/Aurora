@@ -4,17 +4,13 @@
 
 #pragma once
 
+#include <aurora/gal/render_device.hpp>
 #include <aurora/renderer/gpu_resource.hpp>
 #include <aurora/array_view.hpp>
 #include <aurora/integer.hpp>
 #include <vector>
 
 namespace Aura {
-
-enum class IndexDataType {
-  UInt16,
-  UInt32
-};
 
 struct IndexBuffer final : GPUResource {
   IndexBuffer(

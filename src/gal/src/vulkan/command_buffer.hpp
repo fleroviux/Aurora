@@ -107,7 +107,17 @@ struct VulkanCommandBuffer final : CommandBuffer {
     vkCmdBindVertexBuffers(buffer, first_binding, buffers.size(), buffer_handles, buffer_offsets);
   }
 
-  
+  void BindIndexBuffer(
+    AnyPtr<Buffer> buffer,
+    IndexDataType data_type,
+    size_t offset = 0
+  ) override {
+    vkCmdBindIndexBuffer(this->buffer, (VkBuffer)buffer->Handle(), offset, (VkIndexType)data_type);
+  }
+
+  void DrawIndexed(u32 index_count) override {
+    vkCmdDrawIndexed(buffer, index_count, 1, 0, 0, 0);
+  }
 
 private:
   VkDevice device;

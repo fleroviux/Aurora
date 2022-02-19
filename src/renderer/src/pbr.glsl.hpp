@@ -265,6 +265,9 @@ constexpr auto pbr_frag = R"(
     my_light.color = vec3(10.0);
     result += ShadeDirectLight(geometry, my_light, view_dir);
 
+    // Add a very simple ambient lighting term
+    result += geometry.albedo * 0.05;
+
     // TODO: make environment reflection more physically reflect.
     {
       vec3 reflect_dir = reflect(-view_dir, geometry.normal);
