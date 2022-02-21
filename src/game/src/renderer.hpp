@@ -63,7 +63,9 @@ struct Renderer {
     VkCommandBuffer command_buffer,
     AnyPtr<GPUTexture> texture,
     GPUTexture::Layout old_layout,
-    GPUTexture::Layout new_layout
+    GPUTexture::Layout new_layout,
+    u32 base_mip = 0,
+    u32 mip_count = 1
   );
 
   void CreateExampleCubeMap(VkCommandBuffer command_buffer);

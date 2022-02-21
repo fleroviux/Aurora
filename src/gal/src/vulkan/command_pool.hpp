@@ -18,7 +18,7 @@ struct VulkanCommandPool final : CommandPool {
       .queueFamilyIndex = queue_family
     };
 
-    if (!vkCreateCommandPool(device, &info, nullptr, &pool) != VK_SUCCESS) {
+    if (vkCreateCommandPool(device, &info, nullptr, &pool) != VK_SUCCESS) {
       Assert(false, "Vulkan: failed to create a command pool");
     }
   }

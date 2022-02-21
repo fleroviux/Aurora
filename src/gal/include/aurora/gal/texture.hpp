@@ -60,7 +60,8 @@ struct GPUTexture {
   virtual auto width() const -> u32 = 0;
   virtual auto height() const -> u32 = 0;
   virtual auto depth() const -> u32 = 0;
-  virtual auto layers() const->u32 = 0;
+  virtual auto layers() const -> u32 = 0;
+  virtual auto mip_levels() const -> u32 = 0;
 };
 
 constexpr auto operator|(

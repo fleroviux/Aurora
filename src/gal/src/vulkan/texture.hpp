@@ -27,12 +27,14 @@ struct VulkanTexture final : GPUTexture {
   auto height() const -> u32 override { return height_; }
   auto depth() const -> u32 override { return depth_; }
   auto layers() const -> u32 override { return layers_; }
+  auto mip_levels() const -> u32 override { return mip_levels_; }
 
   static auto create(
     VkPhysicalDevice physical_device,
     VkDevice device,
     u32 width,
     u32 height,
+    u32 mip_levels,
     Format format,
     Usage usage
   ) -> std::unique_ptr<VulkanTexture> {
@@ -47,7 +49,7 @@ struct VulkanTexture final : GPUTexture {
         .height = height,
         .depth = 1
       },
-      .mipLevels = 1,
+      .mipLevels = mip_levels,
       .arrayLayers = 1,
       .samples = VK_SAMPLE_COUNT_1_BIT,
       .tiling = VK_IMAGE_TILING_OPTIMAL,
@@ -75,6 +77,7 @@ struct VulkanTexture final : GPUTexture {
     texture->height_ = height;
     texture->depth_ = 1;
     texture->layers_ = 1;
+    texture->mip_levels_ = mip_levels;
     texture->AllocateMemory(physical_device);
     texture->CreateImageView();
 
@@ -135,7 +138,6 @@ struct VulkanTexture final : GPUTexture {
       .pQueueFamilyIndices = nullptr,
       .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
     };
-
 
     auto image = VkImage{};
 
@@ -200,7 +202,7 @@ private:
       .subresourceRange = VkImageSubresourceRange{
         .aspectMask = GetImageAspectFromFormat(format()),
         .baseMipLevel = 0,
-        .levelCount = 1,
+        .levelCount = mip_levels(),
         .baseArrayLayer = 0,
         .layerCount = 1
       }
@@ -229,7 +231,7 @@ private:
       .subresourceRange = VkImageSubresourceRange{
         .aspectMask = GetImageAspectFromFormat(format()),
         .baseMipLevel = 0,
-        .levelCount = 1,
+        .levelCount = mip_levels(),
         .baseArrayLayer = 0,
         .layerCount = 6
       }
@@ -263,6 +265,7 @@ private:
   u32 height_;
   u32 depth_;
   u32 layers_;
+  u32 mip_levels_ = 1;
   bool image_owned_ = true;
 };
 

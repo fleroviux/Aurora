@@ -79,7 +79,8 @@ struct RenderDevice {
     u32 width,
     u32 height,
     GPUTexture::Format format,
-    GPUTexture::Usage usage
+    GPUTexture::Usage usage,
+    u32 mip_levels = 1
   ) -> std::unique_ptr<GPUTexture> = 0;
 
   virtual auto CreateTexture2DFromSwapchainImage(
