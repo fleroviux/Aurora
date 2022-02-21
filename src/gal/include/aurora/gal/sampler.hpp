@@ -31,6 +31,8 @@ struct Sampler {
     FilterMode mag_filter = FilterMode::Nearest;
     FilterMode min_filter = FilterMode::Nearest;
     FilterMode mip_filter = FilterMode::Nearest;
+    bool anisotropy = false;
+    int max_anisotropy = 1;
   };
 
   virtual ~Sampler() = default;

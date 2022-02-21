@@ -282,7 +282,9 @@ void Renderer::UploadTexture(
     .address_mode_v = Sampler::AddressMode::Repeat,
     .min_filter = Sampler::FilterMode::Linear,
     .mag_filter = Sampler::FilterMode::Linear,
-    .mip_filter = Sampler::FilterMode::Linear
+    .mip_filter = Sampler::FilterMode::Linear,
+    .anisotropy = true,
+    .max_anisotropy = 16
   });
 
   auto region = VkBufferImageCopy{

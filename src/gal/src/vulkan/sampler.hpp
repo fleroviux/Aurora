@@ -11,6 +11,7 @@ namespace Aura {
 
 struct VulkanSampler final : Sampler {
   VulkanSampler(VkDevice device, Config const& config) : device_(device) {
+    // TODO: clamp anisotropy level to the hardware-supported level.
     auto info = VkSamplerCreateInfo{
      .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
      .pNext = nullptr,
@@ -22,7 +23,8 @@ struct VulkanSampler final : Sampler {
      .addressModeV = (VkSamplerAddressMode)config.address_mode_v,
      .addressModeW = (VkSamplerAddressMode)config.address_mode_w,
      .mipLodBias = 0,
-     .anisotropyEnable = VK_FALSE,
+     .anisotropyEnable = config.anisotropy ? VK_TRUE : VK_FALSE,
+     .maxAnisotropy = (float)config.max_anisotropy,
      .compareEnable = VK_FALSE,
      .compareOp = VK_COMPARE_OP_NEVER,
      .minLod = 0,
