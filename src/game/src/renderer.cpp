@@ -180,20 +180,9 @@ void Renderer::RenderObject(
   auto& index_buffer = geometry->index_buffer;
 
   command_buffers[1]->BindGraphicsPipeline(object_data.pipeline);
+  command_buffers[1]->BindGraphicsBindGroup(0, pipeline_layout, object_data.bind_group);
   command_buffers[1]->BindIndexBuffer(geometry_data.ibo, index_buffer.data_type());
   command_buffers[1]->BindVertexBuffers(geometry_data.vbos);
-
-  auto descriptor_set = (VkDescriptorSet)object_data.bind_group->Handle();
-  vkCmdBindDescriptorSets(
-    (VkCommandBuffer)command_buffers[1]->Handle(),
-    VK_PIPELINE_BIND_POINT_GRAPHICS,
-    (VkPipelineLayout)pipeline_layout->Handle(),
-    0,
-    1,
-    &descriptor_set,
-    0,
-    nullptr
-  );
 
   switch (index_buffer.data_type()) {
     case IndexDataType::UInt16:

@@ -932,7 +932,7 @@ int main(int argc, char** argv) {
   auto scene = new GameObject{};
   scene->add_child(GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf"));
   scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
-  //scene->add_child(GLTFLoader{}.parse("behemoth/behemoth.gltf"));
+  //scene->add_child(GLTFLoader{}.parse("porsche/porsche.gltf"));
 
   // test 1000 damaged helmets at once
   //auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf")->children()[0];

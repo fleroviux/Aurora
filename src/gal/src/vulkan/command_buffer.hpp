@@ -89,6 +89,24 @@ struct VulkanCommandBuffer final : CommandBuffer {
     vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)handle);
   }
 
+  void BindGraphicsBindGroup(
+    u32 set,
+    AnyPtr<PipelineLayout> pipeline_layout,
+    AnyPtr<BindGroup> bind_group
+  ) override {
+    auto vk_pipeline_layout = (VkPipelineLayout)pipeline_layout->Handle();
+    auto vk_descriptor_set = (VkDescriptorSet)bind_group->Handle();
+
+    vkCmdBindDescriptorSets(
+      buffer,
+      VK_PIPELINE_BIND_POINT_GRAPHICS,
+      vk_pipeline_layout,
+      set,
+      1, &vk_descriptor_set,
+      0, nullptr
+    );
+  }
+
   void BindVertexBuffers(
     ArrayView<std::unique_ptr<Buffer>> buffers,
     u32 first_binding = 0
