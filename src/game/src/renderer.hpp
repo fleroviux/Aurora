@@ -92,7 +92,7 @@ struct Renderer {
 
   // TODO: make this code more sensible.
   static auto GetVkFormatFromAttribute(
-    VertexBufferLayout::Attribute const& attribute
+    Geometry::Attribute const& attribute
   ) -> VkFormat;
 
   VkPhysicalDevice physical_device;

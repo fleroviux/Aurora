@@ -29,7 +29,7 @@ private:
   struct Accessor {
     size_t buffer_view;
     size_t count;
-    VertexBufferLayout::Attribute attribute;
+    Geometry::Attribute attribute;
   };
 
   struct Mesh {
@@ -44,8 +44,8 @@ private:
   void load_buffer_views(nlohmann::json const& gltf);
   void load_accessors(nlohmann::json const& gltf);
   void load_meshes(nlohmann::json const& gltf);
-  auto load_primitive_idx(nlohmann::json const& primitive) -> IndexBuffer;
-  auto load_primitive_vtx(nlohmann::json const& primitive) -> std::vector<VertexBuffer>;
+  void load_primitive_idx(nlohmann::json const& primitive, std::shared_ptr<Geometry>& geometry);
+  void load_primitive_vtx(nlohmann::json const& primitive, std::shared_ptr<Geometry>& geometry);
   void load_images(nlohmann::json const& gltf);
   void load_materials(nlohmann::json const& gltf);
   auto load_node(nlohmann::json const& nodes, size_t id) -> GameObject*;

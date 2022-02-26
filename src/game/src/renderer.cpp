@@ -130,14 +130,14 @@ void Renderer::RenderObject(
     // Upload index buffer
     geometry_data.ibo = render_device->CreateBufferWithData(
       Buffer::Usage::IndexBuffer,
-      geometry->index_buffer.view<u8>()
+      geometry->get_index_buffer()->view<u8>()
     );
 
     // Upload vertex buffers
-    for (auto const& buffer : geometry->buffers) {
+    for (auto const& buffer : geometry->get_vertex_buffers()) {
       geometry_data.vbos.push_back(render_device->CreateBufferWithData(
         Buffer::Usage::VertexBuffer,
-        buffer.view<u8>()
+        buffer->view<u8>()
       ));
     }
   }
@@ -177,19 +177,19 @@ void Renderer::RenderObject(
   ubo->Update(uniforms.data(), uniforms.size());
   object_data.bind_group->Bind(2, ubo, BindGroupLayout::Entry::Type::UniformBuffer);
 
-  auto& index_buffer = geometry->index_buffer;
+  auto& index_buffer = geometry->get_index_buffer();
 
   command_buffers[1]->BindGraphicsPipeline(object_data.pipeline);
   command_buffers[1]->BindGraphicsBindGroup(0, pipeline_layout, object_data.bind_group);
-  command_buffers[1]->BindIndexBuffer(geometry_data.ibo, index_buffer.data_type());
+  command_buffers[1]->BindIndexBuffer(geometry_data.ibo, index_buffer->data_type());
   command_buffers[1]->BindVertexBuffers(geometry_data.vbos);
 
-  switch (index_buffer.data_type()) {
+  switch (index_buffer->data_type()) {
     case IndexDataType::UInt16:
-      command_buffers[1]->DrawIndexed(index_buffer.size() / sizeof(u16));
+      command_buffers[1]->DrawIndexed(index_buffer->size() / sizeof(u16));
       break;
     case IndexDataType::UInt32:
-      command_buffers[1]->DrawIndexed(index_buffer.size() / sizeof(u32));
+      command_buffers[1]->DrawIndexed(index_buffer->size() / sizeof(u32));
       break;
   }
 }
@@ -837,29 +837,28 @@ void Renderer::BuildPipelineGeometryInfo(
   std::vector<VkVertexInputBindingDescription>& bindings,
   std::vector<VkVertexInputAttributeDescription>& attributes
 ) {
-  for (auto& buffer : geometry->buffers) {
-    auto& layout = buffer.layout();
+  for (auto& buffer : geometry->get_vertex_buffers()) {
     auto binding = u32(bindings.size());
 
     bindings.push_back(VkVertexInputBindingDescription{
       .binding = binding,
-      .stride = u32(layout.stride),
+      .stride = u32(buffer->stride()),
       .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
     });
+  }
 
-    for (auto& attribute : layout.attributes) {
-      attributes.push_back(VkVertexInputAttributeDescription{
-        .location = u32(attribute.index),
-        .binding = binding,
-        .format = GetVkFormatFromAttribute(attribute),
-        .offset = u32(attribute.offset)
-      });
-    }
+  for (auto const& attribute : geometry->get_attributes()) {
+    attributes.push_back(VkVertexInputAttributeDescription{
+      .location = u32(attribute.location),
+      .binding = u32(attribute.buffer),
+      .format = GetVkFormatFromAttribute(attribute),
+      .offset = u32(attribute.offset)
+    });
   }
 }
 
 auto Renderer::GetVkFormatFromAttribute(
-  VertexBufferLayout::Attribute const& attribute
+  Geometry::Attribute const& attribute
 ) -> VkFormat {
   const auto components = attribute.components;
   const bool normalized = attribute.normalized;

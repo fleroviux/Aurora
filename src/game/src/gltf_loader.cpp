@@ -148,12 +148,13 @@ void GLTFLoader::load_meshes(nlohmann::json const& gltf) {
         Assert(primitive.contains("indices"),
           "GLTFLoader: non-indexed geometry is unsupported");
 
+        auto geometry = std::make_shared<Geometry>();
+        load_primitive_idx(primitive, geometry);
+        load_primitive_vtx(primitive, geometry);
+
         // TODO: material is not a required field - fallback to a standard material.
         mesh_out.primitives.push_back(Mesh::Primitive{
-          .geometry = std::make_shared<Geometry>(
-            load_primitive_idx(primitive),
-            load_primitive_vtx(primitive)
-          ),
+          .geometry = geometry,
           .material = materials_[primitive["material"].get<size_t>()]
         });
       }
@@ -163,9 +164,10 @@ void GLTFLoader::load_meshes(nlohmann::json const& gltf) {
   }
 }
 
-auto GLTFLoader::load_primitive_idx(
-  nlohmann::json const& primitive
-) -> IndexBuffer {
+void GLTFLoader::load_primitive_idx(
+  nlohmann::json const& primitive,
+  std::shared_ptr<Geometry>& geometry
+) {
   auto const& accessor = accessors_[primitive["indices"].get<size_t>()];
   auto const& buffer_view = buffer_views_[accessor.buffer_view];
   auto const& attribute = accessor.attribute;
@@ -186,24 +188,24 @@ auto GLTFLoader::load_primitive_idx(
       Assert(false, "GLTFLoader: bad index accessor data type, must be uint16 or uint32");
   }
 
-  auto buffer = IndexBuffer{data_type, accessor.count};
+  auto buffer = std::make_shared<IndexBuffer>(data_type, accessor.count);
 
-  std::memcpy(buffer.data(), buffer_view.data, accessor.count * data_width);
+  std::memcpy(buffer->data(), buffer_view.data, accessor.count * data_width);
 
-  return buffer;
+  geometry->set_index_buffer(buffer);
 }
 
-auto GLTFLoader::load_primitive_vtx(
-  nlohmann::json const& primitive
-) -> std::vector<VertexBuffer> {
+void GLTFLoader::load_primitive_vtx(
+  nlohmann::json const& primitive,
+  std::shared_ptr<Geometry>& geometry
+) {
   auto const& attributes = primitive["attributes"];
-  
-  auto buffers = std::vector<VertexBuffer>{};
-  VertexBufferLayout* layout_table[buffer_views_.size()];
 
-  for (auto& v : layout_table) v = nullptr;
+  int buffer_id_table[buffer_views_.size()];
 
-  const auto add_attribute = [&](char const* name, size_t index) {
+  for (auto& buffer_id : buffer_id_table) buffer_id = -1;
+
+  const auto add_attribute = [&](char const* name, size_t location) {
     if (!attributes.contains(name)) {
       return;
     }
@@ -211,33 +213,30 @@ auto GLTFLoader::load_primitive_vtx(
     auto const& accessor = accessors_[attributes[name].get<size_t>()];
     auto const& attribute = accessor.attribute;
 
-    auto layout = layout_table[accessor.buffer_view];
+    auto buffer_id = buffer_id_table[accessor.buffer_view];
 
-    if (layout == nullptr) {
+    // TODO: reuse buffers across primitives if possible.
+    if (buffer_id == -1) {
       auto const& buffer_view = buffer_views_[accessor.buffer_view];
 
       auto byte_stride = buffer_view.byte_stride;
 
-      // Handle non-interleaved buffers (stride = 0)
-      // TODO: check if this is robust enough
       if (byte_stride == 0) {
         byte_stride = buffer_view.byte_length / accessor.count;
       }
 
-      auto buffer = VertexBuffer{VertexBufferLayout{
-        .stride = byte_stride,
-        .attributes = {}
-      }, accessor.count};
+      auto buffer = std::make_shared<VertexBuffer>(byte_stride, accessor.count);
 
-      std::memcpy(buffer.data(), buffer_view.data, buffer_view.byte_length);
+      std::memcpy(buffer->data(), buffer_view.data, buffer_view.byte_length);
 
-      buffers.push_back(std::move(buffer));
-      layout = &buffers.back().layout();
-      layout_table[accessor.buffer_view] = layout; 
+      buffer_id = geometry->get_vertex_buffers().size();
+      buffer_id_table[accessor.buffer_view] = buffer_id;
+      geometry->add_vertex_buffer(buffer);
     }
 
-    layout->attributes.push_back(VertexBufferLayout::Attribute{
-      .index = index,
+    geometry->add_attribute(Geometry::Attribute{
+      .location = location,
+      .buffer = u32(buffer_id),
       .data_type = attribute.data_type,
       .components = attribute.components,
       .normalized = attribute.normalized,
@@ -249,8 +248,6 @@ auto GLTFLoader::load_primitive_vtx(
   add_attribute("NORMAL", 1);
   add_attribute("TEXCOORD_0", 2);
   add_attribute("COLOR_0", 3);
-
-  return buffers;
 }
 
 void GLTFLoader::load_images(nlohmann::json const& gltf) {

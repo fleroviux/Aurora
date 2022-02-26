@@ -28,24 +28,24 @@ void configure_pipeline_geometry(
   auto bindings = new std::vector<VkVertexInputBindingDescription>{};
   auto attributes = new std::vector<VkVertexInputAttributeDescription>{};
 
-  for (auto& buffer : geometry->buffers) {
-    auto& layout = buffer.layout();
+  for (auto& buffer : geometry->get_vertex_buffers()) {
+    //auto& layout = buffer.layout();
     auto binding = u32(bindings->size());
 
     bindings->push_back(VkVertexInputBindingDescription{
       .binding = binding,
-      .stride = u32(layout.stride),
+      .stride = u32(buffer->stride()),
       .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
     });
+  }
 
-    for (auto& attribute : layout.attributes) {
-      attributes->push_back(VkVertexInputAttributeDescription{
-        .location = u32(attribute.index),
-        .binding = binding,
-        .format = Renderer::GetVkFormatFromAttribute(attribute),
-        .offset = u32(attribute.offset)
-      });
-    }
+  for (auto const& attribute : geometry->get_attributes()) {
+    attributes->push_back(VkVertexInputAttributeDescription{
+      .location = u32(attribute.location),
+      .binding = u32(attribute.buffer),
+      .format = Renderer::GetVkFormatFromAttribute(attribute),
+      .offset = u32(attribute.offset)
+    });
   }
 
   pipeline.pVertexInputState = new VkPipelineVertexInputStateCreateInfo{
@@ -247,12 +247,12 @@ void upload_geometry(
     // TODO: write ArrayBuffer constructor (and maybe a cast operator) which accepts a std::vector
     // Also maybe support an ArrayView that doesn't allow modification to the underlying data.
 
-    auto& index_buffer = geometry->index_buffer;
+    auto& index_buffer = geometry->get_index_buffer();
 
-    entry.ibo = render_device->CreateBufferWithData(Buffer::Usage::IndexBuffer, index_buffer.view<u8>());
+    entry.ibo = render_device->CreateBufferWithData(Buffer::Usage::IndexBuffer, index_buffer->view<u8>());
 
-    for (auto& buffer : geometry->buffers) {
-      auto vbo = render_device->CreateBufferWithData(Buffer::Usage::VertexBuffer, buffer.view<u8>());
+    for (auto& buffer : geometry->get_vertex_buffers()) {
+      auto vbo = render_device->CreateBufferWithData(Buffer::Usage::VertexBuffer, buffer->view<u8>());
 
       entry.vk_vbos.push_back((VkBuffer)vbo->Handle());
       entry.vbos.push_back(std::move(vbo));
@@ -270,21 +270,21 @@ void draw_geometry(
   Geometry const* geometry
 ) {
   auto& entry = geometry_cache[geometry];
-  auto const& index_buffer = geometry->index_buffer;
+  auto const& index_buffer = geometry->get_index_buffer();
 
   auto command_buffer_ = (VkCommandBuffer)command_buffer->Handle();
 
   command_buffer->BindGraphicsPipeline(entry.pipeline);
-  command_buffer->BindIndexBuffer(entry.ibo, index_buffer.data_type());
+  command_buffer->BindIndexBuffer(entry.ibo, index_buffer->data_type());
   command_buffer->BindVertexBuffers(entry.vbos);
   vkCmdBindDescriptorSets(command_buffer_, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
 
-  switch (index_buffer.data_type()) {
+  switch (index_buffer->data_type()) {
     case IndexDataType::UInt16:
-      command_buffer->DrawIndexed(index_buffer.size() / sizeof(u16));
+      command_buffer->DrawIndexed(index_buffer->size() / sizeof(u16));
       break;
     case IndexDataType::UInt32:
-      command_buffer->DrawIndexed(index_buffer.size() / sizeof(u32));
+      command_buffer->DrawIndexed(index_buffer->size() / sizeof(u32));
       break;
   }
 }
@@ -621,40 +621,7 @@ static u16 indices[] = {
   2, 3, 0
 };
 
-static const auto fullscreen_quad = Geometry{
-  IndexBuffer{
-    IndexDataType::UInt16,
-    std::vector<u8>{
-      (u8*)indices,
-      (u8*)indices + sizeof(indices)
-    }
-  },
-  std::vector<VertexBuffer>{VertexBuffer{
-    VertexBufferLayout{
-      .stride = sizeof(float) * 8,
-      .attributes = std::vector<VertexBufferLayout::Attribute>{
-        {
-          .index = 0,
-          .data_type = VertexDataType::Float32,
-          .components = 3,
-          .normalized = false,
-          .offset = 0
-        },
-        {
-          .index = 1,
-          .data_type = VertexDataType::Float32,
-          .components = 2,
-          .normalized = false,
-          .offset = sizeof(float) * 6
-        }
-      }
-    },
-    std::vector<u8>{
-      (u8*)vertices,
-      (u8*)vertices + sizeof(vertices)
-    }
-  }}
-};
+static Geometry fullscreen_quad;
 
 struct ScreenRenderer {
   ScreenRenderer(VkPhysicalDevice physical_device, VkDevice device)
@@ -845,6 +812,28 @@ int main(int argc, char** argv) {
   (void)argc;
   (void)argv;
 
+  // Create fullscreen quad geometry
+  auto fs_quad_ibo = std::make_shared<IndexBuffer>(IndexDataType::UInt16, std::vector<u8>{(u8*)indices, (u8*)indices + sizeof(indices)});
+  auto fs_quad_vbo = std::make_shared<VertexBuffer>(sizeof(float) * 8, std::vector<u8>((u8*)vertices, (u8*)vertices + sizeof(vertices)));
+  fullscreen_quad.set_index_buffer(fs_quad_ibo);
+  fullscreen_quad.add_vertex_buffer(fs_quad_vbo);
+  fullscreen_quad.add_attribute({
+    .location = 0,
+    .buffer = 0,
+    .data_type = VertexDataType::Float32,
+    .components = 3,
+    .normalized = false,
+    .offset = 0
+  });
+  fullscreen_quad.add_attribute({
+    .location = 1,
+    .buffer = 0,
+    .data_type = VertexDataType::Float32,
+    .components = 2,
+    .normalized = false,
+    .offset = sizeof(float) * 6
+  });
+
   SDL_Init(SDL_INIT_VIDEO);
 
   auto window = SDL_CreateWindow(
@@ -953,7 +942,7 @@ int main(int argc, char** argv) {
 
   auto camera = new GameObject{};
   camera->add_component<PerspectiveCamera>();
-  camera->transform().position().z() = -3;
+  camera->transform().position().z() = 3;
   scene->add_child(camera);
   scene->add_component<Scene>(camera);
 

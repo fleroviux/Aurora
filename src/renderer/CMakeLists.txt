@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 
 set(SOURCES
-  src/renderer.cpp
   src/texture.cpp
 )
 
@@ -23,7 +22,6 @@ set(HEADERS_PUBLIC
   include/aurora/renderer/geometry/vertex_buffer.hpp
   include/aurora/renderer/gpu_resource.hpp
   include/aurora/renderer/material.hpp
-  include/aurora/renderer/renderer.hpp
   include/aurora/renderer/texture.hpp
   include/aurora/renderer/uniform_block.hpp
 )
