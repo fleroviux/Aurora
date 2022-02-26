@@ -720,7 +720,7 @@ private:
 
   // TODO: get rid of this once we reworked the shader
   void CreateUniformBuffer() {
-    auto transform = Matrix4::perspective_dx(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0);
+    auto transform = Matrix4::perspective_vk(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0);
 
     ubo = render_device->CreateBufferWithData(
       Aura::Buffer::Usage::UniformBuffer,
@@ -965,14 +965,12 @@ int main(int argc, char** argv) {
     auto state = SDL_GetKeyboardState(nullptr);
     auto const& camera_local = camera->transform().local();
 
-    // TODO: make camera controls consistent with OpenGL renderer - different projection matrix to blame?
-
     if (state[SDL_SCANCODE_W]) {
-      camera->transform().position() += camera_local[2].xyz() * 0.05;
+      camera->transform().position() -= camera_local[2].xyz() * 0.05;
     }
 
     if (state[SDL_SCANCODE_S]) {
-      camera->transform().position() -= camera_local[2].xyz() * 0.05;
+      camera->transform().position() += camera_local[2].xyz() * 0.05;
     }
 
     if (state[SDL_SCANCODE_A]) {
@@ -983,12 +981,12 @@ int main(int argc, char** argv) {
       camera->transform().position() += camera_local[0].xyz() * 0.05;
     }
 
-    if (state[SDL_SCANCODE_UP])    x -= 0.01;
-    if (state[SDL_SCANCODE_DOWN])  x += 0.01;
-    if (state[SDL_SCANCODE_LEFT])  y -= 0.01;
-    if (state[SDL_SCANCODE_RIGHT]) y += 0.01;
-    if (state[SDL_SCANCODE_M])     z += 0.01;
-    if (state[SDL_SCANCODE_N])     z -= 0.01;
+    if (state[SDL_SCANCODE_UP])    x += 0.01;
+    if (state[SDL_SCANCODE_DOWN])  x -= 0.01;
+    if (state[SDL_SCANCODE_LEFT])  y += 0.01;
+    if (state[SDL_SCANCODE_RIGHT]) y -= 0.01;
+    if (state[SDL_SCANCODE_M])     z -= 0.01;
+    if (state[SDL_SCANCODE_N])     z += 0.01;
 
     camera->transform().rotation().set_euler(x, y, z);
 
