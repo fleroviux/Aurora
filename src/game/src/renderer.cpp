@@ -596,7 +596,7 @@ void Renderer::UpdateCameraUniformBlock(GameObject* camera) {
   if (camera->has_component<PerspectiveCamera>()) {
     // TODO: switch to using an OpenGL style projection matrix?
     auto cam = camera->get_component<PerspectiveCamera>();
-    *camera_data.projection = Matrix4::perspective_dx(
+    *camera_data.projection = Matrix4::perspective_gl(
       cam->field_of_view, cam->aspect_ratio, cam->near, cam->far);
   } else if (camera->has_component<OrthographicCamera>()) {
     Assert(false, "Renderer: orthographic camera not supported");
@@ -726,7 +726,8 @@ auto Renderer::CreatePipeline(
     .depthClampEnable = VK_FALSE,
     .rasterizerDiscardEnable = VK_FALSE,
     .polygonMode = VK_POLYGON_MODE_FILL,
-    .cullMode = VK_CULL_MODE_FRONT_BIT,
+    .cullMode = VK_CULL_MODE_BACK_BIT,
+    .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
     .depthBiasEnable = VK_FALSE,
     .depthBiasConstantFactor = 0,
     .depthBiasClamp = 0,

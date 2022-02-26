@@ -207,7 +207,7 @@ struct Matrix4 : detail::Matrix4<Matrix4, float> {
 
     auto a = 1 / (near - far);
     auto b = (far + near) * a;
-    auto c = (2 * far * near) * a;
+    auto c = 2 * far * near * a;
 
     return Matrix4{{
       x, 0,  0, 0,
@@ -217,7 +217,7 @@ struct Matrix4 : detail::Matrix4<Matrix4, float> {
     }};
   }
 
-  static auto perspective_dx(
+  static auto perspective_vk(
     float fov_y,
     float aspect_ratio,
     float near,
@@ -226,16 +226,16 @@ struct Matrix4 : detail::Matrix4<Matrix4, float> {
     // cot(fov_y/2) = tan((pi - fov_y)/2)
     auto y = std::tan(((float)M_PI - fov_y) * 0.5f);
     auto x = y / aspect_ratio;
-    
-    float a = 1.0 / (far - near);
-    float b = far * a;
-    float c = -near * far * a;
+
+    auto a = 1 / (near - far);
+    auto b = (far + near) * a * 0.5f - 0.5f;
+    auto c = far * near * a;
 
     return Matrix4{{
-      x, 0, 0, 0,
-      0, y, 0, 0,
-      0, 0, b, c,
-      0, 0, 1, 0
+      x, 0,  0, 0,
+      0, y,  0, 0,
+      0, 0,  b, c,
+      0, 0, -1, 0
     }};
   }
 
