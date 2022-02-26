@@ -6,6 +6,7 @@
 
 #include <aurora/integer.hpp>
 #include <aurora/math/numeric_traits.hpp>
+#include <cmath>
 
 namespace Aura {
 
@@ -211,7 +212,20 @@ struct Vector4 : Vector<Vector4<T>, T, 4> {
 } // namespace Aura::detail
 
 using Vector2 = detail::Vector2<float>;
-using Vector3 = detail::Vector3<float>;
+
+struct Vector3 : detail::Vector3<float> {
+  using detail::Vector3<float>::Vector3;
+
+  auto length() const -> float {
+    return std::sqrt(dot(*this));
+  }
+
+  auto normalize() -> Vector3& {
+    *this *= 1.0f / length();
+    return *this;
+  }
+};
+
 using Vector4 = detail::Vector4<float>;
 
 } // namespaace Aura
