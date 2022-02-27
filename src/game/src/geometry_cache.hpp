@@ -15,8 +15,8 @@ namespace Aura {
 struct GeometryCache {
   struct Entry {
     bool exist = false;
-    Buffer* ibo;
-    std::vector<Buffer*> vbos;
+    std::shared_ptr<Buffer> ibo;
+    std::vector<std::shared_ptr<Buffer>> vbos;
   };
 
   GeometryCache(std::shared_ptr<RenderDevice> render_device)
@@ -49,7 +49,7 @@ struct GeometryCache {
   }
 
 private:
-  auto GetIBO(std::shared_ptr<IndexBuffer> const& index_buffer) -> Buffer* {
+  auto GetIBO(std::shared_ptr<IndexBuffer> const& index_buffer) -> std::shared_ptr<Buffer> {
     auto handle = index_buffer.get();
     auto& ibo = ibo_cache[handle];
 
@@ -70,10 +70,10 @@ private:
       index_buffer->needs_update() = false;
     }
 
-    return ibo.get();
+    return ibo;
   }
 
-  auto GetVBO(std::shared_ptr<VertexBuffer> const& vertex_buffer) -> Buffer* {
+  auto GetVBO(std::shared_ptr<VertexBuffer> const& vertex_buffer) -> std::shared_ptr<Buffer> {
     auto handle = vertex_buffer.get();
     auto& vbo = vbo_cache[handle];
 
@@ -94,11 +94,11 @@ private:
       vertex_buffer->needs_update() = false;
     }
 
-    return vbo.get();
+    return vbo;
   }
 
-  std::unordered_map<IndexBuffer*, std::unique_ptr<Buffer>> ibo_cache;
-  std::unordered_map<VertexBuffer*, std::unique_ptr<Buffer>> vbo_cache;
+  std::unordered_map<IndexBuffer*, std::shared_ptr<Buffer>> ibo_cache;
+  std::unordered_map<VertexBuffer*, std::shared_ptr<Buffer>> vbo_cache;
   std::unordered_map<Geometry*, Entry> geo_cache;
 
   std::shared_ptr<RenderDevice> render_device;

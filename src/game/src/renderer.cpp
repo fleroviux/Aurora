@@ -166,7 +166,8 @@ void Renderer::RenderObject(
   command_buffers[1]->BindGraphicsPipeline(object_data.pipeline);
   command_buffers[1]->BindGraphicsBindGroup(0, pipeline_layout, object_data.bind_group);
   command_buffers[1]->BindIndexBuffer(geo_data.ibo, index_buffer->data_type());
-  command_buffers[1]->BindVertexBuffers(ArrayView<Buffer*>{(Buffer**)geo_data.vbos.data(), geo_data.vbos.size()});
+  command_buffers[1]->BindVertexBuffers(ArrayView<std::shared_ptr<Buffer>>{
+    (std::shared_ptr<Buffer>*)geo_data.vbos.data(), geo_data.vbos.size()});
 
   switch (index_buffer->data_type()) {
     case IndexDataType::UInt16:

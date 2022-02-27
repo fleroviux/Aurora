@@ -219,10 +219,7 @@ auto create_pipeline(
 struct GeometryCacheEntry {
   VkPipeline pipeline;
   std::unique_ptr<Buffer> ibo;
-  std::vector<std::unique_ptr<Buffer>> vbos;
-
-  std::vector<VkBuffer> vk_vbos;
-  std::vector<VkDeviceSize> vk_vbo_offs;
+  std::vector<std::shared_ptr<Buffer>> vbos;
 };
 
 std::unordered_map<Geometry const*, GeometryCacheEntry> geometry_cache;
@@ -254,9 +251,7 @@ void upload_geometry(
     for (auto& buffer : geometry->get_vertex_buffers()) {
       auto vbo = render_device->CreateBufferWithData(Buffer::Usage::VertexBuffer, buffer->view<u8>());
 
-      entry.vk_vbos.push_back((VkBuffer)vbo->Handle());
       entry.vbos.push_back(std::move(vbo));
-      entry.vk_vbo_offs.push_back(0);
     }
 
     geometry_cache[geometry] = std::move(entry);

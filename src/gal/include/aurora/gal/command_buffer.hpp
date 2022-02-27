@@ -49,13 +49,9 @@ struct CommandBuffer {
     AnyPtr<BindGroup> bind_group
   ) = 0;
 
-  // TODO: find an efficient solution that supports std::shared_ptr.
+  // TODO: find an efficient solution that supports std::unique_ptr.
   virtual void BindVertexBuffers(
-    ArrayView<std::unique_ptr<Buffer>> buffers,
-    u32 first_binding = 0
-  ) = 0;
-  virtual void BindVertexBuffers(
-    ArrayView<Buffer*> buffers,
+    ArrayView<std::shared_ptr<Buffer>> buffers,
     u32 first_binding = 0
   ) = 0;
 
