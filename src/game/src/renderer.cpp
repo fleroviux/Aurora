@@ -578,18 +578,15 @@ void Renderer::CreateCameraUniformBlock() {
 }
 
 void Renderer::UpdateCameraUniformBlock(GameObject* camera) {
+  // TODO: add support for filters and component inheritance to our component system.  
   if (camera->has_component<PerspectiveCamera>()) {
-    // TODO: switch to using an OpenGL style projection matrix?
-    auto cam = camera->get_component<PerspectiveCamera>();
-    *camera_data.projection = Matrix4::perspective_gl(
-      cam->field_of_view, cam->aspect_ratio, cam->near, cam->far);
+    *camera_data.projection = camera->get_component<PerspectiveCamera>()->get_projection();
   } else if (camera->has_component<OrthographicCamera>()) {
-    Assert(false, "Renderer: orthographic camera not supported");
+    *camera_data.projection = camera->get_component<OrthographicCamera>()->get_projection();
   } else {
     Assert(false, "Renderer: camera does not hold a camera component");
   }
 
-  // TODO: optimize the camera view matrix calculation.
   *camera_data.view = camera->transform().world().inverse();
 
   camera_data.ubo->Update(camera_data.data.data(), camera_data.data.size());

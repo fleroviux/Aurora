@@ -4,12 +4,21 @@
 
 #pragma once
 
+#include <aurora/math/matrix4.hpp>
 #include <aurora/scene/component.hpp>
 
 namespace Aura {
 
-struct PerspectiveCamera final : Component {
+struct Camera : Component {
   using Component::Component;
+
+  virtual auto get_projection() const -> Matrix4 const& = 0;
+};
+
+struct PerspectiveCamera final : Camera {
+  PerspectiveCamera(GameObject* owner) : Camera(owner) {
+    update();
+  }
 
   PerspectiveCamera(
     GameObject* owner,
@@ -17,21 +26,78 @@ struct PerspectiveCamera final : Component {
     float aspect_ratio,
     float near,
     float far 
-  )   : Component(owner)
+  )   : Camera(owner)
       , field_of_view(field_of_view)
       , aspect_ratio(aspect_ratio)
       , near(near)
       , far(far) {
+    update();
+  }
+
+  void set(float field_of_view, float aspect_ratio, float near, float far) {
+    this->field_of_view = field_of_view;
+    this->aspect_ratio = aspect_ratio;
+    this->near = near;
+    this->far = far;
+    update();
+  }
+
+  auto get_field_of_view() const -> float {
+    return field_of_view;
+  }
+
+  void set_field_of_view(float value) {
+    field_of_view = value;
+    update();
+  }
+
+  auto get_aspect_ratio() const -> float {
+    return aspect_ratio;
+  }
+
+  void set_aspect_ratio(float value) {
+    aspect_ratio = value;
+    update();
+  }
+
+  auto get_near() const -> float {
+    return near;
+  }
+
+  void set_near(float value) {
+    near = value;
+    update();
+  }
+
+  auto get_far() const -> float {
+    return far;
+  }
+
+  void set_far(float value) {
+    far = value;
+    update();
+  }
+
+  auto get_projection() const -> Matrix4 const& override {
+    return projection;
+  }
+
+private:
+  void update() {
+    projection = Matrix4::perspective_vk(field_of_view, aspect_ratio, near, far);
   }
 
   float field_of_view = 45.0;
   float aspect_ratio = 16 / 9.0;
   float near = 0.01;
   float far = 500.0;
+  Matrix4 projection;
 };
 
-struct OrthographicCamera final : Component {
-  using Component::Component;
+struct OrthographicCamera final : Camera {
+  OrthographicCamera(GameObject* owner) : Camera(owner) {
+    update();
+  }
 
   OrthographicCamera(
     GameObject* owner,
@@ -41,13 +107,88 @@ struct OrthographicCamera final : Component {
     float top,
     float near,
     float far
-  )   : Component(owner)
+  )   : Camera(owner)
       , left(left)
       , right(right)
       , bottom(bottom)
       , top(top)
       , near(near)
       , far(far) {
+    update();
+  }
+
+  void set(float left, float right, float bottom, float top, float near, float far) {
+    this->left = left;
+    this->right = right;
+    this->bottom = bottom;
+    this->top = top;
+    this->near = near;
+    this->far = far;
+    update();
+  }
+
+  auto get_left() const -> float {
+    return left;
+  }
+
+  void set_left(float value) {
+    left = value;
+    update();
+  }
+
+  auto get_right() const -> float {
+    return right;
+  }
+
+  void set_right(float value) {
+    right = value;
+    update();
+  }
+
+  auto get_bottom() const -> float {
+    return bottom;
+  }
+
+  void set_bottom(float value) {
+    bottom = value;
+    update();
+  }
+
+  auto get_top() const -> float {
+    return top;
+  }
+
+  void set_top(float value) {
+    top = value;
+    update();
+  }
+
+  auto get_near() const -> float {
+    return near;
+  }
+
+  void set_near(float value) {
+    near = value;
+    update();
+  }
+
+  auto get_far() const -> float {
+    return far;
+  }
+
+  void set_far(float value) {
+    far = value;
+    update();
+  }
+
+  auto get_projection() const -> Matrix4 const& override {
+    return projection;
+  }
+
+private:
+  void update() {
+    // TODO: adjust depth range from -1 ... +1 to 0 ... 1
+    projection = Matrix4::orthographic_gl(left, right, bottom, top, near, far);
   }
 
   float left = -1.0;
@@ -56,6 +197,7 @@ struct OrthographicCamera final : Component {
   float top = 1.0;
   float near = 0.01;
   float far = 500.0;
+  Matrix4 projection;
 };
 
 } // namespace Aura
