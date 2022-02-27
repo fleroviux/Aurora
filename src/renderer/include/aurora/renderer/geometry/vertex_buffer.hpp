@@ -61,6 +61,21 @@ struct VertexBuffer final : GPUResource {
     return ArrayView<T>{(T*)data(), size() / sizeof(T)};
   }
 
+  template<typename T>
+  auto read(size_t id, size_t offset = 0, size_t component = 0) -> T& {
+    return ((T*)(data() + id * stride() + offset))[component];
+  }
+
+  template<typename T>
+  auto read(size_t id, size_t offset = 0, size_t component = 0) const -> T {
+    return const_cast<VertexBuffer*>(this)->read<T>(id, offset, component);
+  }
+
+  template<typename T>
+  void write(size_t id, T value, size_t offset = 0, size_t component = 0) {
+    ((T*)(data() + id * stride() + offset))[component] = value;
+  }
+
 private:
   size_t stride_;
   std::vector<u8> buffer_;
