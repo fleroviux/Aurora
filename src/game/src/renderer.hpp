@@ -18,6 +18,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include "geometry_cache.hpp"
+
 namespace Aura {
 
 struct Renderer {
@@ -114,11 +116,6 @@ struct Renderer {
     std::unique_ptr<Buffer> ubo;
   } camera_data;
 
-  struct GeometryData {
-    std::unique_ptr<Buffer> ibo;
-    std::vector<std::unique_ptr<Buffer>> vbos;
-  };
-
   struct ProgramData {
     std::unique_ptr<ShaderModule> shader_vert;
     std::unique_ptr<ShaderModule> shader_frag;
@@ -143,10 +140,11 @@ struct Renderer {
   Texture* cubemap_handle = nullptr;
 
   std::unordered_map<Material*, std::unique_ptr<Buffer>> material_ubo;
-  std::unordered_map<Geometry*, GeometryData> geometry_cache;
   std::unordered_map<ProgramKey, ProgramData, pair_hash> program_cache;
   std::unordered_map<Texture*, TextureData> texture_cache;
   std::unordered_map<GameObject*, ObjectData> object_cache;
+
+  std::unique_ptr<GeometryCache> geo_cache;
 };
 
 } // namespace Aura

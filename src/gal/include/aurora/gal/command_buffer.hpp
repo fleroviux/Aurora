@@ -54,6 +54,10 @@ struct CommandBuffer {
     ArrayView<std::unique_ptr<Buffer>> buffers,
     u32 first_binding = 0
   ) = 0;
+  virtual void BindVertexBuffers(
+    ArrayView<Buffer*> buffers,
+    u32 first_binding = 0
+  ) = 0;
 
   virtual void BindIndexBuffer(
     AnyPtr<Buffer> buffer,

@@ -14,6 +14,7 @@ set(SOURCES
 set(HEADERS
   src/shader/output.vert.h
   src/shader/output.frag.h
+  src/geometry_cache.hpp
   src/gltf_loader.hpp
   src/renderer.hpp
 )

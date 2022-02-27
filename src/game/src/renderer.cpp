@@ -24,6 +24,8 @@ void Renderer::Initialize(
   CreateCameraUniformBlock();
   CreateRenderTarget();
   CreateBindGroupAndPipelineLayout();
+
+  geo_cache = std::make_unique<GeometryCache>(render_device);
 }
 
 void Renderer::Render(
@@ -96,6 +98,8 @@ void Renderer::RenderObject(
   auto& geometry = mesh->geometry;
   auto& material = mesh->material;
 
+  auto& geo_data = geo_cache->Get(geometry);
+
   auto& object_data = object_cache[object];
 
   if (!object_data.valid) {
@@ -123,26 +127,6 @@ void Renderer::RenderObject(
 
     object_data.valid = true;
   }
-
-  if (geometry_cache.find(geometry.get()) == geometry_cache.end()) {
-    auto& geometry_data = geometry_cache[geometry.get()];
-
-    // Upload index buffer
-    geometry_data.ibo = render_device->CreateBufferWithData(
-      Buffer::Usage::IndexBuffer,
-      geometry->get_index_buffer()->view<u8>()
-    );
-
-    // Upload vertex buffers
-    for (auto const& buffer : geometry->get_vertex_buffers()) {
-      geometry_data.vbos.push_back(render_device->CreateBufferWithData(
-        Buffer::Usage::VertexBuffer,
-        buffer->view<u8>()
-      ));
-    }
-  }
-
-  auto& geometry_data = geometry_cache[geometry.get()];
 
   // Update object transform UBO
   object_data.ubo->Update(&object->transform().world());
@@ -181,8 +165,8 @@ void Renderer::RenderObject(
 
   command_buffers[1]->BindGraphicsPipeline(object_data.pipeline);
   command_buffers[1]->BindGraphicsBindGroup(0, pipeline_layout, object_data.bind_group);
-  command_buffers[1]->BindIndexBuffer(geometry_data.ibo, index_buffer->data_type());
-  command_buffers[1]->BindVertexBuffers(geometry_data.vbos);
+  command_buffers[1]->BindIndexBuffer(geo_data.ibo, index_buffer->data_type());
+  command_buffers[1]->BindVertexBuffers(ArrayView<Buffer*>{(Buffer**)geo_data.vbos.data(), geo_data.vbos.size()});
 
   switch (index_buffer->data_type()) {
     case IndexDataType::UInt16:

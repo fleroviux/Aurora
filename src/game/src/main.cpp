@@ -315,7 +315,7 @@ u32 queue_family_transfer;
 
 auto get_instance_layers() -> std::vector<char const*> {
   const std::vector<char const*> kDesiredInstanceLayers {
-    "VK_LAYER_KHRONOS_validation"
+    //"VK_LAYER_KHRONOS_validation"
   };
 
   auto result = std::vector<char const*>{};
@@ -345,7 +345,7 @@ auto get_instance_layers() -> std::vector<char const*> {
 
 auto get_device_layers(VkPhysicalDevice physical_device) -> std::vector<char const*> {
   const std::vector<char const*> kDesiredDeviceLayers {
-    "VK_LAYER_KHRONOS_validation"
+    //"VK_LAYER_KHRONOS_validation"
   };
 
   auto result = std::vector<char const*>{};
@@ -919,9 +919,12 @@ int main(int argc, char** argv) {
 
   auto event = SDL_Event{};
   auto scene = new GameObject{};
-  scene->add_child(GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf"));
+  //scene->add_child(GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf"));
   scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
   //scene->add_child(GLTFLoader{}.parse("porsche/porsche.gltf"));
+
+  auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
+  scene->add_child(behemoth);
 
   // test 1000 damaged helmets at once
   //auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf")->children()[0];
@@ -978,6 +981,12 @@ int main(int argc, char** argv) {
     if (state[SDL_SCANCODE_N])     z += 0.01;
 
     camera->transform().rotation().set_euler(x, y, z);
+
+    if (state[SDL_SCANCODE_O] && behemoth != nullptr) {
+      scene->remove_child(behemoth);
+      delete behemoth;
+      behemoth = nullptr;
+    }
 
     u32 swapchain_image_id;
 
