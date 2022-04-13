@@ -311,20 +311,11 @@ struct Vector4 : Vector<Derived, T, 4> {
   /**
    * Construct a Vector4 from a Vector3 and a scalar w-component.
    */
-  Vector4(Vector3 const& xyz, T w) {
+  Vector4(Vector3 const& xyz, T w = NumericConstants<T>::one()) {
     this->data[0] = xyz.x();
     this->data[1] = xyz.y();
     this->data[2] = xyz.z();
     this->data[3] = w;
-  }
-
-  /**
-   * Construct a Vector4 from a Vector3 and initialize the w-component to one.
-   */
-  Vector4(Vector3 const& other) {
-    for (uint i = 0; i < 3; i++)
-      this->data[i] = other[i];
-    this->data[3] = NumericConstants<T>::one();
   }
 
   auto x() -> T& { return this->data[0]; }
