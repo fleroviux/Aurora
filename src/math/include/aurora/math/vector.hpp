@@ -13,24 +13,48 @@ namespace Aura {
 namespace detail {
 
 /**
- * Generic vector with dimension `n` and underlying type `T`.
+ * Generic vector on type `T` with dimension `n`.
  *
  * @tparam Derived the result type for operations that yield another vector.
- * @tparam T the underlying data type (i.e. float)
- * @tparam n the number of components (or dimensions)
+ * @tparam T       the underlying data type (i.e. float)
+ * @tparam n       the number of components (or dimensions)
  */
 template<typename Derived, typename T, uint n>
 struct Vector {
+  /**
+   * Default constructor. The vector will be zero-initialised.
+   */
   Vector() {}
 
+  /**
+   * Access a component of the vector via its index (between `0` and `n - 1`).
+   * Out-of-bounds access is undefined behaviour.
+   *
+   * @param i the index
+   * @return a reference to the component value
+   */
   auto operator[](int i) -> T& {
     return data[i];
   }
 
+  /**
+   * Read a component of the vector via its index (between `0` and `n - 1`).
+   * Out-of-bounds access is undefined behaviour.
+   *
+   * @param i the index
+   * @return the component value
+   */
   auto operator[](int i) const -> T {
     return data[i];
   }
 
+  /**
+   * Perform a component-wise summation of this vector with another vector.
+   * Store the result in a new vector.
+   *
+   * @param other the other vector
+   * @return the result vector
+   */
   auto operator+(Derived const& other) const -> Derived {
     Derived result{};
     for (uint i = 0; i < n; i++)
@@ -38,6 +62,13 @@ struct Vector {
     return result;
   }
 
+  /**
+   * Perform a component-wise subtraction of another vector from this vector.
+   * Store the result in a new vector.
+   *
+   * @param other the other vector
+   * @return the result vector
+   */
   auto operator-(Derived const& other) const -> Derived {
     Derived result{};
     for (uint i = 0; i < n; i++)
@@ -45,6 +76,13 @@ struct Vector {
     return result;
   }
 
+  /**
+   * Multiply each component of this vector with a scalar value.
+   * Store the result in a new vector.
+   *
+   * @param value the scalar value
+   * @return the result vector
+   */
   auto operator*(T value) const -> Derived {
     Derived result{};
     for (uint i = 0; i < n; i++)
@@ -52,6 +90,13 @@ struct Vector {
     return result;
   }
 
+  /**
+   * Divide each component of this vector by a scalar value.
+   * Store the result in a new vector.
+   *
+   * @param value the scalar value
+   * @return the result vector
+   */
   auto operator/(T value) const -> Derived {
     Derived result{};
     for (uint i = 0; i < n; i++)
@@ -59,30 +104,62 @@ struct Vector {
     return result;
   }
 
+  /**
+   * Perform a component-wise summation of this vector with another vector.
+   * Store the result in this vector.
+   *
+   * @param other the other vector
+   * @return a reference to this vector
+   */
   auto operator+=(Derived const& other) -> Derived& {
     for (uint i = 0; i < n; i++)
       data[i] += other[i];
     return *static_cast<Derived*>(this);
   }
 
+  /**
+   * Perform a component-wise subtraction of another vector from this vector.
+   * Store the result in this vector.
+   *
+   * @param other the other vector
+   * @return a reference to this vector
+   */
   auto operator-=(Derived const& other) -> Derived& {
     for (uint i = 0; i < n; i++)
       data[i] -= other[i];
     return *static_cast<Derived*>(this);
   }
 
+  /**
+   * Multiply each component of this vector with a scalar value.
+   * Store the result in this vector.
+   *
+   * @param value the scalar value
+   * @return a reference to this vector
+   */
   auto operator*=(T value) -> Derived& {
     for (uint i = 0; i < n; i++)
       data[i] *= value;
     return *static_cast<Derived*>(this);
   }
 
+  /**
+   * Divide each component of this vector by a scalar value.
+   * Store the result in this vector.
+   *
+   * @param value the scalar value
+   * @return a reference to this vector
+   */
   auto operator/=(T value) -> Derived& {
     for (uint i = 0; i < n; i++)
       data[i] /= value;
     return *static_cast<Derived*>(this);
   }
 
+  /**
+   * Negate each component in this vector. Store the result in a new vector.
+   * @return the result vector
+   */
   auto operator-() const -> Derived {
     Derived result{};
     for (uint i = 0; i < n; i++)
@@ -90,6 +167,10 @@ struct Vector {
     return result;
   }
 
+  /**
+   * Perform a component-wise equality-comparison of this vector with another vector.
+   * @return true if all components are equal.
+   */
   bool operator==(Derived const& other) const {
     for (uint i = 0; i < n; i++)
       if (data[i] != other[i])
@@ -97,10 +178,21 @@ struct Vector {
     return true;
   }
 
+  /**
+   * Perform a component-wise inequality-comparison of this vector with another vector.
+   * @return true if at least one component in unequal.
+   */
   bool operator!=(Derived const& other) const {
     return !(*this == other);
   }
 
+  /**
+   * Calculate the dot product between this vector and another vector.
+   * See: https://en.wikipedia.org/wiki/Dot_product#Algebraic_definition
+   *
+   * @param other the other vector
+   * @return the scalar result
+   */
   auto dot(Derived const& other) const -> T {
     T result{};
     for (uint i = 0; i < n; i++)
@@ -108,8 +200,14 @@ struct Vector {
     return result;
   }
 
-  template<typename U>
-  static auto interpolate(Derived const& a, Derived const& b, U factor) -> Derived {
+  /**
+   * Perform linear interpolation between two vectors with a factor between `0` and `1`.
+   *
+   * @param a the vector at `factor = 0`
+   * @param b the vector at `factor = 1`
+   * @return the interpolated result vector
+   */
+  static auto lerp(Derived const& a, Derived const& b, T factor) -> Derived {
     Derived result{};
     U one_minus_factor = NumericConstants<U>::one() - factor;
     for (uint i = 0; i < n; i++)
@@ -118,7 +216,7 @@ struct Vector {
   }
 
 protected:
-  T data[n] { NumericConstants<T>::zero() };
+  T data[n] { NumericConstants<T>::zero() }; /**< the `n` components of the vector. */
 };
 
 template<typename T>
