@@ -97,8 +97,6 @@ private:
     float x = 1 / projection.x().x();
     float y = 1 / projection.y().y();
 
-    Log<Info>("x={} y={}", x, y);
-
     frustum.set_plane(Frustum::Side::NZ, Plane{Vector3{ 0,  0, -1}, -near});
     frustum.set_plane(Frustum::Side::PZ, Plane{Vector3{ 0,  0,  1}, -far });
     frustum.set_plane(Frustum::Side::NX, Plane{Vector3{ 1 , 0, -x}.normalize(), 0});
