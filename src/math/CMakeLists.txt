@@ -5,8 +5,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(HEADERS_PUBLIC
+  include/aurora/math/box3.hpp
+  include/aurora/math/frustum.hpp
   include/aurora/math/matrix4.hpp
   include/aurora/math/numeric_traits.hpp
+  include/aurora/math/plane.hpp
   include/aurora/math/quaternion.hpp
   include/aurora/math/rotation.hpp
   include/aurora/math/vector.hpp

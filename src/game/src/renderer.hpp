@@ -49,6 +49,8 @@ struct Renderer {
     Mesh* mesh
   );
 
+  bool IsObjectInsideCameraFrustum(Matrix4 const& modelview, std::shared_ptr<Geometry> const& geometry);
+
   void CompileShaderProgram(AnyPtr<Material> material);
 
   void UploadTexture(
@@ -73,7 +75,7 @@ struct Renderer {
   void CreateExampleCubeMap(VkCommandBuffer command_buffer);
 
   void CreateCameraUniformBlock();
-  void UpdateCameraUniformBlock(GameObject* camera);
+  void UpdateCamera(GameObject* camera);
 
   void CreateRenderTarget();
 
@@ -114,6 +116,8 @@ struct Renderer {
     Matrix4* projection;
     Matrix4* view;
     std::unique_ptr<Buffer> ubo;
+
+    Frustum const* frustum;
   } camera_data;
 
   struct ProgramData {

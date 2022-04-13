@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include <aurora/math/box3.hpp>
 #include <aurora/renderer/geometry/index_buffer.hpp>
 #include <aurora/renderer/geometry/vertex_buffer.hpp>
 #include <aurora/any_ptr.hpp>
 #include <aurora/array_view.hpp>
+#include <aurora/log.hpp>
 #include <memory>
 #include <optional>
 
@@ -63,11 +65,67 @@ struct Geometry final : GPUResource {
     this->topology = topology;
   }
 
+  auto get_bounding_box() -> Box3 const& {
+    if (!have_bounding_box) {
+      compute_bounding_box();
+    }
+
+    return bounding_box;
+  }
+
+  void compute_bounding_box() {
+    auto position_attribute = std::find_if(
+      attributes.begin(), attributes.end(), [](Attribute const& attribute) {
+        return attribute.location == 0;});
+
+    if (position_attribute == attributes.end()) {
+      return;
+    }
+
+    if (position_attribute->buffer >= vertex_buffers.size()) {
+      return;
+    }
+
+    if (position_attribute->data_type != VertexDataType::Float32 &&
+        position_attribute->components != 3) {
+      Log<Warn>("Geometry: cannot calculate bounding box: position attribute is not in F32x3 format");
+      return;
+    }
+
+    bounding_box.min.x() = +std::numeric_limits<float>::infinity();
+    bounding_box.min.y() = +std::numeric_limits<float>::infinity();
+    bounding_box.min.z() = +std::numeric_limits<float>::infinity();
+
+    bounding_box.max.x() = -std::numeric_limits<float>::infinity();
+    bounding_box.max.y() = -std::numeric_limits<float>::infinity();
+    bounding_box.max.z() = -std::numeric_limits<float>::infinity();
+
+    auto& buffer = vertex_buffers[position_attribute->buffer];
+    auto  length = buffer->size() / buffer->stride();
+    auto  offset = position_attribute->offset;
+
+    for (size_t i = 0; i < length; i++) {
+      auto position = buffer->read<Vector3>(i, offset, 0);
+
+      bounding_box.min.x() = std::min(bounding_box.min.x(), position.x());
+      bounding_box.min.y() = std::min(bounding_box.min.y(), position.y());
+      bounding_box.min.z() = std::min(bounding_box.min.z(), position.z());
+
+      bounding_box.max.x() = std::max(bounding_box.max.x(), position.x());
+      bounding_box.max.y() = std::max(bounding_box.max.y(), position.y());
+      bounding_box.max.z() = std::max(bounding_box.max.z(), position.z());
+    }
+
+    have_bounding_box = true;
+  }
+
 private:
   std::shared_ptr<IndexBuffer> index_buffer;
   std::vector<std::shared_ptr<VertexBuffer>> vertex_buffers;
   std::vector<Attribute> attributes;
   Topology topology = Topology::Triangles;
+  Box3 bounding_box;
+  bool have_bounding_box = false;
 };
 
 } // namespace Aura

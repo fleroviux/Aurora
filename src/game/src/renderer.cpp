@@ -46,12 +46,17 @@ void Renderer::Render(
     transform.update_world(false);
 
     auto mesh = object->get_component<Mesh>();
+    auto modelview = *camera_data.view * transform.world();
 
-    if (mesh && mesh->visible) {
-      // TODO: is there a faster way to calculate the view-space z-Coordinate?
-      auto view_position = (*camera_data.view) * (transform.world() * transform.position());
+    // TODO: calculate view * world here and use it both for sorting and for culling.
+    if (mesh && mesh->visible && IsObjectInsideCameraFrustum(modelview, mesh->geometry)) {
+      auto& position = transform.position();
+      auto  view_z = modelview.x().z() * position.x() +
+                     modelview.y().z() * position.y() +
+                     modelview.z().z() * position.z() +
+                     modelview.w().z();
 
-      render_list.push_back({object, mesh, view_position.z()});
+      render_list.push_back({object, mesh, view_z});
     }
 
     for (auto child : object->children()) record_render_list(child);
@@ -61,17 +66,19 @@ void Renderer::Render(
     CreateExampleCubeMap((VkCommandBuffer)command_buffers[0]->Handle());
     uploaded_example_cubemap = true;
   }
+  
+  // TODO: verify that scene component exists and camera is non-null.
+  UpdateCamera(scene->get_component<Scene>()->camera);
 
   record_render_list(scene);
+
+  Log<Info>("Renderer: render_list size={}", render_list.size());
 
   // This is going to be super slow :rpog:
   const auto comparator = [](Renderable& a, Renderable& b) {
     return a.z < b.z;
   };
   std::sort(render_list.begin(), render_list.end(), comparator);
-
-  // TODO: verify that scene component exists and camera is non-null.
-  UpdateCameraUniformBlock(scene->get_component<Scene>()->camera);
 
   command_buffers[1]->BeginRenderPass(render_target, render_pass);
 
@@ -177,6 +184,12 @@ void Renderer::RenderObject(
       command_buffers[1]->DrawIndexed(index_buffer->size() / sizeof(u32));
       break;
   }
+}
+
+bool Renderer::IsObjectInsideCameraFrustum(Matrix4 const& modelview, std::shared_ptr<Geometry> const& geometry) {
+  auto aabb = geometry->get_bounding_box().apply_matrix(modelview);
+
+  return camera_data.frustum->contains_box(aabb);
 }
 
 void Renderer::CompileShaderProgram(AnyPtr<Material> material) {
@@ -577,12 +590,18 @@ void Renderer::CreateCameraUniformBlock() {
   camera_data.ubo = render_device->CreateBuffer(Buffer::Usage::UniformBuffer, camera_data.data.size());
 }
 
-void Renderer::UpdateCameraUniformBlock(GameObject* camera) {
+void Renderer::UpdateCamera(GameObject* camera) {
   // TODO: add support for filters and component inheritance to our component system.  
   if (camera->has_component<PerspectiveCamera>()) {
-    *camera_data.projection = camera->get_component<PerspectiveCamera>()->get_projection();
+    auto camera_component = camera->get_component<PerspectiveCamera>();
+
+    *camera_data.projection = camera_component->get_projection();
+    camera_data.frustum = &camera_component->get_frustum();
   } else if (camera->has_component<OrthographicCamera>()) {
-    *camera_data.projection = camera->get_component<OrthographicCamera>()->get_projection();
+    auto camera_component = camera->get_component<OrthographicCamera>();
+
+    *camera_data.projection = camera_component->get_projection();
+    camera_data.frustum = &camera_component->get_frustum();
   } else {
     Assert(false, "Renderer: camera does not hold a camera component");
   }

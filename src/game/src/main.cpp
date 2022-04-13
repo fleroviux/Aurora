@@ -914,29 +914,30 @@ int main(int argc, char** argv) {
 
   auto event = SDL_Event{};
   auto scene = new GameObject{};
-  //scene->add_child(GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf"));
-  scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
+  //auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf");
+  //scene->add_child(helmet);
+  //scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
   //scene->add_child(GLTFLoader{}.parse("porsche/porsche.gltf"));
 
-  auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
-  scene->add_child(behemoth);
+  //auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
+  //scene->add_child(behemoth);
 
   // test 1000 damaged helmets at once
-  //auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf")->children()[0];
-  //auto& geometry = helmet->get_component<Mesh>()->geometry;
-  //auto& material = helmet->get_component<Mesh>()->material;
-  //for (int x = 0; x < 10; x++) {
-  //  for (int y = 0; y < 10; y++) {
-  //    for (int z = 0; z < 10; z++) {
-  //      auto object = new GameObject{};
-  //      object->add_component<Mesh>(geometry, material);
-  //      object->transform().position().x() = x * 1.5;
-  //      object->transform().position().y() = y * 1.5;
-  //      object->transform().position().z() = z * 1.5;
-  //      scene->add_child(object);
-  //    }
-  //  }
-  //}
+  auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf")->children()[0];
+  auto& geometry = helmet->get_component<Mesh>()->geometry;
+  auto& material = helmet->get_component<Mesh>()->material;
+  for (int x = 0; x < 10; x++) {
+    for (int y = 0; y < 10; y++) {
+      for (int z = 0; z < 10; z++) {
+        auto object = new GameObject{};
+        object->add_component<Mesh>(geometry, material);
+        object->transform().position().x() = x * 1.5;
+        object->transform().position().y() = y * 1.5;
+        object->transform().position().z() = z * 1.5;
+        scene->add_child(object);
+      }
+    }
+  }
 
   auto camera = new GameObject{};
   camera->add_component<PerspectiveCamera>();
@@ -977,11 +978,11 @@ int main(int argc, char** argv) {
 
     camera->transform().rotation().set_euler(x, y, z);
 
-    if (state[SDL_SCANCODE_O] && behemoth != nullptr) {
+    /*if (state[SDL_SCANCODE_O] && behemoth != nullptr) {
       scene->remove_child(behemoth);
       delete behemoth;
       behemoth = nullptr;
-    }
+    }*/
 
     u32 swapchain_image_id;
 

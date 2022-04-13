@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <aurora/log.hpp>
+
+#include <aurora/math/frustum.hpp>
 #include <aurora/math/matrix4.hpp>
 #include <aurora/scene/component.hpp>
 
@@ -12,6 +15,7 @@ namespace Aura {
 struct Camera : Component {
   using Component::Component;
 
+  virtual auto get_frustum() const -> Frustum const& = 0;
   virtual auto get_projection() const -> Matrix4 const& = 0;
 };
 
@@ -78,6 +82,10 @@ struct PerspectiveCamera final : Camera {
     update();
   }
 
+  auto get_frustum() const -> Frustum const& override {
+    return frustum;
+  }
+
   auto get_projection() const -> Matrix4 const& override {
     return projection;
   }
@@ -85,12 +93,25 @@ struct PerspectiveCamera final : Camera {
 private:
   void update() {
     projection = Matrix4::perspective_vk(field_of_view, aspect_ratio, near, far);
+
+    float x = 1 / projection.x().x();
+    float y = 1 / projection.y().y();
+
+    Log<Info>("x={} y={}", x, y);
+
+    frustum.set_plane(Frustum::Side::NZ, Plane{Vector3{ 0,  0, -1}, -near});
+    frustum.set_plane(Frustum::Side::PZ, Plane{Vector3{ 0,  0,  1}, -far });
+    frustum.set_plane(Frustum::Side::NX, Plane{Vector3{ 1 , 0, -x}.normalize(), 0});
+    frustum.set_plane(Frustum::Side::PX, Plane{Vector3{-1 , 0, -x}.normalize(), 0});
+    frustum.set_plane(Frustum::Side::NY, Plane{Vector3{ 0,  1, -y}.normalize(), 0});
+    frustum.set_plane(Frustum::Side::PY, Plane{Vector3{ 0, -1, -y}.normalize(), 0});
   }
 
   float field_of_view = 45.0;
   float aspect_ratio = 16 / 9.0;
   float near = 0.01;
   float far = 500.0;
+  Frustum frustum;
   Matrix4 projection;
 };
 
@@ -181,12 +202,23 @@ struct OrthographicCamera final : Camera {
     update();
   }
 
+  auto get_frustum() const -> Frustum const& override {
+    return frustum;
+  }
+
   auto get_projection() const -> Matrix4 const& override {
     return projection;
   }
 
 private:
   void update() {
+    frustum.set_plane(Frustum::Side::NZ, Plane{Vector3{ 0,  0, -1}, -near});
+    frustum.set_plane(Frustum::Side::PZ, Plane{Vector3{ 0,  0,  1}, -far});
+    frustum.set_plane(Frustum::Side::NX, Plane{Vector3{ 1,  0,  0},  left});
+    frustum.set_plane(Frustum::Side::PX, Plane{Vector3{-1,  0,  0},  right});
+    frustum.set_plane(Frustum::Side::NY, Plane{Vector3{ 0,  1, -1},  bottom});
+    frustum.set_plane(Frustum::Side::PY, Plane{Vector3{ 0, -1, -1},  top});
+
     // TODO: adjust depth range from -1 ... +1 to 0 ... 1
     projection = Matrix4::orthographic_gl(left, right, bottom, top, near, far);
   }
@@ -197,6 +229,7 @@ private:
   float top = 1.0;
   float near = 0.01;
   float far = 500.0;
+  Frustum frustum;
   Matrix4 projection;
 };
 
