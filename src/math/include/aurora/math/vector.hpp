@@ -12,6 +12,13 @@ namespace Aura {
 
 namespace detail {
 
+/**
+ * Generic vector with dimension `n` and underlying type `T`.
+ *
+ * @tparam Derived the result type for operations that yield another vector.
+ * @tparam T the underlying data type (i.e. float)
+ * @tparam n the number of components (or dimensions)
+ */
 template<typename Derived, typename T, uint n>
 struct Vector {
   Vector() {}
