@@ -750,7 +750,7 @@ struct Application {
       command_buffers[1],
       render_targets[image_id],
       render_pass,
-      renderer.color_texture
+      renderer.normal_texture
     );
   }
 

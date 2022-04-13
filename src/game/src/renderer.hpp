@@ -105,6 +105,8 @@ struct Renderer {
 
   std::shared_ptr<GPUTexture> color_texture;
   std::shared_ptr<GPUTexture> depth_texture;
+  std::shared_ptr<GPUTexture> albedo_texture;
+  std::shared_ptr<GPUTexture> normal_texture;
   std::unique_ptr<RenderTarget> render_target;
   std::unique_ptr<RenderPass> render_pass;
 

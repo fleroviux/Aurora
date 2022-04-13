@@ -88,10 +88,22 @@ void Renderer::Render(
 
   command_buffers[1]->EndRenderPass();
 
-  // TODO: use a subpass dependency to transition image layout.
+  // TODO: use a subpass dependency to transition render target image layouts.
   TransitionImageLayout(
     (VkCommandBuffer)command_buffers[1]->Handle(),
     color_texture,
+    GPUTexture::Layout::ColorAttachment,
+    GPUTexture::Layout::ShaderReadOnly
+  );
+  TransitionImageLayout(
+    (VkCommandBuffer)command_buffers[1]->Handle(),
+    albedo_texture,
+    GPUTexture::Layout::ColorAttachment,
+    GPUTexture::Layout::ShaderReadOnly
+  );
+  TransitionImageLayout(
+    (VkCommandBuffer)command_buffers[1]->Handle(),
+    normal_texture,
     GPUTexture::Layout::ColorAttachment,
     GPUTexture::Layout::ShaderReadOnly
   );
@@ -619,6 +631,22 @@ void Renderer::CreateRenderTarget() {
     GPUTexture::Usage::ColorAttachment | GPUTexture::Usage::Sampled
   );
 
+  // TODO: use the proper format.
+  albedo_texture = render_device->CreateTexture2D(
+    1600,
+    900,
+    GPUTexture::Format::B8G8R8A8_SRGB,
+    GPUTexture::Usage::ColorAttachment | GPUTexture::Usage::Sampled
+  );
+
+  // TODO: use the proper format.
+  normal_texture = render_device->CreateTexture2D(
+    1600,
+    900,
+    GPUTexture::Format::B8G8R8A8_SRGB,
+    GPUTexture::Usage::ColorAttachment | GPUTexture::Usage::Sampled
+  );
+
   depth_texture = render_device->CreateTexture2D(
     1600,
     900,
@@ -626,10 +654,12 @@ void Renderer::CreateRenderTarget() {
     GPUTexture::Usage::DepthStencilAttachment
   );
 
-  render_target = render_device->CreateRenderTarget({ color_texture }, depth_texture);
+  render_target = render_device->CreateRenderTarget({ color_texture, albedo_texture, normal_texture }, depth_texture);
   render_pass = render_target->CreateRenderPass();
 
-  render_pass->SetClearColor(0, 0.01, 0.01, 0.01, 1);
+  render_pass->SetClearColor(0, 0.01, 0.01, 0.01, 1.0);
+  render_pass->SetClearColor(1, 0.00, 0.00, 0.00, 0.5);
+  render_pass->SetClearColor(2, 0.50, 0.50, 0.50, 0.5);
   render_pass->SetClearDepth(1); 
 }
 
@@ -763,12 +793,28 @@ auto Renderer::CreatePipeline(
     .maxDepthBounds = 0
   };
 
-  auto color_blend_attachment_info = VkPipelineColorBlendAttachmentState{
-    .blendEnable = VK_FALSE,
-    .colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-                      VK_COLOR_COMPONENT_G_BIT |
-                      VK_COLOR_COMPONENT_B_BIT |
-                      VK_COLOR_COMPONENT_A_BIT
+  auto color_blend_attachment_states = std::vector<VkPipelineColorBlendAttachmentState>{
+    {
+      .blendEnable = VK_FALSE,
+      .colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+                        VK_COLOR_COMPONENT_G_BIT |
+                        VK_COLOR_COMPONENT_B_BIT |
+                        VK_COLOR_COMPONENT_A_BIT
+    },
+    {
+      .blendEnable = VK_FALSE,
+      .colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+                        VK_COLOR_COMPONENT_G_BIT |
+                        VK_COLOR_COMPONENT_B_BIT |
+                        VK_COLOR_COMPONENT_A_BIT
+    },
+    {
+      .blendEnable = VK_FALSE,
+      .colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+                        VK_COLOR_COMPONENT_G_BIT |
+                        VK_COLOR_COMPONENT_B_BIT |
+                        VK_COLOR_COMPONENT_A_BIT
+    }
   };
 
   auto color_blend_info = VkPipelineColorBlendStateCreateInfo{
@@ -777,8 +823,8 @@ auto Renderer::CreatePipeline(
     .flags = 0,
     .logicOpEnable = VK_FALSE,
     .logicOp = VK_LOGIC_OP_NO_OP,
-    .attachmentCount = 1,
-    .pAttachments = &color_blend_attachment_info,
+    .attachmentCount = (u32)color_blend_attachment_states.size(),
+    .pAttachments = color_blend_attachment_states.data(),
     .blendConstants = {0, 0, 0, 0}
   };
 

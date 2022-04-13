@@ -127,6 +127,8 @@ constexpr auto pbr_frag = R"(
   // PBR library end
 
   layout (location = 0) out vec4 frag_color;
+  layout (location = 1) out vec4 frag_albedo;
+  layout (location = 2) out vec4 frag_normal;
 
   layout(location = 0) in vec3 v_world_position;
   layout(location = 1) in vec3 v_world_normal;
@@ -281,5 +283,7 @@ constexpr auto pbr_frag = R"(
     result = LinearTosRGB(result);
 
     frag_color = vec4(result, 1.0);
+    frag_albedo = vec4(geometry.albedo, geometry.metalness);
+    frag_normal = vec4(geometry.normal, geometry.roughness);
   }
 )";
