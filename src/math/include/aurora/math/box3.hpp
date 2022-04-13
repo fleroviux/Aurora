@@ -25,8 +25,7 @@ struct Box3 {
     auto max_z = matrix.z().xyz() * max.z();
     auto translation = matrix.w().xyz();
 
-    // TODO: fix the matrix types (ugh)
-    detail::Vector3<float> v[8];
+    Vector3 v[8];
     v[0] = min_x + min_y + min_z + translation;
     v[1] = max_x + min_y + min_z + translation;
     v[2] = min_x + max_y + min_z + translation;

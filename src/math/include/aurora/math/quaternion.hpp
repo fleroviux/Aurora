@@ -14,7 +14,7 @@ namespace Aura {
 
 namespace detail {
 
-template<typename Derived, typename T>
+template<typename Derived, typename Vector3, typename T>
 struct Quaternion {
   Quaternion() {}
 
@@ -38,7 +38,7 @@ struct Quaternion {
   auto y() const -> T { return data[2]; }
   auto z() const -> T { return data[3]; }
 
-  auto xyz() const -> Vector3<T> { return Vector3<T>{x(), y(), z()}; }
+  auto xyz() const -> Vector3 { return Vector3{x(), y(), z()}; }
 
   auto operator+(Derived const& rhs) const -> Derived {
     return Derived{
@@ -167,8 +167,8 @@ private:
 
 } // namespace Aura::detail
 
-struct Quaternion : detail::Quaternion<Quaternion, float> {
-  using detail::Quaternion<Quaternion, float>::Quaternion;
+struct Quaternion : detail::Quaternion<Quaternion, Vector3, float> {
+  using detail::Quaternion<Quaternion, Vector3, float>::Quaternion;
 
   auto length() const -> float {
     return std::sqrt(length_squared());

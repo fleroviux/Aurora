@@ -17,7 +17,7 @@ namespace Aura {
 namespace detail {
 
 // TODO: align data to 16-byte boundary to allow for better vectorization?
-template<typename Derived, typename T>
+template<typename Derived, typename Vector4, typename T>
 struct Matrix4 {
   Matrix4() {};
 
@@ -26,26 +26,26 @@ struct Matrix4 {
       data[i & 3][i >> 2] = elements[i];
   }
 
-  auto operator[](int i) -> Vector4<T>& {
+  auto operator[](int i) -> Vector4& {
     return data[i];
   }
   
-  auto operator[](int i) const -> Vector4<T> const& {
+  auto operator[](int i) const -> Vector4 const& {
     return data[i];
   }
 
-  auto x() -> Vector4<T>& { return data[0]; }
-  auto y() -> Vector4<T>& { return data[1]; }
-  auto z() -> Vector4<T>& { return data[2]; }
-  auto w() -> Vector4<T>& { return data[3]; }
+  auto x() -> Vector4& { return data[0]; }
+  auto y() -> Vector4& { return data[1]; }
+  auto z() -> Vector4& { return data[2]; }
+  auto w() -> Vector4& { return data[3]; }
 
-  auto x() const -> Vector4<T> const& { return data[0]; }
-  auto y() const -> Vector4<T> const& { return data[1]; }
-  auto z() const -> Vector4<T> const& { return data[2]; }
-  auto w() const -> Vector4<T> const& { return data[3]; }
+  auto x() const -> Vector4 const& { return data[0]; }
+  auto y() const -> Vector4 const& { return data[1]; }
+  auto z() const -> Vector4 const& { return data[2]; }
+  auto w() const -> Vector4 const& { return data[3]; }
 
-  auto operator*(Vector4<T> const& vec) const -> Vector4<T> {
-    Vector4<T> result{};
+  auto operator*(Vector4 const& vec) const -> Vector4 {
+    Vector4 result{};
     for (uint i = 0; i < 4; i++)
       result += data[i] * vec[i];
     return result;
@@ -123,15 +123,13 @@ struct Matrix4 {
   }
 
 private:
-  Vector4<T> data[4] {};
+  Vector4 data[4] {};
 };
 
 } // namespace Aura::detail
 
-struct Matrix4 : detail::Matrix4<Matrix4, float> {
-  Matrix4() : detail::Matrix4<Matrix4, float>() {}
-
-  Matrix4(std::array<float, 16> const& elements) : detail::Matrix4<Matrix4, float>(elements) {}
+struct Matrix4 : detail::Matrix4<Matrix4, Vector4, float> {
+  using detail::Matrix4<Matrix4, Vector4, float>::Matrix4;
 
   static auto scale(float x, float y, float z) -> Matrix4 {
     return Matrix4{{

@@ -13,7 +13,7 @@ namespace Aura {
 namespace detail {
 
 /**
- * Generic vector on type `T` with dimension `n`.
+ * Generic vector template on type `T` with dimension `n`.
  *
  * @tparam Derived the result type for operations that yield another vector.
  * @tparam T       the underlying data type (i.e. float)
@@ -188,7 +188,7 @@ struct Vector {
 
   /**
    * Calculate the dot product between this vector and another vector.
-   * See: https://en.wikipedia.org/wiki/Dot_product#Algebraic_definition
+   * See: https://tutorial.math.lamar.edu/classes/calcii/dotproduct.aspx
    *
    * @param other the other vector
    * @return the scalar result
@@ -219,18 +219,22 @@ protected:
   T data[n] { NumericConstants<T>::zero() }; /**< the `n` components of the vector. */
 };
 
-template<typename T>
-struct Vector2 : Vector<Vector2<T>, T, 2> {
-  Vector2() {}
+/**
+ * A two-dimensional vector template on type `T`
+ *
+ * @tparam Derived the result type for operations that yield another vector.
+ * @tparam T       the underlying data type (i.e. float)
+ */
+template<typename Derived, typename T>
+struct Vector2 : Vector<Derived, T, 2> {
+  using Vector<Derived, T, 2>::Vector;
 
+  /**
+   * Construct a Vector2 from two scalar values.
+   */
   Vector2(T x, T y) {
     this->data[0] = x;
     this->data[1] = y;
-  }
-
-  Vector2(Vector2 const& other) {
-    this->data[0] = other[0];
-    this->data[1] = other[1];
   }
 
   auto x() -> T& { return this->data[0]; }
@@ -240,19 +244,23 @@ struct Vector2 : Vector<Vector2<T>, T, 2> {
   auto y() const -> T { return this->data[1]; }
 };
 
-template<typename T>
-struct Vector3 : Vector<Vector3<T>, T, 3> {
-  Vector3() {}
+/**
+ * A three-dimensional vector template on type `T`
+ *
+ * @tparam Derived the result type for operations that yield another vector.
+ * @tparam T       the underlying data type (i.e. float)
+ */
+template<typename Derived, typename T>
+struct Vector3 : Vector<Derived, T, 3> {
+  using Vector<Derived, T, 3>::Vector;
 
+  /**
+   * Construct a Vector3 from three scalar values.
+   */
   Vector3(T x, T y, T z) {
     this->data[0] = x;
     this->data[1] = y;
     this->data[2] = z;
-  }
-
-  Vector3(Vector3 const& other) {
-    for (uint i = 0; i < 3; i++)
-      this->data[i] = other[i];
   }
 
   auto x() -> T& { return this->data[0]; }
@@ -263,6 +271,13 @@ struct Vector3 : Vector<Vector3<T>, T, 3> {
   auto y() const -> T { return this->data[1]; }
   auto z() const -> T { return this->data[2]; }
 
+  /**
+   * Calculate the cross product of this vector with another vector.
+   * See: https://tutorial.math.lamar.edu/classes/calcii/crossproduct.aspx
+   *
+   * @param other the other vector
+   * @returm the result vector
+   */
   auto cross(Vector3 const& other) -> Vector3 {
     return {
       this->data[1] * other[2] - this->data[2] * other[1],
@@ -272,10 +287,20 @@ struct Vector3 : Vector<Vector3<T>, T, 3> {
   }
 };
 
-template<typename T>
-struct Vector4 : Vector<Vector4<T>, T, 4> {
-  Vector4() {}
+/**
+ * A four-dimensional vector template on type `T`
+ *
+ * @tparam Derived the result type for operations that yield another vector.
+ * @tparam Vector3 the Vector3 type used with this class.
+ * @tparam T       the underlying data type (i.e. float)
+ */
+template<typename Derived, typename Vector3, typename T>
+struct Vector4 : Vector<Derived, T, 4> {
+  using Vector<Derived, T, 4>::Vector;
 
+  /**
+   * Construct a Vector4 from four scalar values.
+   */
   Vector4(T x, T y, T z, T w) {
     this->data[0] = x;
     this->data[1] = y;
@@ -283,22 +308,23 @@ struct Vector4 : Vector<Vector4<T>, T, 4> {
     this->data[3] = w;
   }
 
-  Vector4(Vector3<T> const& xyz, T w) {
+  /**
+   * Construct a Vector4 from a Vector3 and a scalar w-component.
+   */
+  Vector4(Vector3 const& xyz, T w) {
     this->data[0] = xyz.x();
     this->data[1] = xyz.y();
     this->data[2] = xyz.z();
     this->data[3] = w;
   }
 
-  Vector4(Vector3<T> const& other) {
+  /**
+   * Construct a Vector4 from a Vector3 and initialize the w-component to one.
+   */
+  Vector4(Vector3 const& other) {
     for (uint i = 0; i < 3; i++)
       this->data[i] = other[i];
     this->data[3] = NumericConstants<T>::one();
-  }
-
-  Vector4(Vector4 const& other) {
-    for (uint i = 0; i < 4; i++)
-      this->data[i] = other[i];
   }
 
   auto x() -> T& { return this->data[0]; }
@@ -311,26 +337,48 @@ struct Vector4 : Vector<Vector4<T>, T, 4> {
   auto z() const -> T { return this->data[2]; }
   auto w() const -> T { return this->data[3]; }
 
-  auto xyz() const -> Vector3<T> { return Vector3<T>{x(), y(), z()}; }
+  auto xyz() const -> Vector3 { return Vector3{x(), y(), z()}; }
 };
 
 } // namespace Aura::detail
 
-using Vector2 = detail::Vector2<float>;
+/**
+ * A two-dimensional float vector 
+ */
+struct Vector2 : detail::Vector2<Vector2, float> {
+  using detail::Vector2<Vector2, float>::Vector2;
+};
 
-struct Vector3 : detail::Vector3<float> {
-  using detail::Vector3<float>::Vector3;
+/**
+ * A three-dimensional float vector
+ */
+struct Vector3 : detail::Vector3<Vector3, float> {
+  using detail::Vector3<Vector3, float>::Vector3;
 
+  /**
+   * Calculate the euclidean length of this vector.
+   * @return the calculated length
+   */
   auto length() const -> float {
     return std::sqrt(dot(*this));
   }
 
+  /**
+   * Set the euclidean length of this vector to one while preserving its direction.
+   * If this vector is the zero vector then this operation is undefined.
+   * @return a reference to this vector
+   */
   auto normalize() -> Vector3& {
     *this *= 1.0f / length();
     return *this;
   }
 };
 
-using Vector4 = detail::Vector4<float>;
+/**
+ * A four-dimensional float vector
+ */
+struct Vector4 : detail::Vector4<Vector4, Vector3, float> {
+  using detail::Vector4<Vector4, Vector3, float>::Vector4;
+};
 
 } // namespaace Aura
