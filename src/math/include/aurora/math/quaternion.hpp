@@ -18,7 +18,7 @@ namespace detail {
  * Generic quaternion template on type `T`.
  * This implementation uses the WXYZ convention where W is the scalar part and XYZ the vector part.
  *
- * @tparam Derived the result type for operations that yield another quaternion
+ * @tparam Derived the inheriting type
  * @tparam Vector3 the Vector3 type used with this class
  * @tparam T       the underlying data type (i.e. float)
  */
@@ -250,7 +250,7 @@ private:
 /**
  * A float quaternion
  */
-struct Quaternion : detail::Quaternion<Quaternion, Vector3, float> {
+struct Quaternion final : detail::Quaternion<Quaternion, Vector3, float> {
   using detail::Quaternion<Quaternion, Vector3, float>::Quaternion;
 
   /**

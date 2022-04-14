@@ -19,7 +19,7 @@ namespace detail {
 /**
  * Generic 4x4 matrix template on type `T`.
  *
- * @tparam Derived the result type for operations that yield another matrix
+ * @tparam Derived the inheriting type
  * @tparam Vector4 the Vector4 type used with this class
  * @tparam T       the underlying data type (i.e. float)
  */
@@ -178,7 +178,7 @@ private:
 /**
  * A 4x4 float matrix
  */
-struct Matrix4 : detail::Matrix4<Matrix4, Vector4, float> {
+struct Matrix4 final : detail::Matrix4<Matrix4, Vector4, float> {
   using detail::Matrix4<Matrix4, Vector4, float>::Matrix4;
 
   /**

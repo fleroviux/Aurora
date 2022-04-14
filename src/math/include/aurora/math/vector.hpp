@@ -15,7 +15,7 @@ namespace detail {
 /**
  * Generic vector template on type `T` with dimension `n`.
  *
- * @tparam Derived the result type for operations that yield another vector.
+ * @tparam Derived the inheriting type
  * @tparam T       the underlying data type (i.e. float)
  * @tparam n       the number of components (or dimensions)
  */
@@ -222,7 +222,7 @@ protected:
 /**
  * A two-dimensional vector template on type `T`
  *
- * @tparam Derived the result type for operations that yield another vector.
+ * @tparam Derived the inheriting type
  * @tparam T       the underlying data type (i.e. float)
  */
 template<typename Derived, typename T>
@@ -247,7 +247,7 @@ struct Vector2 : Vector<Derived, T, 2> {
 /**
  * A three-dimensional vector template on type `T`
  *
- * @tparam Derived the result type for operations that yield another vector.
+ * @tparam Derived the inheriting type
  * @tparam T       the underlying data type (i.e. float)
  */
 template<typename Derived, typename T>
@@ -290,7 +290,7 @@ struct Vector3 : Vector<Derived, T, 3> {
 /**
  * A four-dimensional vector template on type `T`
  *
- * @tparam Derived the result type for operations that yield another vector.
+ * @tparam Derived the inheriting type
  * @tparam Vector3 the Vector3 type used with this class.
  * @tparam T       the underlying data type (i.e. float)
  */
@@ -336,14 +336,14 @@ struct Vector4 : Vector<Derived, T, 4> {
 /**
  * A two-dimensional float vector 
  */
-struct Vector2 : detail::Vector2<Vector2, float> {
+struct Vector2 final : detail::Vector2<Vector2, float> {
   using detail::Vector2<Vector2, float>::Vector2;
 };
 
 /**
  * A three-dimensional float vector
  */
-struct Vector3 : detail::Vector3<Vector3, float> {
+struct Vector3 final : detail::Vector3<Vector3, float> {
   using detail::Vector3<Vector3, float>::Vector3;
 
   /**
@@ -368,7 +368,7 @@ struct Vector3 : detail::Vector3<Vector3, float> {
 /**
  * A four-dimensional float vector
  */
-struct Vector4 : detail::Vector4<Vector4, Vector3, float> {
+struct Vector4 final : detail::Vector4<Vector4, Vector3, float> {
   using detail::Vector4<Vector4, Vector3, float>::Vector4;
 };
 
