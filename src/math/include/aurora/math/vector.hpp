@@ -5,7 +5,7 @@
 #pragma once
 
 #include <aurora/integer.hpp>
-#include <aurora/math/numeric_traits.hpp>
+#include <aurora/math/traits.hpp>
 #include <cmath>
 
 namespace Aura {

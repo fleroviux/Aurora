@@ -32,6 +32,8 @@ struct Box3 {
    * Apply a matrix transform on each vertex of this bounding box.
    * Because the new bounding box must be axis-aligned new mininum and maximum
    * vectors will be computed to fit the transformed bounding box.
+   *
+   * @param matrix the matrix transform
    * @return the transformed bounding box
    */
   auto apply_matrix(Matrix4 const& matrix) const -> Box3 {

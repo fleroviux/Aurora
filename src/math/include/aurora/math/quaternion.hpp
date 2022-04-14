@@ -5,7 +5,7 @@
 #pragma once
 
 #include <algorithm>
-#include <aurora/math/numeric_traits.hpp>
+#include <aurora/math/traits.hpp>
 #include <aurora/math/matrix4.hpp>
 #include <cmath>
 #include <initializer_list>
