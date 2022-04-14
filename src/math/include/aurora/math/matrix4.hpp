@@ -169,7 +169,7 @@ struct Matrix4 {
   }
 
 private:
-  Vector4 data[4] {}; /**< the four basic vectors of the matrix. */
+  Vector4 data[4] {}; /**< the four basis vectors of the matrix. */
 };
 
 } // namespace Aura::detail
