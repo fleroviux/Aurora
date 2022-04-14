@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 fleroviux
+ * Copyright (C) 2022 fleroviux
  */
 
 #pragma once
@@ -16,20 +16,44 @@ namespace Aura {
 
 namespace detail {
 
-// TODO: align data to 16-byte boundary to allow for better vectorization?
+/**
+ * Generic 4x4 matrix template on type `T`.
+ *
+ * @tparam Derived the result type for operations that yield another matrix
+ * @tparam T       the underlying data type (i.e. float)
+ */
 template<typename Derived, typename Vector4, typename T>
 struct Matrix4 {
-  Matrix4() {};
+  /**
+   * Default constructor.
+   */
+  Matrix4() {
+  };
 
+  /**
+   * Construct a Matrix4 from an array of scalars in row-major order.
+   */
   Matrix4(std::array<T, 16> const& elements) {
     for (uint i = 0; i < 16; i++)
       data[i & 3][i >> 2] = elements[i];
   }
 
+  /**
+   * Access a column vector of this matrix via its index (between `0` and `3`)
+   *
+   * @param i the index
+   * @return a reference to the column vector
+   */
   auto operator[](int i) -> Vector4& {
     return data[i];
   }
-  
+
+  /**
+   * Read a column vector of this matrix via its index (between `0` and `3`)
+   *
+   * @param i the index
+   * @return a const-reference to the column vector
+   */
   auto operator[](int i) const -> Vector4 const& {
     return data[i];
   }
@@ -44,6 +68,12 @@ struct Matrix4 {
   auto z() const -> Vector4 const& { return data[2]; }
   auto w() const -> Vector4 const& { return data[3]; }
 
+  /**
+   * Apply this matrix on a four-dimensional vector.
+   *
+   * @param vec the vector
+   * @return the result vector
+   */
   auto operator*(Vector4 const& vec) const -> Vector4 {
     Vector4 result{};
     for (uint i = 0; i < 4; i++)
@@ -51,6 +81,13 @@ struct Matrix4 {
     return result;
   }
 
+  /**
+   * Apply this matrix on each column vector of another matrix.
+   * Store the result in a new matrix.
+   *
+   * @param other the other matrix
+   * @return the result matrix
+   */
   auto operator*(Derived const& other) const -> Derived {
     Derived result{};
     for (uint i = 0; i < 4; i++)
@@ -58,6 +95,11 @@ struct Matrix4 {
     return result;
   }
 
+  /**
+   * Calculate the inverse of this matrix.
+   * If this matrix is not invertable (determinant = 0) then the operation is undefined.
+   * @return the inverted matrix
+   */
   auto inverse() const -> Derived {
     // Adapted from this code: https://stackoverflow.com/a/44446912
     auto a2323 = data[2][2] * data[3][3] - data[3][2] * data[2][3];
@@ -106,6 +148,10 @@ struct Matrix4 {
     }};
   }
 
+  /**
+   * Get a new identity matrix.
+   * @return the identity matrix
+   */
   static auto identity() -> Derived {
     Derived result{};
 
@@ -123,14 +169,25 @@ struct Matrix4 {
   }
 
 private:
-  Vector4 data[4] {};
+  Vector4 data[4] {}; /**< the four basic vectors of the matrix. */
 };
 
 } // namespace Aura::detail
 
+/**
+ * A 4x4 float matrix
+ */
 struct Matrix4 : detail::Matrix4<Matrix4, Vector4, float> {
   using detail::Matrix4<Matrix4, Vector4, float>::Matrix4;
 
+  /**
+   * Create a 3D scale matrix from three scalar values.
+   *
+   * @param x x-axis scale
+   * @param y y-axis scale
+   * @param z z-axis scale
+   * @return the scale matrix
+   */
   static auto scale(float x, float y, float z) -> Matrix4 {
     return Matrix4{{
       x, 0, 0, 0,
@@ -140,10 +197,22 @@ struct Matrix4 : detail::Matrix4<Matrix4, Vector4, float> {
     }};
   }
 
+  /**
+   * Create a 3D scale matrix from a Vector3.
+   *
+   * @param vec the Vector3 that encodes the x-, y- and z-axis scale
+   * @return the scale matrix
+   */
   static auto scale(Vector3 const& vec) -> Matrix4 {
     return scale(vec.x(), vec.y(), vec.z());
   }
 
+  /**
+   * Create a x-Axis rotation matrix from an angle.
+   *
+   * @param radians the angle in radians
+   * @return the rotation matrix
+   */
   static auto rotation_x(float radians) -> Matrix4 {
     auto cos = std::cos(radians);
     auto sin = std::sin(radians);
@@ -156,6 +225,12 @@ struct Matrix4 : detail::Matrix4<Matrix4, Vector4, float> {
     }};
   }
 
+  /**
+   * Create a y-Axis rotation matrix from an angle.
+   *
+   * @param radians the angle in radians
+   * @return the rotation matrix
+   */
   static auto rotation_y(float radians) -> Matrix4 {
     auto cos = std::cos(radians);
     auto sin = std::sin(radians);
@@ -168,6 +243,12 @@ struct Matrix4 : detail::Matrix4<Matrix4, Vector4, float> {
     }};
   }
 
+  /**
+   * Create a z-Axis rotation matrix from an angle.
+   *
+   * @param radians the angle in radians
+   * @return the rotation matrix
+   */
   static auto rotation_z(float radians) -> Matrix4 {
     auto cos = std::cos(radians);
     auto sin = std::sin(radians);
@@ -180,6 +261,14 @@ struct Matrix4 : detail::Matrix4<Matrix4, Vector4, float> {
     }};
   }
 
+  /**
+   * Create a 3D translation matrix from three scalar values.
+   *
+   * @param x x-axis translation
+   * @param y y-axis translation
+   * @param z z-axis translation
+   * @return the translation matrix
+   */
   static auto translation(float x, float y, float z) -> Matrix4 {
     return Matrix4{{
       1, 0, 0, x,
@@ -189,10 +278,25 @@ struct Matrix4 : detail::Matrix4<Matrix4, Vector4, float> {
     }};
   }
 
+  /**
+   * Create a 3D translation matrix from a Vector3.
+   *
+   * @param vec the Vector3 that encodes the x-, y- and z-axis translation
+   * @return the translation matrix
+   */
   static auto translation(Vector3 const& vec) -> Matrix4 {
     return Matrix4::translation(vec.x(), vec.y(), vec.z());
   }
 
+  /**
+   * Create a perspective projection for OpenGL (negative z-Axis is forward; `-1` to `+1` depth range)
+   *
+   * @param fov_y        vertical field-of-view (radians)
+   * @param aspect_ratio ratio of width to height
+   * @param near         near clipping plane distance (from origin)
+   * @param far          far clipping plane distance (from origin)
+   * @return the projection matrix
+   */
   static auto perspective_gl(
     float fov_y,
     float aspect_ratio,
@@ -215,6 +319,15 @@ struct Matrix4 : detail::Matrix4<Matrix4, Vector4, float> {
     }};
   }
 
+  /**
+   * Create a perspective projection for Vulkan (negative z-Axis is forward; `0` to `1` depth range)
+   *
+   * @param fov_y        vertical field-of-view (radians)
+   * @param aspect_ratio ratio of width to height
+   * @param near         near clipping plane distance (from origin)
+   * @param far          far clipping plane distance (from origin)
+   * @return the projection matrix
+   */
   static auto perspective_vk(
     float fov_y,
     float aspect_ratio,
@@ -237,6 +350,17 @@ struct Matrix4 : detail::Matrix4<Matrix4, Vector4, float> {
     }};
   }
 
+  /**
+   * Create an orthographic projection for OpenGL (negative z-Axis is forward; `-1` to `+1` depth range)
+   *
+   * @param left   left clipping plane distance
+   * @param right  right clipping plane distance
+   * @param bottom bottom clipping plane distance
+   * @param top    top clipping plane distance
+   * @param near   near clipping plane distance
+   * @param far    far clipping plane distance
+   * @return the projection matrix
+   */
   static auto orthographic_gl(
     float left,
     float right,
