@@ -9,24 +9,50 @@
 
 namespace Aura {
 
+/**
+ * A frustum defined by six inward-facing parametric Planes,
+ * one Plane for each {@link #Side} of the Frustum.
+ */
 struct Frustum {
+  /**
+   * Enumerate the six sides (or faces) of a Frustum.
+   */
   enum class Side {
-    NX = 0,
-    PX = 1,
-    NY = 2,
-    PY = 3,
-    NZ = 4,
-    PZ = 5
+    NX = 0, /**< negative-X */
+    PX = 1, /**< positive-X */
+    NY = 2, /**< negative-Y */
+    PY = 3, /**< positive-Y */
+    NZ = 4, /**< negative-Z */
+    PZ = 5  /**< positive-Z */
   };
 
-  auto get_plane(Side side) const -> Plane {
+  /**
+   * Get the parametric {@link #Plane} for one {@link #Side} of this Frustum.
+   *
+   * @param side the side (or face)
+   * @return the parametric {@link #Plane}
+   */
+  auto get_plane(Side side) const -> Plane const& {
     return planes[(int)side];
   }
 
-  void set_plane(Side side, Plane plane) {
+  /**
+   * Set the parametric {@link #Plane} for one {@link #Side} of this Frustum.
+   *
+   * @param side the side (or face)
+   * @param the parametric {@link #Plane}
+   */
+  void set_plane(Side side, Plane const& plane) {
     planes[(int)side] = plane;
   }
 
+  /**
+   * Calculate whether an axis-aligned bounding box ({@link #Box3}) is
+   * at least partially contained within this Frustum.
+   *
+   * @param box the bounding box
+   * @return true if the {@link #Box3} is partially or fully inside this Frustum
+   */
   bool contains_box(Box3 const& box) const {
     for (auto& plane : planes) {
       auto point = Vector3{
