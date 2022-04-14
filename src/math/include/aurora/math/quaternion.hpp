@@ -18,11 +18,11 @@ namespace detail {
  * Generic quaternion template on type `T`.
  * This implementation uses the WXYZ convention where W is the scalar part and XYZ the vector part.
  *
- * @tparam Derived the inheriting type
- * @tparam Vector3 the Vector3 type used with this class
+ * @tparam Derived the final inheriting class
+ * @tparam Vec3    the three-dimensional vector type to be used
  * @tparam T       the underlying data type (i.e. float)
  */
-template<typename Derived, typename Vector3, typename T>
+template<typename Derived, typename Vec3, typename T>
 struct Quaternion {
   /**
    * Default constructor. The Quaternion will be initialised to (1 0 0 0).
@@ -66,7 +66,7 @@ struct Quaternion {
   auto y() const -> T { return data[2]; }
   auto z() const -> T { return data[3]; }
 
-  auto xyz() const -> Vector3 { return Vector3{x(), y(), z()}; }
+  auto xyz() const -> Vec3 { return Vec3{x(), y(), z()}; }
 
   /**
    * Perform a component-wise summation of this quaternion with another quaternion.

@@ -19,11 +19,11 @@ namespace detail {
 /**
  * Generic 4x4 matrix template on type `T`.
  *
- * @tparam Derived the inheriting type
- * @tparam Vector4 the Vector4 type used with this class
+ * @tparam Derived the final inheriting class
+ * @tparam Vec4    the four-dimensional vector type to be used
  * @tparam T       the underlying data type (i.e. float)
  */
-template<typename Derived, typename Vector4, typename T>
+template<typename Derived, typename Vec4, typename T>
 struct Matrix4 {
   /**
    * Default constructor.
@@ -45,7 +45,7 @@ struct Matrix4 {
    * @param i the index
    * @return a reference to the column vector
    */
-  auto operator[](int i) -> Vector4& {
+  auto operator[](int i) -> Vec4& {
     return data[i];
   }
 
@@ -55,19 +55,19 @@ struct Matrix4 {
    * @param i the index
    * @return a const-reference to the column vector
    */
-  auto operator[](int i) const -> Vector4 const& {
+  auto operator[](int i) const -> Vec4 const& {
     return data[i];
   }
 
-  auto x() -> Vector4& { return data[0]; }
-  auto y() -> Vector4& { return data[1]; }
-  auto z() -> Vector4& { return data[2]; }
-  auto w() -> Vector4& { return data[3]; }
+  auto x() -> Vec4& { return data[0]; }
+  auto y() -> Vec4& { return data[1]; }
+  auto z() -> Vec4& { return data[2]; }
+  auto w() -> Vec4& { return data[3]; }
 
-  auto x() const -> Vector4 const& { return data[0]; }
-  auto y() const -> Vector4 const& { return data[1]; }
-  auto z() const -> Vector4 const& { return data[2]; }
-  auto w() const -> Vector4 const& { return data[3]; }
+  auto x() const -> Vec4 const& { return data[0]; }
+  auto y() const -> Vec4 const& { return data[1]; }
+  auto z() const -> Vec4 const& { return data[2]; }
+  auto w() const -> Vec4 const& { return data[3]; }
 
   /**
    * Apply this matrix on a four-dimensional vector.
@@ -75,8 +75,8 @@ struct Matrix4 {
    * @param vec the vector
    * @return the result vector
    */
-  auto operator*(Vector4 const& vec) const -> Vector4 {
-    Vector4 result{};
+  auto operator*(Vec4 const& vec) const -> Vec4 {
+    Vec4 result{};
     for (uint i = 0; i < 4; i++)
       result += data[i] * vec[i];
     return result;
@@ -170,7 +170,7 @@ struct Matrix4 {
   }
 
 private:
-  Vector4 data[4] {}; /**< the four basis vectors of the matrix. */
+  Vec4 data[4] {}; /**< the four basis vectors of the matrix. */
 };
 
 } // namespace Aura::detail

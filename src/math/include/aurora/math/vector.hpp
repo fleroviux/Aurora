@@ -15,7 +15,7 @@ namespace detail {
 /**
  * Generic vector template on type `T` with dimension `n`.
  *
- * @tparam Derived the inheriting type
+ * @tparam Derived the final inheriting class
  * @tparam T       the underlying data type (i.e. float)
  * @tparam n       the number of components (or dimensions)
  */
@@ -222,7 +222,7 @@ protected:
 /**
  * A two-dimensional vector template on type `T`
  *
- * @tparam Derived the inheriting type
+ * @tparam Derived the final inheriting class
  * @tparam T       the underlying data type (i.e. float)
  */
 template<typename Derived, typename T>
@@ -247,7 +247,7 @@ struct Vector2 : Vector<Derived, T, 2> {
 /**
  * A three-dimensional vector template on type `T`
  *
- * @tparam Derived the inheriting type
+ * @tparam Derived the final inheriting class
  * @tparam T       the underlying data type (i.e. float)
  */
 template<typename Derived, typename T>
@@ -290,11 +290,11 @@ struct Vector3 : Vector<Derived, T, 3> {
 /**
  * A four-dimensional vector template on type `T`
  *
- * @tparam Derived the inheriting type
- * @tparam Vector3 the Vector3 type used with this class.
+ * @tparam Derived the final inheriting class
+ * @tparam Vec3    the three-dimensional vector type to be used
  * @tparam T       the underlying data type (i.e. float)
  */
-template<typename Derived, typename Vector3, typename T>
+template<typename Derived, typename Vec3, typename T>
 struct Vector4 : Vector<Derived, T, 4> {
   using Vector<Derived, T, 4>::Vector;
 
@@ -311,7 +311,7 @@ struct Vector4 : Vector<Derived, T, 4> {
   /**
    * Construct a Vector4 from a Vector3 and a scalar w-component.
    */
-  Vector4(Vector3 const& xyz, T w = NumericConstants<T>::one()) {
+  Vector4(Vec3 const& xyz, T w = NumericConstants<T>::one()) {
     this->data[0] = xyz.x();
     this->data[1] = xyz.y();
     this->data[2] = xyz.z();
@@ -328,7 +328,7 @@ struct Vector4 : Vector<Derived, T, 4> {
   auto z() const -> T { return this->data[2]; }
   auto w() const -> T { return this->data[3]; }
 
-  auto xyz() const -> Vector3 { return Vector3{x(), y(), z()}; }
+  auto xyz() const -> Vec3 { return Vec3{x(), y(), z()}; }
 };
 
 } // namespace Aura::detail
