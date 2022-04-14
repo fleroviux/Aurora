@@ -10,10 +10,30 @@
 
 namespace Aura {
 
+/**
+ * A 3D axis-aligned bounding box (AABB).
+ * The bounding box is defined through a minimum and a maximum vector.
+ * Because the bounding box is axis-aligned, its eight vertices can be retrieved like this:
+ *
+ *   v0 = (min.x, min.y, min.z)
+ *   v1 = (max.x, min.y, min.z)
+ *   v2 = (min.x, max.y, min.z)
+ *   v3 = (max.x, max.y, min.z)
+ *   v4 = (min.x, min.y, max.z)
+ *   v5 = (max.x, min.y, max.z)
+ *   v6 = (min.x, max.y, max.z)
+ *   v7 = (max.x, max.y, max.z)
+ */
 struct Box3 {
-  Vector3 min;
-  Vector3 max;
+  Vector3 min; /**< the lower-left vertex */
+  Vector3 max; /**< the upper-right vertex */
 
+  /**
+   * Apply a matrix transform on each vertex of this bounding box.
+   * Because the new bounding box must be axis-aligned new mininum and maximum
+   * vectors will be computed to fit the transformed bounding box.
+   * @return the transformed bounding box
+   */
   auto apply_matrix(Matrix4 const& matrix) const -> Box3 {
     Box3 box;
 
