@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 fleroviux
+ * Copyright (C) 2022 fleroviux
  */
 
 #pragma once
@@ -14,16 +14,44 @@ namespace Aura {
 
 namespace detail {
 
+/**
+ * Generic quaternion template on type `T`.
+ * This implementation uses the WXYZ convention where W is the scalar part and XYZ the vector part.
+ *
+ * @tparam Derived the result type for operations that yield another quaternion
+ * @tparam Vector3 the Vector3 type used with this class
+ * @tparam T       the underlying data type (i.e. float)
+ */
 template<typename Derived, typename Vector3, typename T>
 struct Quaternion {
+  /**
+   * Default constructor. The Quaternion will be initialised to (1 0 0 0).
+   */
   Quaternion() {}
 
+  /**
+   * Construct a Quaternion from four scalar values.
+   */
   Quaternion(T w, T x, T y, T z) : data{w, x, y, z} {}
 
+  /**
+   * Access a component of the quaternion via its index (between `0` and `3`).
+   * Out-of-bounds access is undefined behaviour.
+   *
+   * @param index the index
+   * @return a reference to the component value
+   */
   auto operator[](int index) -> T& {
     return data[index];
   }
 
+  /**
+   * Read a component of the quaternion via its index (between `0` and `3`).
+   * Out-of-bounds access is undefined behaviour.
+   *
+   * @param index the index
+   * @return the component value
+   */
   auto operator[](int index) const -> T {
     return data[index];
   }
@@ -40,6 +68,13 @@ struct Quaternion {
 
   auto xyz() const -> Vector3 { return Vector3{x(), y(), z()}; }
 
+  /**
+   * Perform a component-wise summation of this quaternion with another quaternion.
+   * Store the result in a new quaternion.
+   *
+   * @param rhs the other quaternion
+   * @return the result quaternion
+   */
   auto operator+(Derived const& rhs) const -> Derived {
     return Derived{
       w() + rhs.w(),
@@ -49,12 +84,26 @@ struct Quaternion {
     };
   }
 
+  /**
+   * Perform a component-wise summation of this quaternion with another quaternion.
+   * Store the result in this quaternion.
+   *
+   * @param rhs the other quaternion
+   * @return a reference to this quaternion
+   */
   auto operator+=(Derived const& rhs) -> Derived& {
     for (auto i : {0, 1, 2, 3}) data[i] += rhs[i];
 
     return *static_cast<Derived*>(this);
   }
 
+  /**
+   * Perform a component-wise subtraction of another quaternion from this quaternion.
+   * Store the result in a new quaternion.
+   *
+   * @param rhs the other quaternion
+   * @return the result quaternion
+   */
   auto operator-(Derived const& rhs) const -> Derived {
     return Derived{
       w() - rhs.w(),
@@ -64,12 +113,26 @@ struct Quaternion {
     };
   }
 
+  /**
+   * Perform a component-wise subtraction of another quaterion from this quaternion.
+   * Store the result in this quaternion.
+   *
+   * @param rhs the other quaternion
+   * @return a reference to this quaternion
+   */
   auto operator-=(Derived const& rhs) -> Derived& {
     for (auto i : {0, 1, 2, 3}) data[i] -= rhs[i];
 
     return *static_cast<Derived*>(this);
   }
 
+  /**
+   * Multiply each component of this quaternion with a scalar value.
+   * Store the result in a new quaternion.
+   *
+   * @param scale the scalar value
+   * @return the new quaternion
+   */
   auto operator*(T scale) const -> Derived {
     return Derived{
       w() * scale,
@@ -79,40 +142,29 @@ struct Quaternion {
     };
   }
 
+  /**
+   * Multiply each component of this quaternion with a scalar value.
+   * Store the result in this quaternion.
+   *
+   * @param scale the scalar value
+   * @return a reference to this quaternion
+   */
   auto operator*=(T scale) -> Derived& {
     for (auto i : {0, 1, 2, 3}) data[i] *= scale;
 
     return *static_cast<Derived*>(this);
   }
 
+  /**
+   * Calculate the Hamilton product of two quaternions.
+   * Store the result in a new quaternion.
+   * This operation is not commutative.
+   * See: https://en.wikipedia.org/wiki/Quaternion#Hamilton_product
+   *
+   * @param rhs the right-hand side quaternion
+   * @return the result quaternion
+   */
   auto operator*(Derived const& rhs) const -> Derived {
-    /*
-     * i^2 = j^2 = k^2 = ijk = -1
-     *
-     * ij =  k
-     * ik = -j
-     * ji = -k
-     * jk =  i
-     * ki =  j
-     * kj = -i
-     *
-     * (w0 + x0*i + y0*j + z0*k) * (w1 + x1*i + y1*j + z1*k) = 
-     *
-     * w0*w1   + w0*x1*i  + w0*y1*j  + w0*z1*k  + 
-     * x0*w1*i + x0*x1*ii + x0*y1*ij + x0*z1*ik +
-     * y0*w1*j + y0*x1*ji + y0*y1*jj + y0*z1*jk +
-     * z0*w1*k + z0*x1*ki + z0*y1*kj + z0*z1*kk =
-     *
-     * w0*w1   + w0*x1*i  + w0*y1*j  + w0*z1*k  + 
-     * x0*w1*i - x0*x1    + x0*y1*k  - x0*z1*j  +
-     * y0*w1*j - y0*x1*k  - y0*y1    + y0*z1*i  +
-     * z0*w1*k + z0*x1*j  - z0*y1*i  - z0*z1   = 
-     *
-     * (w0*w1 - x0*x1 - y0*y1 - z0*z1) +
-     * (x0*w1 + w0*x1 - z0*y1 + y0*z1)*i +
-     * (y0*w1 + z0*x1 + w0*y1 - x0*z1)*j +
-     * (z0*w1 - y0*x1 + x0*y1 + w0*z1)*k 
-     */
     return Derived{
       w() * rhs.w() - x() * rhs.x() - y() * rhs.y() - z() * rhs.z(),
       x() * rhs.w() + w() * rhs.x() - z() * rhs.y() + y() * rhs.z(),
@@ -121,10 +173,20 @@ struct Quaternion {
     };
   }
 
+  /**
+   * Calculate the conjugate of this quaternion.
+   * For rotation quaternions the conjugate is equivalent to the inverse.
+   * @return the conjugate quaternion
+   */
   auto operator~() const -> Derived {
     return Derived{*static_cast<Derived const*>(this)}.conjugate();
   }
 
+  /**
+   * Conjugate this quaternion.
+   * For rotation quaternions the conjugate is equivalent to the inverse.
+   * @return a reference to this quaternion.
+   */
   auto conjugate() -> Derived& {
     x() = -x();
     y() = -y();
@@ -132,14 +194,26 @@ struct Quaternion {
     return *static_cast<Derived*>(this);
   }
 
+  /**
+   * Calculate the inverse of this quaternion.
+   * @return the inverse quaternion
+   */
   auto inverse() const -> Derived {
     return ~(*this) * (NumericConstants<T>::one() / length_squared());
   }
 
+  /**
+   * Calculate the squared length of this quaternion.
+   * @return the squared length
+   */
   auto length_squared() const -> T {
     return w() * w() + x() * x() + y() * y() + z() * z();
   }
 
+  /**
+   * Calculate the dot product of this quaternion with another quaternion.
+   * @return the dot product
+   */
   auto dot(Derived const& rhs) const -> T {
     return w() * rhs.w() +
            x() * rhs.x() +
@@ -147,6 +221,12 @@ struct Quaternion {
            z() * rhs.z();
   }
 
+  /**
+   * Calculate the cross-product of this quaternion's and another quaternion's vector components.
+   *
+   * @param rhs the right-hand side quaternion
+   * @return the result quaternion
+   */
   auto cross(Derived const& rhs) const -> Derived {
     return Derived{
       NumericConstants<T>::zero(),
@@ -162,24 +242,40 @@ private:
     NumericConstants<T>::zero(),
     NumericConstants<T>::zero(),
     NumericConstants<T>::zero()
-  };
+  }; /**< the four components of this quaternion. */
 };
 
 } // namespace Aura::detail
 
+/**
+ * A float quaternion
+ */
 struct Quaternion : detail::Quaternion<Quaternion, Vector3, float> {
   using detail::Quaternion<Quaternion, Vector3, float>::Quaternion;
 
+  /**
+   * Calculate the euclidean length of this quaternion.
+   * @return the euclidean length
+   */
   auto length() const -> float {
     return std::sqrt(length_squared());
   }
 
+  /**
+   * Normalize this quaternion.
+   * @return a reference to this quaternion
+   */
   auto normalize() -> Quaternion& {
     auto scale = 1.0 / length();
     *this *= scale;
     return *this;
   }
 
+  /**
+   * Create a 4x4 matrix equivalent to the rotation of this quaternion.
+   * The result is only valid if this is a pure, normalised rotation quaternion.
+   * @return the rotation matrix
+   */
   auto to_rotation_matrix() const -> Matrix4 {
     /*
      * To derive this formula apply quaternion rotation on each
@@ -229,6 +325,12 @@ struct Quaternion : detail::Quaternion<Quaternion, Vector3, float> {
     return mat;
   }
 
+  /**
+   * Create a quaternion from a rotation matrix.
+   *
+   * @param mat the rotation matrix
+   * @return the quaternion
+   */
   static auto from_rotation_matrix(Matrix4 const& mat) -> Quaternion {
     /*
      * Thanks to Martin John Baker from euclideanspace.com:
@@ -280,6 +382,13 @@ struct Quaternion : detail::Quaternion<Quaternion, Vector3, float> {
     }
   }
 
+  /**
+   * Create a rotation quaternion from a rotational axis and angle.
+   * 
+   * @param axis the rotational axis
+   * @param angle the angle (in radians)
+   * @return the rotation quaternion
+   */
   static auto from_axis_angle(Vector3 const& axis, float angle) -> Quaternion {
     auto a = angle * 0.5f;
     auto c = std::cos(a);
@@ -288,6 +397,15 @@ struct Quaternion : detail::Quaternion<Quaternion, Vector3, float> {
     return Quaternion{c, axis.x() * s, axis.y() * s, axis.z() * s};
   }
 
+  /**
+   * Perform a simple linear interpolation between two quaternions with a factor between `0` and `1`.
+   * The rotation property is not preserved.
+   * Use {@link #nlerp} or {@link #slerp} instead to interpolate rotations.
+   * 
+   * @param q0 the quaternion at `factor = 0`
+   * @param q1 the quaternion at `factor = 1`
+   * @return the interpolated quaternion
+   */
   static auto lerp(
     Quaternion const& q0,
     Quaternion const& q1,
@@ -296,6 +414,14 @@ struct Quaternion : detail::Quaternion<Quaternion, Vector3, float> {
     return q0 + (q1 - q0) * t;
   }
 
+  /**
+   * Perform a normalised linear interpolation between two quaternions with a factor between `0` and `1`.
+   * This interpolation method is torque-minimal and variable velocity.
+   *
+   * @param q0 the quaternion at `factor = 0`
+   * @param q1 the quaternion at `factor = 1`
+   * @return the interpolated quaternion
+   */
   static auto nlerp(
     Quaternion const& q0,
     Quaternion const& q1,
@@ -304,6 +430,14 @@ struct Quaternion : detail::Quaternion<Quaternion, Vector3, float> {
     return lerp(q0, q1, t).normalize();
   }
 
+  /**
+   * Perform a spherical interpolation between two quaternions with a factor between `0` and `1`.
+   * This interpolation method is torque-minimal and constant velocity.
+   *
+   * @param q0 the quaternion at `factor = 0`
+   * @param q1 the quaternion at `factor = 1`
+   * @return the interpolated quaternion
+   */
   static auto slerp(
     Quaternion const& q0,
     Quaternion const& q1,

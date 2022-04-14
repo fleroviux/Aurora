@@ -20,6 +20,7 @@ namespace detail {
  * Generic 4x4 matrix template on type `T`.
  *
  * @tparam Derived the result type for operations that yield another matrix
+ * @tparam Vector4 the Vector4 type used with this class
  * @tparam T       the underlying data type (i.e. float)
  */
 template<typename Derived, typename Vector4, typename T>
