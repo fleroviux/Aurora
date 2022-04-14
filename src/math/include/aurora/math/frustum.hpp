@@ -10,8 +10,8 @@
 namespace Aura {
 
 /**
- * A frustum defined by six inward-facing parametric Planes,
- * one Plane for each {@link #Side} of the Frustum.
+ * A frustum defined by six inward-facing parametric planes,
+ * one {@link #Plane} for each {@link #Side} of the Frustum.
  */
 struct Frustum {
   /**
