@@ -15,6 +15,7 @@ set(HEADERS_PUBLIC
   include/aurora/scene/component/transform.hpp
   include/aurora/scene/component.hpp
   include/aurora/scene/game_object.hpp
+  include/aurora/scene/rotation.hpp
 )
 
 add_library(Aurora-Scene ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})

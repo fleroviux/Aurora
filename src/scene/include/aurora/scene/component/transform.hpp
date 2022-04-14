@@ -1,10 +1,10 @@
 /*
- * Copyright (C) 2021 fleroviux
+ * Copyright (C) 2022 fleroviux
  */
 
 #include <aurora/math/matrix4.hpp>
-#include <aurora/math/rotation.hpp>
 #include <aurora/scene/component.hpp>
+#include <aurora/scene/rotation.hpp>
 
 namespace Aura {
 

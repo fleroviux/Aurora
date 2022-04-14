@@ -11,7 +11,6 @@ set(HEADERS_PUBLIC
   include/aurora/math/numeric_traits.hpp
   include/aurora/math/plane.hpp
   include/aurora/math/quaternion.hpp
-  include/aurora/math/rotation.hpp
   include/aurora/math/vector.hpp
 )
 
