@@ -35,6 +35,11 @@ struct Quaternion {
   Quaternion(T w, T x, T y, T z) : data{w, x, y, z} {}
 
   /**
+   * Construct a Quaternion from a Vector3.
+   */
+  Quaternion(Vec3 const& vec3) : data{NumericConstants<T>::zero(), vec3.x(), vec3.y(), vec3.z()} {}
+
+  /**
    * Access a component of the quaternion via its index (between `0` and `3`).
    * Out-of-bounds access is undefined behaviour.
    *
