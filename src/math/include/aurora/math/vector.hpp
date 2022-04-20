@@ -209,7 +209,7 @@ struct Vector {
    */
   static auto lerp(Derived const& a, Derived const& b, T factor) -> Derived {
     Derived result{};
-    U one_minus_factor = NumericConstants<U>::one() - factor;
+    T one_minus_factor = NumericConstants<T>::one() - factor;
     for (uint i = 0; i < n; i++)
       result[i] = a[i] * one_minus_factor + b[i] * factor;
     return result;
@@ -278,7 +278,7 @@ struct Vector3 : Vector<Derived, T, 3> {
    * @param other the other vector
    * @returm the result vector
    */
-  auto cross(Vector3 const& other) -> Vector3 {
+  auto cross(Vector3 const& other) const -> Vector3 {
     return {
       this->data[1] * other[2] - this->data[2] * other[1],
       this->data[2] * other[0] - this->data[0] * other[2],
