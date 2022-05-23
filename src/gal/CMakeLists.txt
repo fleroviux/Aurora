@@ -13,7 +13,6 @@ set(HEADERS
   src/vulkan/buffer.hpp
   src/vulkan/command_buffer.hpp
   src/vulkan/command_pool.hpp
-  src/vulkan/common.hpp
   src/vulkan/pipeline_layout.hpp
   src/vulkan/render_pass.hpp
   src/vulkan/render_target.hpp

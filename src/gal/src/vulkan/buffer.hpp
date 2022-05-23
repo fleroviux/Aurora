@@ -8,7 +8,6 @@
 #include <aurora/log.hpp>
 #include <vk_mem_alloc.h>
 
-#include "common.hpp"
 #include "command_buffer.hpp"
 
 namespace Aura {
