@@ -34,6 +34,7 @@ struct VulkanBuffer final : Buffer {
     };
 
     // TODO: skip staging buffer creation on devices with UMA (e.g. Apple M1 SoC)
+    // TODO: create and destroy staging buffer on demand (when data is static/not dynamic)
 
     auto alloc_info = VmaAllocationCreateInfo{
       .usage = VMA_MEMORY_USAGE_GPU_ONLY
