@@ -25,7 +25,7 @@ struct RenderDevice {
   virtual ~RenderDevice() = default;
 
   virtual auto Handle() -> void* = 0;
-  
+
   virtual auto CreateBuffer(
     Buffer::Usage usage,
     size_t size,
@@ -123,6 +123,9 @@ struct RenderDevice {
   virtual auto CreateCommandBuffer(
     std::shared_ptr<CommandPool> pool
   ) -> std::unique_ptr<CommandBuffer> = 0;
+
+  // TODO: come up with a less hacky API for this.
+  virtual void SetTransferCommandBuffer(CommandBuffer* cmd_buffer) = 0;
 };
 
 } // namespace Aura

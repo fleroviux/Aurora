@@ -4,6 +4,9 @@
 
 #include <aurora/gal/backend/vulkan.hpp>
 
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+
 #include "bind_group.hpp"
 #include "buffer.hpp"
 #include "command_buffer.hpp"
@@ -21,7 +24,13 @@ struct VulkanRenderDevice final : RenderDevice {
       : instance(options.instance)
       , physical_device(options.physical_device)
       , device(options.device) {
+    CreateVmaAllocator();
     CreateDescriptorPool();
+  }
+
+ ~VulkanRenderDevice() {
+    vkDestroyDescriptorPool(device, descriptor_pool, nullptr);
+    vmaDestroyAllocator(allocator);
   }
 
   auto Handle() -> void* override {
@@ -35,8 +44,8 @@ struct VulkanRenderDevice final : RenderDevice {
     bool map = true
   ) -> std::unique_ptr<Buffer> override {
     return std::make_unique<VulkanBuffer>(
-      physical_device,
-      device,
+      allocator,
+      transfer_cmd_buffer,
       usage,
       size,
       host_visible,
@@ -118,7 +127,30 @@ struct VulkanRenderDevice final : RenderDevice {
     return std::make_unique<VulkanCommandBuffer>(device, pool);
   }
 
+  void SetTransferCommandBuffer(CommandBuffer* cmd_buffer) override {
+    transfer_cmd_buffer = (VulkanCommandBuffer*)cmd_buffer;
+  }
+
 private:
+  void CreateVmaAllocator() {
+    auto info = VmaAllocatorCreateInfo{};
+    info.flags = 0;
+    info.physicalDevice = physical_device;
+    info.device = device;
+    info.preferredLargeHeapBlockSize = 0;
+    info.pAllocationCallbacks = nullptr;
+    info.pDeviceMemoryCallbacks = nullptr;
+    info.pHeapSizeLimit = nullptr;
+    info.pVulkanFunctions = nullptr;
+    info.instance = instance;
+    info.vulkanApiVersion = VK_API_VERSION_1_2;
+    info.pTypeExternalMemoryHandleTypes = nullptr;
+
+    if (vmaCreateAllocator(&info, &allocator) != VK_SUCCESS) {
+      Assert(false, "VulkanRenderDevice: failed to create the VMA allocator");
+    }
+  }
+
   void CreateDescriptorPool() {
     // TODO: create pools for other descriptor types
     VkDescriptorPoolSize pool_sizes[] {
@@ -150,6 +182,8 @@ private:
   VkPhysicalDevice physical_device;
   VkDevice device;
   VkDescriptorPool descriptor_pool;
+  VmaAllocator allocator;
+  VulkanCommandBuffer* transfer_cmd_buffer;
 };
 
 auto CreateVulkanRenderDevice(

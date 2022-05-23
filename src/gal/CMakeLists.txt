@@ -42,7 +42,7 @@ find_package(Vulkan REQUIRED)
 add_library(Aurora-GAL ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
 
 target_link_libraries(Aurora-GAL PUBLIC Aurora-Common)
-target_link_libraries(Aurora-GAL PRIVATE Vulkan::Vulkan)
+target_link_libraries(Aurora-GAL PRIVATE Vulkan::Vulkan VulkanMemoryAllocator)
 
 target_include_directories(Aurora-GAL PUBLIC include)
 target_include_directories(Aurora-GAL PRIVATE src)

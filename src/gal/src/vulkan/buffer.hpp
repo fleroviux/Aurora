@@ -6,20 +6,22 @@
 
 #include <aurora/gal/backend/vulkan.hpp>
 #include <aurora/log.hpp>
+#include <vk_mem_alloc.h>
 
 #include "common.hpp"
+#include "command_buffer.hpp"
 
 namespace Aura {
 
 struct VulkanBuffer final : Buffer {
   VulkanBuffer(
-    VkPhysicalDevice physical_device,
-    VkDevice device,
+    VmaAllocator allocator,
+    VulkanCommandBuffer* transfer_cmd_buffer,
     Buffer::Usage usage,
     size_t size,
     bool host_visible,
     bool map
-  )   : device(device), size(size), host_visible(host_visible) {
+  )   : allocator(allocator), transfer_cmd_buffer(transfer_cmd_buffer), size(size), host_visible(false) {
     auto buffer_info = VkBufferCreateInfo{
       .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
       .pNext = nullptr,
@@ -31,39 +33,53 @@ struct VulkanBuffer final : Buffer {
       .pQueueFamilyIndices = nullptr
     };
 
-    if (vkCreateBuffer(device, &buffer_info, nullptr, &buffer) != VK_SUCCESS) {
-      Assert(false, "VulkanBuffer: failed to create buffer, usage=0x{:08X}, size={}", (u32)usage, size);
-    }
+    // TODO: skip staging buffer creation on devices with UMA (e.g. Apple M1 SoC)
 
-    auto memory_requirements = VkMemoryRequirements{};
-    vkGetBufferMemoryRequirements(device, buffer, &memory_requirements);
-
-    auto allocate_info = VkMemoryAllocateInfo{
-      .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-      .pNext = nullptr,
-      .allocationSize = memory_requirements.size,
-      .memoryTypeIndex = vk_find_memory_type(
-        physical_device,
-        memory_requirements.memoryTypeBits,
-        host_visible ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT : 0
-      )
+    auto alloc_info = VmaAllocationCreateInfo{
+      .usage = VMA_MEMORY_USAGE_GPU_ONLY
     };
 
-    if (vkAllocateMemory(device, &allocate_info, nullptr, &memory) != VK_SUCCESS) {
-      Assert(false, "VulkanBuffer: failed to allocate buffer memory, usage=0x{:08X}, size={}", (u32)usage, size);
+    if (host_visible) {
+      // force transfer destination bit when a staging buffer is used.
+      // TODO: evaluate if this is actually a good idea.
+      buffer_info.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+      staging_buffer = std::make_unique<VulkanBuffer>(allocator, size);
     }
 
-    vkBindBufferMemory(device, buffer, memory, 0);
+    vmaCreateBuffer(allocator, &buffer_info, &alloc_info, &buffer, &allocation, nullptr);
 
     if (map) {
       Map();
     }
   }
 
+  // TODO: make it clear what kind of buffer is created
+  VulkanBuffer(
+    VmaAllocator allocator,
+    size_t size
+  )   : allocator(allocator), size(size), host_visible(true) {
+    auto buffer_info = VkBufferCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .size = size,
+      .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+      .queueFamilyIndexCount = 0,
+      .pQueueFamilyIndices = nullptr
+    };
+
+    auto alloc_info = VmaAllocationCreateInfo{
+      .usage = VMA_MEMORY_USAGE_CPU_ONLY
+    };
+
+    vmaCreateBuffer(allocator, &buffer_info, &alloc_info, &buffer, &allocation, nullptr);
+  }
+
  ~VulkanBuffer() override {
     Unmap();
-    vkDestroyBuffer(device, buffer, nullptr);
-    vkFreeMemory(device, memory, nullptr);
+    vmaDestroyBuffer(allocator, buffer, allocation);
   }
 
   auto Handle() -> void* override {
@@ -71,18 +87,30 @@ struct VulkanBuffer final : Buffer {
   }
 
   void Map() override {
+    if (staging_buffer) {
+      staging_buffer->Map();
+      host_data = staging_buffer->Data();
+      return;
+    }
+
     if (host_data == nullptr) {
       Assert(host_visible, "VulkanBuffer: attempted to map buffer which is not host visible");
 
-      if (vkMapMemory(device, memory, 0, VK_WHOLE_SIZE, 0, &host_data) != VK_SUCCESS) {
+      if (vmaMapMemory(allocator, allocation, &host_data) != VK_SUCCESS) {
         Assert(false, "VulkanBuffer: failed to map buffer to host memory, size={}", size);
       }
     }
   }
 
   void Unmap() override {
+    if (staging_buffer) {
+      staging_buffer->Unmap();
+      host_data = nullptr;
+      return;
+    }
+
     if (host_data != nullptr) {
-      vkUnmapMemory(device, memory);
+      vmaUnmapMemory(allocator, allocation);
       host_data = nullptr;
     }
   }
@@ -100,32 +128,38 @@ struct VulkanBuffer final : Buffer {
   }
 
   void Flush(size_t offset, size_t size) override {
+    if (staging_buffer) {
+      // TODO: implement buffer copy as a method on CommandBuffer
+      auto region = VkBufferCopy{
+        .srcOffset = offset,
+        .dstOffset = offset,
+        .size = size
+      };
+
+      staging_buffer->Flush(offset, size);
+
+      vkCmdCopyBuffer((VkCommandBuffer)transfer_cmd_buffer->Handle(), (VkBuffer)staging_buffer->Handle(), buffer, 1, &region);
+      return;
+    }
+
     auto range_end = offset + size;
 
     Assert(range_end <= this->size, "VulkanBuffer: out-of-bounds flush request, offset={}, size={}", offset, size);
 
-    // TODO: Use offset and size instead of flushing the whole buffer.
-    // This will require rounding them based on VkPhysicalDeviceLimits::nonCoherentAtomSize
-    auto range = VkMappedMemoryRange{
-      .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-      .pNext = nullptr,
-      .memory = memory,
-      .offset = 0,
-      .size = VK_WHOLE_SIZE
-    };
-
-    if (vkFlushMappedMemoryRanges(device, 1, &range) != VK_SUCCESS) {
+    if (vmaFlushAllocation(allocator, allocation, offset, size) != VK_SUCCESS) {
       Assert(false, "VulkanBuffer: failed to flush range");
     }
   }
 
 private:
-  VkDevice device;
   VkBuffer buffer;
-  VkDeviceMemory memory;
+  VmaAllocator allocator;
+  VmaAllocation allocation;
+  VulkanCommandBuffer* transfer_cmd_buffer;
   size_t size;
   bool host_visible;
   void* host_data = nullptr;
+  std::unique_ptr<VulkanBuffer> staging_buffer;
 };
 
 } // namespace Aura
