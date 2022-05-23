@@ -24,7 +24,7 @@ set(SHADERC_SKIP_EXAMPLES ON CACHE INTERNAL "")
 set(SHADERC_ENABLE_SHARED_CRT ON CACHE INTERNAL "")
 add_subdirectory(shaderc)
 
-add_library(stb stb.cpp stb/stb_image.h)
+add_library(stb stb.cpp stb/stb_image.h )
 target_include_directories(stb PUBLIC stb)
 
 add_subdirectory(VulkanMemoryAllocator)
