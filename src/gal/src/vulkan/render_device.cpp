@@ -30,7 +30,7 @@ struct VulkanRenderDevice final : RenderDevice {
 
  ~VulkanRenderDevice() {
     vkDestroyDescriptorPool(device, descriptor_pool, nullptr);
-    vmaDestroyAllocator(vma_allocator);
+    vmaDestroyAllocator(allocator);
   }
 
   auto Handle() -> void* override {
@@ -44,8 +44,7 @@ struct VulkanRenderDevice final : RenderDevice {
     bool map = true
   ) -> std::unique_ptr<Buffer> override {
     return std::make_unique<VulkanBuffer>(
-      physical_device,
-      device,
+      allocator,
       usage,
       size,
       host_visible,
@@ -142,7 +141,7 @@ private:
     info.vulkanApiVersion = VK_API_VERSION_1_2;
     info.pTypeExternalMemoryHandleTypes = nullptr;
 
-    if (vmaCreateAllocator(&info, &vma_allocator) != VK_SUCCESS) {
+    if (vmaCreateAllocator(&info, &allocator) != VK_SUCCESS) {
       Assert(false, "VulkanRenderDevice: failed to create the VMA allocator");
     }
   }
@@ -178,7 +177,7 @@ private:
   VkPhysicalDevice physical_device;
   VkDevice device;
   VkDescriptorPool descriptor_pool;
-  VmaAllocator vma_allocator;
+  VmaAllocator allocator;
 };
 
 auto CreateVulkanRenderDevice(
