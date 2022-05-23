@@ -48,7 +48,9 @@ struct VulkanBuffer final : Buffer {
       staging_buffer = std::make_unique<VulkanBuffer>(allocator, size);
     }
 
-    vmaCreateBuffer(allocator, &buffer_info, &alloc_info, &buffer, &allocation, nullptr);
+    if (vmaCreateBuffer(allocator, &buffer_info, &alloc_info, &buffer, &allocation, nullptr) != VK_SUCCESS) {
+      Assert(false, "VulkanBuffer: failed to create buffer");
+    }
 
     if (map) {
       Map();

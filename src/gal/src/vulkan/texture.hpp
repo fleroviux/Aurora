@@ -6,6 +6,7 @@
 
 #include <aurora/gal/backend/vulkan.hpp>
 #include <aurora/log.hpp>
+#include <vk_mem_alloc.h>
 
 namespace Aura {
 
@@ -13,8 +14,7 @@ struct VulkanTexture final : GPUTexture {
  ~VulkanTexture() override {
     vkDestroyImageView(device_, image_view_, nullptr);
     if (image_owned_) {
-      vkDestroyImage(device_, image_, nullptr);
-      vkFreeMemory(device_, memory_, nullptr);
+      vmaDestroyImage(allocator, image_, allocation);
     }
   }
 
@@ -32,13 +32,14 @@ struct VulkanTexture final : GPUTexture {
   static auto create(
     VkPhysicalDevice physical_device,
     VkDevice device,
+    VmaAllocator allocator,
     u32 width,
     u32 height,
     u32 mip_levels,
     Format format,
     Usage usage
   ) -> std::unique_ptr<VulkanTexture> {
-    auto info = VkImageCreateInfo{
+    auto image_info = VkImageCreateInfo{
       .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
@@ -60,15 +61,22 @@ struct VulkanTexture final : GPUTexture {
       .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
     };
 
-    auto image = VkImage{};
+    auto alloc_info = VmaAllocationCreateInfo{
+      .usage = VMA_MEMORY_USAGE_AUTO
+    };
 
-    if (vkCreateImage(device, &info, nullptr, &image) != VK_SUCCESS) {
+    auto image = VkImage{};
+    auto allocation = VmaAllocation{};
+
+    if (vmaCreateImage(allocator, &image_info, &alloc_info, &image, &allocation, nullptr) != VK_SUCCESS) {
       Assert(false, "VulkanTexture: failed to create image");
     }
 
     auto texture = std::make_unique<VulkanTexture>();
 
     texture->device_ = device;
+    texture->allocator = allocator;
+    texture->allocation = allocation;
     texture->image_ = image;
     texture->grade_ = Grade::_2D;
     texture->format_ = format;
@@ -78,7 +86,6 @@ struct VulkanTexture final : GPUTexture {
     texture->depth_ = 1;
     texture->layers_ = 1;
     texture->mip_levels_ = mip_levels;
-    texture->AllocateMemory(physical_device);
     texture->CreateImageView();
 
     return texture;
@@ -111,13 +118,13 @@ struct VulkanTexture final : GPUTexture {
   static auto create_cube(
     VkPhysicalDevice physical_device,
     VkDevice device,
+    VmaAllocator allocator,
     u32 width,
     u32 height,
     Format format,
     Usage usage
   ) -> std::unique_ptr<VulkanTexture> {
-    // TODO: deduplicate this mess :redp2:
-    auto info = VkImageCreateInfo{
+    auto image_info = VkImageCreateInfo{
       .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
       .pNext = nullptr,
       .flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
@@ -139,15 +146,22 @@ struct VulkanTexture final : GPUTexture {
       .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
     };
 
-    auto image = VkImage{};
+    auto alloc_info = VmaAllocationCreateInfo{
+      .usage = VMA_MEMORY_USAGE_AUTO
+    };
 
-    if (vkCreateImage(device, &info, nullptr, &image) != VK_SUCCESS) {
+    auto image = VkImage{};
+    auto allocation = VmaAllocation{};
+
+    if (vmaCreateImage(allocator, &image_info, &alloc_info, &image, &allocation, nullptr) != VK_SUCCESS) {
       Assert(false, "VulkanTexture: failed to create image");
     }
 
     auto texture = std::make_unique<VulkanTexture>();
 
     texture->device_ = device;
+    texture->allocator = allocator;
+    texture->allocation = allocation;
     texture->image_ = image;
     texture->grade_ = Grade::_2D;
     texture->format_ = format;
@@ -156,35 +170,12 @@ struct VulkanTexture final : GPUTexture {
     texture->height_ = height;
     texture->depth_ = 1;
     texture->layers_ = 6;
-    texture->AllocateMemory(physical_device);
     texture->CreateImageViewCube();
 
     return texture;
   }
 
 private:
-  void AllocateMemory(VkPhysicalDevice physical_device) {
-    auto requirements = VkMemoryRequirements{};
-    vkGetImageMemoryRequirements(device_, image_, &requirements);
-
-    auto info = VkMemoryAllocateInfo{
-      .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-      .pNext = nullptr,
-      .allocationSize = requirements.size,
-      .memoryTypeIndex = vk_find_memory_type(
-        physical_device,
-        requirements.memoryTypeBits,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-      )
-    };
-
-    if (vkAllocateMemory(device_, &info, nullptr, &memory_) != VK_SUCCESS) {
-      Assert(false, "VulkanTexture: failed to allocate image memory, size={}", requirements.size);
-    }
-
-    vkBindImageMemory(device_, image_, memory_, 0);
-  }
-
   void CreateImageView() {
     auto info = VkImageViewCreateInfo{
       .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -214,7 +205,6 @@ private:
   }
 
   void CreateImageViewCube() {
-    // TODO: deduplicate this mess :redp2:
     auto info = VkImageViewCreateInfo{
       .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
       .pNext = nullptr,
@@ -256,6 +246,8 @@ private:
 
   VkDevice device_;
   VkDeviceMemory memory_;
+  VmaAllocator allocator;
+  VmaAllocation allocation;
   VkImage image_;
   VkImageView image_view_;
   Grade grade_;
