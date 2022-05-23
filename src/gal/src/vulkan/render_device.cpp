@@ -45,6 +45,7 @@ struct VulkanRenderDevice final : RenderDevice {
   ) -> std::unique_ptr<Buffer> override {
     return std::make_unique<VulkanBuffer>(
       allocator,
+      transfer_cmd_buffer,
       usage,
       size,
       host_visible,
@@ -126,6 +127,10 @@ struct VulkanRenderDevice final : RenderDevice {
     return std::make_unique<VulkanCommandBuffer>(device, pool);
   }
 
+  void SetTransferCommandBuffer(CommandBuffer* cmd_buffer) override {
+    transfer_cmd_buffer = (VulkanCommandBuffer*)cmd_buffer;
+  }
+
 private:
   void CreateVmaAllocator() {
     auto info = VmaAllocatorCreateInfo{};
@@ -178,6 +183,7 @@ private:
   VkDevice device;
   VkDescriptorPool descriptor_pool;
   VmaAllocator allocator;
+  VulkanCommandBuffer* transfer_cmd_buffer;
 };
 
 auto CreateVulkanRenderDevice(

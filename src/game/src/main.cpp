@@ -732,8 +732,11 @@ struct Application {
       , screen_renderer(physical_device, device) {
   }
 
-  void Initialize() {
+  void Initialize1() {
     CreateRenderDevice();
+  }
+
+  void Initialize2() {
     CreateSwapChainRenderTargets();
     screen_renderer.Initialize(render_device);
     renderer.Initialize(physical_device, device, render_device);
@@ -877,7 +880,7 @@ int main(int argc, char** argv) {
 
   auto app = Application{instance, physical_device, device, swapchain};
 
-  app.Initialize();
+  app.Initialize1();
 
   auto& render_device = app.render_device;
 
@@ -889,6 +892,11 @@ int main(int argc, char** argv) {
   auto command_buffers = std::array<std::unique_ptr<CommandBuffer>, 2>{};
   command_buffers[0] = render_device->CreateCommandBuffer(command_pool);
   command_buffers[1] = render_device->CreateCommandBuffer(command_pool);
+  render_device->SetTransferCommandBuffer(command_buffers[0].get());
+
+  // TODO: remove this atrocious hack.
+  command_buffers[0]->Begin(CommandBuffer::OneTimeSubmit::Yes);
+  app.Initialize2();
 
   // TODO: move this closer to the device creation logic?
   auto queue_graphics = VkQueue{};
@@ -919,25 +927,25 @@ int main(int argc, char** argv) {
   //scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
   //scene->add_child(GLTFLoader{}.parse("porsche/porsche.gltf"));
 
-  //auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
-  //scene->add_child(behemoth);
+  auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
+  scene->add_child(behemoth);
 
-  // test 1000 damaged helmets at once
-  auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf")->children()[0];
-  auto& geometry = helmet->get_component<Mesh>()->geometry;
-  auto& material = helmet->get_component<Mesh>()->material;
-  for (int x = 0; x < 10; x++) {
-    for (int y = 0; y < 10; y++) {
-      for (int z = 0; z < 10; z++) {
-        auto object = new GameObject{};
-        object->add_component<Mesh>(geometry, material);
-        object->transform().position().x() = x * 1.5;
-        object->transform().position().y() = y * 1.5;
-        object->transform().position().z() = z * 1.5;
-        scene->add_child(object);
-      }
-    }
-  }
+  //// test 1000 damaged helmets at once
+  //auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf")->children()[0];
+  //auto& geometry = helmet->get_component<Mesh>()->geometry;
+  //auto& material = helmet->get_component<Mesh>()->material;
+  //for (int x = 0; x < 10; x++) {
+  //  for (int y = 0; y < 10; y++) {
+  //    for (int z = 0; z < 10; z++) {
+  //      auto object = new GameObject{};
+  //      object->add_component<Mesh>(geometry, material);
+  //      object->transform().position().x() = x * 1.5;
+  //      object->transform().position().y() = y * 1.5;
+  //      object->transform().position().z() = z * 1.5;
+  //      scene->add_child(object);
+  //    }
+  //  }
+  //}
 
   auto camera = new GameObject{};
   camera->add_component<PerspectiveCamera>();
@@ -990,7 +998,7 @@ int main(int argc, char** argv) {
     vkAcquireNextImageKHR(device, swapchain, u64(-1), VK_NULL_HANDLE, fence, &swapchain_image_id);
     vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
 
-    command_buffers[0]->Begin(CommandBuffer::OneTimeSubmit::Yes);
+    //command_buffers[0]->Begin(CommandBuffer::OneTimeSubmit::Yes);
     command_buffers[1]->Begin(CommandBuffer::OneTimeSubmit::Yes);
 
     app.Render(command_buffers, scene, swapchain_image_id);
@@ -1017,6 +1025,8 @@ int main(int argc, char** argv) {
     vkResetFences(device, 1, &fence);
     vkQueueSubmit(queue_graphics, 1, &submit_info, fence);
     vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
+
+    command_buffers[0]->Begin(CommandBuffer::OneTimeSubmit::Yes);
 
     auto result = VkResult{};
 
