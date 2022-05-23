@@ -604,13 +604,6 @@ auto sdl_create_surface(
   return VK_NULL_HANDLE;
 }
 
-static float vertices[] = {
-  -1, -1,  3,   1, 0, 0,  0, 0,
-   1, -1,  3,   0, 1, 0,  1, 0,
-   1,  1,  3,   0, 0, 1,  1, 1,
-  -1,  1,  3,   1, 1, 0,  0, 1
-};
-
 static u16 indices[] = {
   0, 1, 2,
   2, 3, 0
@@ -812,25 +805,7 @@ int main(int argc, char** argv) {
 
   // Create fullscreen quad geometry
   auto fs_quad_ibo = std::make_shared<IndexBuffer>(IndexDataType::UInt16, std::vector<u8>{(u8*)indices, (u8*)indices + sizeof(indices)});
-  auto fs_quad_vbo = std::make_shared<VertexBuffer>(sizeof(float) * 8, std::vector<u8>((u8*)vertices, (u8*)vertices + sizeof(vertices)));
   fullscreen_quad.set_index_buffer(fs_quad_ibo);
-  fullscreen_quad.add_vertex_buffer(fs_quad_vbo);
-  fullscreen_quad.add_attribute({
-    .location = 0,
-    .buffer = 0,
-    .data_type = VertexDataType::Float32,
-    .components = 3,
-    .normalized = false,
-    .offset = 0
-  });
-  fullscreen_quad.add_attribute({
-    .location = 1,
-    .buffer = 0,
-    .data_type = VertexDataType::Float32,
-    .components = 2,
-    .normalized = false,
-    .offset = sizeof(float) * 6
-  });
 
   SDL_Init(SDL_INIT_VIDEO);
 
@@ -924,7 +899,7 @@ int main(int argc, char** argv) {
   auto scene = new GameObject{};
   //auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf");
   //scene->add_child(helmet);
-  //scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
+  scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
   //scene->add_child(GLTFLoader{}.parse("porsche/porsche.gltf"));
 
   auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");

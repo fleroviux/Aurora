@@ -1,11 +1,12 @@
 #version 450
 
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec2 a_uv;
-
 layout(location = 0) out vec2 v_uv;
 
 void main() {
-  v_uv = a_uv;
-  gl_Position = vec4(a_position, 0.0, 1.0);
+  switch (gl_VertexIndex) {
+    case 0: gl_Position = vec4(-1.0, -1.0, 0.0, 1.0); v_uv = vec2(0.0, 0.0); break;
+    case 1: gl_Position = vec4( 1.0, -1.0, 0.0, 1.0); v_uv = vec2(1.0, 0.0); break;
+    case 2: gl_Position = vec4( 1.0,  1.0, 0.0, 1.0); v_uv = vec2(1.0, 1.0); break;
+    case 3: gl_Position = vec4(-1.0,  1.0, 0.0, 1.0); v_uv = vec2(0.0, 1.0); break;
+  }
 }
