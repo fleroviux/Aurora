@@ -20,263 +20,6 @@ using namespace Aura;
 #include <aurora/integer.hpp>
 #include <vulkan/vulkan.h>
 
-void configure_pipeline_geometry(
-  VkGraphicsPipelineCreateInfo& pipeline,
-  Geometry const* geometry
-) {
-  // TODO: find a way to not leak memory while also keeping the code sane.
-  auto bindings = new std::vector<VkVertexInputBindingDescription>{};
-  auto attributes = new std::vector<VkVertexInputAttributeDescription>{};
-
-  for (auto& buffer : geometry->get_vertex_buffers()) {
-    //auto& layout = buffer.layout();
-    auto binding = u32(bindings->size());
-
-    bindings->push_back(VkVertexInputBindingDescription{
-      .binding = binding,
-      .stride = u32(buffer->stride()),
-      .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-    });
-  }
-
-  for (auto const& attribute : geometry->get_attributes()) {
-    attributes->push_back(VkVertexInputAttributeDescription{
-      .location = u32(attribute.location),
-      .binding = u32(attribute.buffer),
-      .format = Renderer::GetVkFormatFromAttribute(attribute),
-      .offset = u32(attribute.offset)
-    });
-  }
-
-  pipeline.pVertexInputState = new VkPipelineVertexInputStateCreateInfo{
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .vertexBindingDescriptionCount = u32(bindings->size()),
-    .pVertexBindingDescriptions = bindings->data(),
-    .vertexAttributeDescriptionCount = u32(attributes->size()),
-    .pVertexAttributeDescriptions = attributes->data()
-  };
-
-  pipeline.pInputAssemblyState = new VkPipelineInputAssemblyStateCreateInfo{
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-    .primitiveRestartEnable = VK_FALSE
-  };
-}
-
-auto create_pipeline(
-  VkDevice device,
-  VkShaderModule shader_vert,
-  VkShaderModule shader_frag,
-  VkRenderPass render_pass,
-  VkPipelineLayout pipeline_layout,
-  Geometry const* geometry
-) -> VkPipeline {
-  auto pipeline = VkPipeline{};
-
-  VkPipelineShaderStageCreateInfo pipeline_stages[] = {
-    {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .stage = VK_SHADER_STAGE_VERTEX_BIT,
-      .module = shader_vert,
-      .pName = "main",
-      .pSpecializationInfo = nullptr
-    },
-    {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-      .module = shader_frag,
-      .pName = "main",
-      .pSpecializationInfo = nullptr
-    }
-  };
-
-  auto viewport = VkViewport{
-    .x = 0,
-    .y = 0,
-    .width = 1600,
-    .height = 900,
-    .minDepth = 0,
-    .maxDepth = 1
-  };
-
-  auto scissor = VkRect2D{
-    .offset = VkOffset2D{
-      .x = 0,
-      .y = 0
-    },
-    .extent = VkExtent2D{
-      .width = 1600,
-      .height = 900
-    }
-  };
-
-  auto viewport_info = VkPipelineViewportStateCreateInfo{
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .viewportCount = 1,
-    .pViewports = &viewport,
-    .scissorCount = 1,
-    .pScissors = &scissor
-  };
-
-  auto rasterization_info = VkPipelineRasterizationStateCreateInfo{
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .depthClampEnable = VK_FALSE,
-    .rasterizerDiscardEnable = VK_FALSE,
-    .polygonMode = VK_POLYGON_MODE_FILL,
-    .cullMode = VK_CULL_MODE_NONE,
-    .depthBiasEnable = VK_FALSE,
-    .depthBiasConstantFactor = 0,
-    .depthBiasClamp = 0,
-    .depthBiasSlopeFactor = 0,
-    .lineWidth = 1
-  };
-
-  auto multisample_info = VkPipelineMultisampleStateCreateInfo{
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-    .sampleShadingEnable = VK_FALSE,
-    .minSampleShading = 0,
-    .pSampleMask = nullptr,
-    .alphaToCoverageEnable = VK_FALSE,
-    .alphaToOneEnable = VK_FALSE
-  };
-
-  auto depth_stencil_info = VkPipelineDepthStencilStateCreateInfo{
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .depthTestEnable = VK_TRUE,
-    .depthWriteEnable = VK_TRUE,
-    .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
-    .depthBoundsTestEnable = VK_FALSE,
-    .stencilTestEnable = VK_FALSE,
-    .front = {},
-    .back = {},
-    .minDepthBounds = 0,
-    .maxDepthBounds = 0
-  };
-  
-  auto color_blend_attachment_info = VkPipelineColorBlendAttachmentState{
-    .blendEnable = VK_FALSE,
-    .colorWriteMask = 0xF // ?
-  };
-
-  auto color_blend_info = VkPipelineColorBlendStateCreateInfo{
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .logicOpEnable = VK_FALSE,
-    .logicOp = VK_LOGIC_OP_NO_OP,
-    .attachmentCount = 1,
-    .pAttachments = &color_blend_attachment_info,
-    .blendConstants = {0, 0, 0, 0}
-  };
-
-  auto pipeline_info = VkGraphicsPipelineCreateInfo{
-    .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .stageCount = 2,
-    .pStages = pipeline_stages,
-    .pTessellationState = nullptr,
-    .pViewportState = &viewport_info,
-    .pRasterizationState = &rasterization_info,
-    .pMultisampleState = &multisample_info,
-    .pDepthStencilState = &depth_stencil_info,
-    .pColorBlendState = &color_blend_info,
-    .pDynamicState = nullptr,
-    .layout = pipeline_layout,
-    .renderPass = render_pass,
-    .subpass = 0,
-    .basePipelineHandle = VK_NULL_HANDLE,
-    .basePipelineIndex = 0
-  };
-
-  configure_pipeline_geometry(pipeline_info, geometry);
-
-  if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
-    Assert(false, "Vulkan: failed to create graphics pipeline :(");
-  }
-
-  return pipeline;
-}
-
-
-struct GeometryCacheEntry {
-  VkPipeline pipeline;
-  std::unique_ptr<Buffer> ibo;
-  std::vector<std::shared_ptr<Buffer>> vbos;
-};
-
-std::unordered_map<Geometry const*, GeometryCacheEntry> geometry_cache;
-
-void upload_geometry(
-  VkPhysicalDevice physical_device,
-  VkDevice device,
-  std::shared_ptr<RenderDevice> render_device,
-  VkShaderModule shader_vert,
-  VkShaderModule shader_frag,
-  VkRenderPass render_pass,
-  VkPipelineLayout pipeline_layout,
-  Geometry const* geometry
-) {
-  auto match = geometry_cache.find(geometry);
-
-  if (match == geometry_cache.end()) {
-    auto entry = GeometryCacheEntry{};
-
-    entry.pipeline = create_pipeline(device, shader_vert, shader_frag, render_pass, pipeline_layout, geometry);
-
-    // TODO: write ArrayBuffer constructor (and maybe a cast operator) which accepts a std::vector
-    // Also maybe support an ArrayView that doesn't allow modification to the underlying data.
-
-    auto& index_buffer = geometry->get_index_buffer();
-
-    entry.ibo = render_device->CreateBufferWithData(Buffer::Usage::IndexBuffer, index_buffer->view<u8>());
-
-    for (auto& buffer : geometry->get_vertex_buffers()) {
-      auto vbo = render_device->CreateBufferWithData(Buffer::Usage::VertexBuffer, buffer->view<u8>());
-
-      entry.vbos.push_back(std::move(vbo));
-    }
-
-    geometry_cache[geometry] = std::move(entry);
-  }
-}
-
-void draw_geometry(
-  std::unique_ptr<CommandBuffer>& command_buffer,
-  VkPipelineLayout pipeline_layout,
-  VkDescriptorSet descriptor_set,
-  Geometry const* geometry
-) {
-  auto& entry = geometry_cache[geometry];
-  auto const& index_buffer = geometry->get_index_buffer();
-
-  auto command_buffer_ = (VkCommandBuffer)command_buffer->Handle();
-
-  command_buffer->BindGraphicsPipeline(entry.pipeline);
-  vkCmdBindDescriptorSets(command_buffer_, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
-  vkCmdDraw(command_buffer_, 3, 1, 0, 0);
-}
-
-// ---------------------------------------------------
-// legacy level two 
-
 #include <algorithm>
 #include <cstdio>
 #include <cstdint>
@@ -594,13 +337,6 @@ auto sdl_create_surface(
   return VK_NULL_HANDLE;
 }
 
-static u16 indices[] = {
-  0, 1, 2,
-  2, 3, 0
-};
-
-static Geometry fullscreen_quad;
-
 struct ScreenRenderer {
   ScreenRenderer(VkPhysicalDevice physical_device, VkDevice device)
     : physical_device(physical_device), device(device) {}
@@ -623,26 +359,16 @@ struct ScreenRenderer {
 
     render_pass->SetClearColor(0, 1, 0, 0, 1);
 
+    if (pipeline == VK_NULL_HANDLE) {
+      CreateGraphicsPipeline(render_pass);
+    }
+
+    auto command_buffer_ = (VkCommandBuffer)command_buffer->Handle();
+
     command_buffer->BeginRenderPass(render_target, render_pass);
-
-    upload_geometry(
-      physical_device,
-      device,
-      render_device,
-      (VkShaderModule)shader_vert->Handle(),
-      (VkShaderModule)shader_frag->Handle(),
-      ((VulkanRenderPass*)render_pass.get())->Handle(),
-      (VkPipelineLayout)pipeline_layout->Handle(),
-      &fullscreen_quad
-    );
-
-    draw_geometry(
-      command_buffer,
-      (VkPipelineLayout)pipeline_layout->Handle(),
-      (VkDescriptorSet)bind_group->Handle(),
-      &fullscreen_quad
-    );
-
+    command_buffer->BindGraphicsPipeline(pipeline);
+    command_buffer->BindGraphicsBindGroup(0, pipeline_layout, bind_group);
+    vkCmdDraw(command_buffer_, 3, 1, 0, 0);
     command_buffer->EndRenderPass();
   }
 
@@ -688,6 +414,159 @@ private:
     shader_frag = render_device->CreateShaderModule(output_frag, sizeof(output_frag));
   }
 
+  void CreateGraphicsPipeline(std::unique_ptr<RenderPass>& render_pass) {
+    VkPipelineShaderStageCreateInfo pipeline_stages[] = {
+      {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+        .module = (VkShaderModule)shader_vert->Handle(),
+        .pName = "main",
+        .pSpecializationInfo = nullptr
+      },
+      {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .module = (VkShaderModule)shader_frag->Handle(),
+        .pName = "main",
+        .pSpecializationInfo = nullptr
+      }
+    };
+
+    auto viewport = VkViewport{
+      .x = 0,
+      .y = 0,
+      .width = 1600,
+      .height = 900,
+      .minDepth = 0,
+      .maxDepth = 1
+    };
+
+    auto scissor = VkRect2D{
+      .offset = VkOffset2D{
+        .x = 0,
+        .y = 0
+      },
+      .extent = VkExtent2D{
+        .width = 1600,
+        .height = 900
+      }
+    };
+
+    auto viewport_info = VkPipelineViewportStateCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .viewportCount = 1,
+      .pViewports = &viewport,
+      .scissorCount = 1,
+      .pScissors = &scissor
+    };
+
+    auto rasterization_info = VkPipelineRasterizationStateCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .depthClampEnable = VK_FALSE,
+      .rasterizerDiscardEnable = VK_FALSE,
+      .polygonMode = VK_POLYGON_MODE_FILL,
+      .cullMode = VK_CULL_MODE_NONE,
+      .depthBiasEnable = VK_FALSE,
+      .depthBiasConstantFactor = 0,
+      .depthBiasClamp = 0,
+      .depthBiasSlopeFactor = 0,
+      .lineWidth = 1
+    };
+
+    auto multisample_info = VkPipelineMultisampleStateCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+      .sampleShadingEnable = VK_FALSE,
+      .minSampleShading = 0,
+      .pSampleMask = nullptr,
+      .alphaToCoverageEnable = VK_FALSE,
+      .alphaToOneEnable = VK_FALSE
+    };
+
+    auto depth_stencil_info = VkPipelineDepthStencilStateCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .depthTestEnable = VK_TRUE,
+      .depthWriteEnable = VK_TRUE,
+      .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
+      .depthBoundsTestEnable = VK_FALSE,
+      .stencilTestEnable = VK_FALSE,
+      .front = {},
+      .back = {},
+      .minDepthBounds = 0,
+      .maxDepthBounds = 0
+    };
+
+    auto color_blend_attachment_info = VkPipelineColorBlendAttachmentState{
+      .blendEnable = VK_FALSE,
+      .colorWriteMask = 0xF // ?
+    };
+
+    auto color_blend_info = VkPipelineColorBlendStateCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .logicOpEnable = VK_FALSE,
+      .logicOp = VK_LOGIC_OP_NO_OP,
+      .attachmentCount = 1,
+      .pAttachments = &color_blend_attachment_info,
+      .blendConstants = {0, 0, 0, 0}
+    };
+
+    auto pipeline_info = VkGraphicsPipelineCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .stageCount = 2,
+      .pStages = pipeline_stages,
+      .pTessellationState = nullptr,
+      .pViewportState = &viewport_info,
+      .pRasterizationState = &rasterization_info,
+      .pMultisampleState = &multisample_info,
+      .pDepthStencilState = &depth_stencil_info,
+      .pColorBlendState = &color_blend_info,
+      .pDynamicState = nullptr,
+      .layout = (VkPipelineLayout)pipeline_layout->Handle(),
+      .renderPass = ((VulkanRenderPass*)(render_pass.get()))->Handle(),
+      .subpass = 0,
+      .basePipelineHandle = VK_NULL_HANDLE,
+      .basePipelineIndex = 0
+    };
+
+    pipeline_info.pVertexInputState = new VkPipelineVertexInputStateCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .vertexBindingDescriptionCount = 0,
+      .pVertexBindingDescriptions = nullptr,
+      .vertexAttributeDescriptionCount = 0,
+      .pVertexAttributeDescriptions = nullptr
+    };
+
+    pipeline_info.pInputAssemblyState = new VkPipelineInputAssemblyStateCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+      .primitiveRestartEnable = VK_FALSE
+    };
+
+    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
+      Assert(false, "Vulkan: failed to create graphics pipeline :(");
+    }
+  }
+
   VkPhysicalDevice physical_device;
   VkDevice device;
   std::shared_ptr<RenderDevice> render_device;
@@ -700,6 +579,8 @@ private:
   std::unique_ptr<Sampler> sampler;
   std::unique_ptr<ShaderModule> shader_vert;
   std::unique_ptr<ShaderModule> shader_frag;
+
+  VkPipeline pipeline = VK_NULL_HANDLE;
 };
 
 struct Application {
@@ -792,10 +673,6 @@ struct Application {
 int main(int argc, char** argv) {
   (void)argc;
   (void)argv;
-
-  // Create fullscreen quad geometry
-  auto fs_quad_ibo = std::make_shared<IndexBuffer>(IndexDataType::UInt16, std::vector<u8>{(u8*)indices, (u8*)indices + sizeof(indices)});
-  fullscreen_quad.set_index_buffer(fs_quad_ibo);
 
   SDL_Init(SDL_INIT_VIDEO);
 
