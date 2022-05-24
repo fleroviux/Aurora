@@ -352,7 +352,7 @@ struct ScreenRenderer {
   void Render(
     std::unique_ptr<CommandBuffer>& command_buffer,
     std::unique_ptr<RenderTarget>& render_target,
-    std::unique_ptr<RenderPass>& render_pass,
+    std::shared_ptr<RenderPass>& render_pass,
     std::shared_ptr<GPUTexture>& texture
   ) {
     bind_group->Bind(1, texture, sampler);
@@ -366,7 +366,7 @@ struct ScreenRenderer {
     auto command_buffer_ = (VkCommandBuffer)command_buffer->Handle();
 
     command_buffer->BeginRenderPass(render_target, render_pass);
-    command_buffer->BindGraphicsPipeline(pipeline);
+    command_buffer->BindGraphicsPipeline(pipeline->Handle());
     command_buffer->BindGraphicsBindGroup(0, pipeline_layout, bind_group);
     vkCmdDraw(command_buffer_, 3, 1, 0, 0);
     command_buffer->EndRenderPass();
@@ -389,8 +389,8 @@ private:
     pipeline_layout = render_device->CreatePipelineLayout({ bind_group_layout });
   }
 
-  // TODO: get rid of this once we reworked the shader
   void CreateUniformBuffer() {
+    // TODO: get rid of this once we reworked the shader
     auto transform = Matrix4::perspective_vk(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0);
 
     ubo = render_device->CreateBufferWithData(
@@ -401,8 +401,8 @@ private:
     bind_group->Bind(0, ubo, BindGroupLayout::Entry::Type::UniformBuffer);
   }
 
-  // TODO: specify a sampler inside the shader if possible
   void CreateSampler() {
+    // TODO: specify a sampler inside the shader if possible
     sampler = render_device->CreateSampler({
       .mag_filter = Sampler::FilterMode::Nearest,
       .min_filter = Sampler::FilterMode::Nearest
@@ -414,173 +414,32 @@ private:
     shader_frag = render_device->CreateShaderModule(output_frag, sizeof(output_frag));
   }
 
-  void CreateGraphicsPipeline(std::unique_ptr<RenderPass>& render_pass) {
-    VkPipelineShaderStageCreateInfo pipeline_stages[] = {
-      {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .stage = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = (VkShaderModule)shader_vert->Handle(),
-        .pName = "main",
-        .pSpecializationInfo = nullptr
-      },
-      {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = (VkShaderModule)shader_frag->Handle(),
-        .pName = "main",
-        .pSpecializationInfo = nullptr
-      }
-    };
+  void CreateGraphicsPipeline(std::shared_ptr<RenderPass>& render_pass) {
+    auto pipeline_builder = render_device->CreateGraphicsPipelineBuilder();
 
-    auto viewport = VkViewport{
-      .x = 0,
-      .y = 0,
-      .width = 1600,
-      .height = 900,
-      .minDepth = 0,
-      .maxDepth = 1
-    };
+    // TODO: make it unnecessary to set the scissor unless we really need it.
+    pipeline_builder->SetViewport(0, 0, 1600, 900);
+    pipeline_builder->SetScissor(0, 0, 1600, 900);
+    pipeline_builder->SetShaderModule(PipelineStage::Vertex, shader_vert);
+    pipeline_builder->SetShaderModule(PipelineStage::Fragment, shader_frag);
+    pipeline_builder->SetPipelineLayout(pipeline_layout);
+    pipeline_builder->SetRenderPass(render_pass);
 
-    auto scissor = VkRect2D{
-      .offset = VkOffset2D{
-        .x = 0,
-        .y = 0
-      },
-      .extent = VkExtent2D{
-        .width = 1600,
-        .height = 900
-      }
-    };
-
-    auto viewport_info = VkPipelineViewportStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .viewportCount = 1,
-      .pViewports = &viewport,
-      .scissorCount = 1,
-      .pScissors = &scissor
-    };
-
-    auto rasterization_info = VkPipelineRasterizationStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .depthClampEnable = VK_FALSE,
-      .rasterizerDiscardEnable = VK_FALSE,
-      .polygonMode = VK_POLYGON_MODE_FILL,
-      .cullMode = VK_CULL_MODE_NONE,
-      .depthBiasEnable = VK_FALSE,
-      .depthBiasConstantFactor = 0,
-      .depthBiasClamp = 0,
-      .depthBiasSlopeFactor = 0,
-      .lineWidth = 1
-    };
-
-    auto multisample_info = VkPipelineMultisampleStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-      .sampleShadingEnable = VK_FALSE,
-      .minSampleShading = 0,
-      .pSampleMask = nullptr,
-      .alphaToCoverageEnable = VK_FALSE,
-      .alphaToOneEnable = VK_FALSE
-    };
-
-    auto depth_stencil_info = VkPipelineDepthStencilStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .depthTestEnable = VK_TRUE,
-      .depthWriteEnable = VK_TRUE,
-      .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
-      .depthBoundsTestEnable = VK_FALSE,
-      .stencilTestEnable = VK_FALSE,
-      .front = {},
-      .back = {},
-      .minDepthBounds = 0,
-      .maxDepthBounds = 0
-    };
-
-    auto color_blend_attachment_info = VkPipelineColorBlendAttachmentState{
-      .blendEnable = VK_FALSE,
-      .colorWriteMask = 0xF // ?
-    };
-
-    auto color_blend_info = VkPipelineColorBlendStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .logicOpEnable = VK_FALSE,
-      .logicOp = VK_LOGIC_OP_NO_OP,
-      .attachmentCount = 1,
-      .pAttachments = &color_blend_attachment_info,
-      .blendConstants = {0, 0, 0, 0}
-    };
-
-    auto pipeline_info = VkGraphicsPipelineCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .stageCount = 2,
-      .pStages = pipeline_stages,
-      .pTessellationState = nullptr,
-      .pViewportState = &viewport_info,
-      .pRasterizationState = &rasterization_info,
-      .pMultisampleState = &multisample_info,
-      .pDepthStencilState = &depth_stencil_info,
-      .pColorBlendState = &color_blend_info,
-      .pDynamicState = nullptr,
-      .layout = (VkPipelineLayout)pipeline_layout->Handle(),
-      .renderPass = ((VulkanRenderPass*)(render_pass.get()))->Handle(),
-      .subpass = 0,
-      .basePipelineHandle = VK_NULL_HANDLE,
-      .basePipelineIndex = 0
-    };
-
-    pipeline_info.pVertexInputState = new VkPipelineVertexInputStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .vertexBindingDescriptionCount = 0,
-      .pVertexBindingDescriptions = nullptr,
-      .vertexAttributeDescriptionCount = 0,
-      .pVertexAttributeDescriptions = nullptr
-    };
-
-    pipeline_info.pInputAssemblyState = new VkPipelineInputAssemblyStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-      .primitiveRestartEnable = VK_FALSE
-    };
-
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
-      Assert(false, "Vulkan: failed to create graphics pipeline :(");
-    }
+    pipeline = pipeline_builder->Build();
   }
 
   VkPhysicalDevice physical_device;
   VkDevice device;
   std::shared_ptr<RenderDevice> render_device;
 
-  // TODO: clean this up a bit...
-  std::unique_ptr<PipelineLayout> pipeline_layout;
+  std::shared_ptr<PipelineLayout> pipeline_layout;
   std::shared_ptr<BindGroupLayout> bind_group_layout;
   std::unique_ptr<BindGroup> bind_group;
   std::unique_ptr<Buffer> ubo;
   std::unique_ptr<Sampler> sampler;
-  std::unique_ptr<ShaderModule> shader_vert;
-  std::unique_ptr<ShaderModule> shader_frag;
-
-  VkPipeline pipeline = VK_NULL_HANDLE;
+  std::shared_ptr<ShaderModule> shader_vert;
+  std::shared_ptr<ShaderModule> shader_frag;
+  std::unique_ptr<GraphicsPipeline> pipeline;
 };
 
 struct Application {
@@ -664,7 +523,7 @@ struct Application {
   VkSwapchainKHR swapchain;
   std::shared_ptr<RenderDevice> render_device;
   std::vector<std::unique_ptr<RenderTarget>> render_targets;
-  std::unique_ptr<RenderPass> render_pass;
+  std::shared_ptr<RenderPass> render_pass;
 
   ScreenRenderer screen_renderer;
   Renderer renderer;

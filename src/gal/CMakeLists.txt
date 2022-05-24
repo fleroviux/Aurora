@@ -13,6 +13,7 @@ set(HEADERS
   src/vulkan/buffer.hpp
   src/vulkan/command_buffer.hpp
   src/vulkan/command_pool.hpp
+  src/vulkan/pipeline_builder.hpp
   src/vulkan/pipeline_layout.hpp
   src/vulkan/render_pass.hpp
   src/vulkan/render_target.hpp
@@ -27,6 +28,7 @@ set(HEADERS_PUBLIC
   include/aurora/gal/buffer.hpp
   include/aurora/gal/command_buffer.hpp
   include/aurora/gal/command_pool.hpp
+  include/aurora/gal/pipeline_builder.hpp
   include/aurora/gal/pipeline_layout.hpp
   include/aurora/gal/render_device.hpp
   include/aurora/gal/render_pass.hpp

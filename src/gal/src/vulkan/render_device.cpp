@@ -11,6 +11,7 @@
 #include "buffer.hpp"
 #include "command_buffer.hpp"
 #include "command_pool.hpp"
+#include "pipeline_builder.hpp"
 #include "pipeline_layout.hpp"
 #include "render_target.hpp"
 #include "sampler.hpp"
@@ -111,6 +112,10 @@ struct VulkanRenderDevice final : RenderDevice {
     std::vector<std::shared_ptr<BindGroupLayout>> const& bind_groups
   ) -> std::unique_ptr<PipelineLayout> override {
     return std::make_unique<VulkanPipelineLayout>(device, bind_groups);
+  }
+
+  auto CreateGraphicsPipelineBuilder() -> std::unique_ptr<GraphicsPipelineBuilder> override {
+    return std::make_unique<VulkanGraphicsPipelineBuilder>(device);
   }
 
   // TODO: better handle queue families
