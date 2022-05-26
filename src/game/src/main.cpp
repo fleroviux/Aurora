@@ -527,6 +527,104 @@ struct Application {
   Renderer renderer;
 };
 
+struct GlassMaterial final : Material {
+  GlassMaterial() : Material(std::vector<std::string>{}) {
+    auto layout = UniformBlockLayout{};
+    layout.add<Matrix4>("model");
+    uniforms = UniformBlock{layout};
+
+    blend_state.enable = true;
+    blend_state.src_color_factor = BlendFactor::One;
+    blend_state.src_alpha_factor = BlendFactor::Zero;
+    blend_state.dst_color_factor = BlendFactor::Src1Color;
+    blend_state.dst_alpha_factor = BlendFactor::One;
+
+    side() = Side::Both;
+  }
+
+  auto get_vert_shader() -> char const* override {
+    return R"(
+  #version 450
+
+  layout (location = 0) in vec3 a_position;
+  layout (location = 1) in vec3 a_normal;
+
+  layout (binding = 0, std140) uniform Camera {
+    mat4 u_projection;
+    mat4 u_view;
+  };
+
+  layout (binding = 1, std140) uniform Material {
+    mat4 u_model;
+  };
+
+  layout(location = 0) out vec3 v_world_position;
+  layout(location = 1) out vec3 v_world_normal;
+  layout(location = 2) out vec3 v_view_position;
+
+  void main() {
+    vec4 world_position = u_model * vec4(a_position, 1.0);
+    vec4 view_position = u_view * world_position;
+
+    // TODO: handle non-uniform scale in normal matrix.
+    v_world_position = world_position.xyz;
+    v_view_position = view_position.xyz;
+    v_world_normal = normalize((u_model * vec4(a_normal, 0.0)).xyz);
+
+    gl_Position = u_projection * view_position;
+  }
+)";
+  }
+
+  auto get_frag_shader() -> char const* override {
+    return R"(
+  #version 450
+
+  layout (location = 0, index = 0) out vec4 frag_color_add;
+  layout (location = 0, index = 1) out vec4 frag_color_multiply;
+
+  layout(location = 0) in vec3 v_world_position;
+  layout(location = 1) in vec3 v_world_normal;
+  layout(location = 2) in vec3 v_view_position;
+
+  layout (binding = 0, std140) uniform Camera {
+    mat4 u_projection;
+    mat4 u_view;
+  };
+
+  layout (binding = 34) uniform samplerCube u_env_map;
+
+  float FresnelSchlick(float f0, float n_dot_v) {
+    return f0 + (1.0 - f0) * pow(1.0 - n_dot_v, 5.0);
+  }
+
+  void main() {
+    vec3 view_dir = -normalize(v_view_position);
+    view_dir = (vec4(view_dir, 0.0) * u_view).xyz;
+
+    vec3 world_normal = v_world_normal * (gl_FrontFacing ? 1.0 : -1.0);
+
+    vec3 reflect_dir = reflect(-view_dir, world_normal);
+    float n_dot_v = dot(view_dir, world_normal);
+    vec4 reflection = texture(u_env_map, reflect_dir) * FresnelSchlick(0.0425, n_dot_v);
+
+    frag_color_add = reflection;
+    frag_color_multiply = vec4(0.25, 0.5, 0.5, 1.0);
+  }
+)";
+  }
+
+  auto get_uniforms() -> UniformBlock & override {
+    return uniforms;
+  }
+
+  auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture>> override {
+    return ArrayView<std::shared_ptr<Texture>>{nullptr, 0};
+  }
+private:
+  UniformBlock uniforms;
+};
+
 int main(int argc, char** argv) {
   (void)argc;
   (void)argv;
@@ -621,15 +719,18 @@ int main(int argc, char** argv) {
 
   auto event = SDL_Event{};
   auto scene = new GameObject{};
-  auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf");
-  //helmet->transform().rotation().set_euler(0, M_PI * 0.5, 0);
-  //helmet->transform().position().y() = 2.0;
-  scene->add_child(helmet);
+  //auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf");
+  //scene->add_child(helmet);
   scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
-  //scene->add_child(GLTFLoader{}.parse("porsche/porsche.gltf"));
 
-  //auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
-  //scene->add_child(behemoth);
+  auto plane = GLTFLoader{}.parse("plane/plane.gltf");
+  plane->children()[0]->get_component<Mesh>()->material = std::make_shared<GlassMaterial>();
+  plane->transform().rotation().set_euler(M_PI * 0.5, 0.0, M_PI * 0.5);
+  plane->transform().position() = Vector3{-4, 1, 0};
+  scene->add_child(plane);
+
+  auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
+  scene->add_child(behemoth);
 
   //// test 1000 damaged helmets at once
   //auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf")->children()[0];

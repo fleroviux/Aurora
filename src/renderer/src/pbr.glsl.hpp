@@ -37,6 +37,7 @@ constexpr auto pbr_vert = R"(
     v_view_position = view_position.xyz;
     v_world_normal = (u_model * vec4(a_normal, 0.0)).xyz;
 
+    
     v_color = a_color;
     v_uv = a_uv;
     v_normal = a_normal;
