@@ -153,6 +153,16 @@ struct GraphicsPipelineBuilder {
   virtual void SetDepthCompareOp(CompareOp compare_op) = 0;
   virtual void SetPrimitiveTopology(PrimitiveTopology topology) = 0;
   virtual void SetPrimitiveRestartEnable(bool enable) = 0;
+  virtual void SetBlendEnable(size_t color_attachment, bool enable) = 0;
+  virtual void SetSrcColorBlendFactor(size_t color_attachment, BlendFactor blend_factor) = 0;
+  virtual void SetSrcAlphaBlendFactor(size_t color_attachment, BlendFactor blend_factor) = 0;
+  virtual void SetDstColorBlendFactor(size_t color_attachment, BlendFactor blend_factor) = 0;
+  virtual void SetDstAlphaBlendFactor(size_t color_attachment, BlendFactor blend_factor) = 0;
+  virtual void SetColorBlendOp(size_t color_attachment, BlendOp blend_op) = 0;
+  virtual void SetAlphaBlendOp(size_t color_attachment, BlendOp blend_op) = 0;
+  virtual void SetColorWriteMask(size_t color_attachment, ColorComponent components) = 0;
+  virtual void SetBlendConstants(float r, float g, float b, float a) = 0;
+
   virtual void ResetVertexInput() = 0;
   virtual void AddVertexInputBinding(u32 binding, u32 stride, VertexInputRate input_rate = VertexInputRate::Vertex) = 0;
   virtual void AddVertexInputAttribute(
@@ -163,15 +173,7 @@ struct GraphicsPipelineBuilder {
     int components,
     bool normalized
   ) = 0;
-  virtual void SetBlendEnable(size_t color_attachment, bool enable) = 0;
-  virtual void SetSrcColorBlendFactor(size_t color_attachment, BlendFactor blend_factor) = 0;
-  virtual void SetSrcAlphaBlendFactor(size_t color_attachment, BlendFactor blend_factor) = 0;
-  virtual void SetDstColorBlendFactor(size_t color_attachment, BlendFactor blend_factor) = 0;
-  virtual void SetDstAlphaBlendFactor(size_t color_attachment, BlendFactor blend_factor) = 0;
-  virtual void SetColorBlendOp(size_t color_attachment, BlendOp blend_op) = 0;
-  virtual void SetAlphaBlendOp(size_t color_attachment, BlendOp blend_op) = 0;
-  virtual void SetColorWriteMask(size_t color_attachment, ColorComponent components) = 0;
-  virtual void SetBlendConstants(float r, float g, float b, float a) = 0;
+
   virtual auto Build() -> std::unique_ptr<GraphicsPipeline> = 0;
 };
 

@@ -119,35 +119,6 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
     input_assembly_info.primitiveRestartEnable = enable ? VK_TRUE : VK_FALSE;
   }
 
-  void ResetVertexInput() override {
-    vertex_input_bindings.clear();
-    vertex_input_attributes.clear();
-  }
-
-  void AddVertexInputBinding(u32 binding, u32 stride, VertexInputRate input_rate) override {
-    vertex_input_bindings.push_back({
-      .binding = binding,
-      .stride = stride,
-      .inputRate = (VkVertexInputRate)input_rate
-    });
-  }
-
-  void AddVertexInputAttribute(
-    u32 location,
-    u32 binding,
-    u32 offset,
-    VertexDataType data_type,
-    int components,
-    bool normalized
-  ) override {
-    vertex_input_attributes.push_back({
-      .location = location,
-      .binding = binding,
-      .format = GetVertexInputAttributeFormat(data_type, components, normalized),
-      .offset = offset
-    });
-  }
-
   void SetBlendEnable(size_t color_attachment, bool enable) override {
     CheckColorAttachmentIndex(color_attachment);
     attachment_blend_state[color_attachment].blendEnable = enable ? VK_TRUE : VK_FALSE;
@@ -193,6 +164,35 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
     color_blend_info.blendConstants[1] = g;
     color_blend_info.blendConstants[2] = b;
     color_blend_info.blendConstants[3] = a;
+  }
+
+  void ResetVertexInput() override {
+    vertex_input_bindings.clear();
+    vertex_input_attributes.clear();
+  }
+
+  void AddVertexInputBinding(u32 binding, u32 stride, VertexInputRate input_rate) override {
+    vertex_input_bindings.push_back({
+      .binding = binding,
+      .stride = stride,
+      .inputRate = (VkVertexInputRate)input_rate
+    });
+  }
+
+  void AddVertexInputAttribute(
+    u32 location,
+    u32 binding,
+    u32 offset,
+    VertexDataType data_type,
+    int components,
+    bool normalized
+  ) override {
+    vertex_input_attributes.push_back({
+      .location = location,
+      .binding = binding,
+      .format = GetVertexInputAttributeFormat(data_type, components, normalized),
+      .offset = offset
+    });
   }
 
   auto Build() -> std::unique_ptr<GraphicsPipeline> override {
