@@ -6,6 +6,7 @@
 
 #include <aurora/gal/bind_group.hpp>
 #include <aurora/gal/buffer.hpp>
+#include <aurora/gal/pipeline_builder.hpp>
 #include <aurora/gal/pipeline_layout.hpp>
 #include <aurora/gal/render_target.hpp>
 #include <aurora/gal/render_pass.hpp>
@@ -41,7 +42,7 @@ struct CommandBuffer {
   ) = 0;
   virtual void EndRenderPass() = 0;
 
-  virtual void BindGraphicsPipeline(void* handle) = 0;
+  virtual void BindGraphicsPipeline(AnyPtr<GraphicsPipeline> pipeline) = 0;
 
   virtual void BindGraphicsBindGroup(
     u32 set,

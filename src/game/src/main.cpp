@@ -366,7 +366,7 @@ struct ScreenRenderer {
     auto command_buffer_ = (VkCommandBuffer)command_buffer->Handle();
 
     command_buffer->BeginRenderPass(render_target, render_pass);
-    command_buffer->BindGraphicsPipeline(pipeline->Handle());
+    command_buffer->BindGraphicsPipeline(pipeline);
     command_buffer->BindGraphicsBindGroup(0, pipeline_layout, bind_group);
     vkCmdDraw(command_buffer_, 3, 1, 0, 0);
     command_buffer->EndRenderPass();
@@ -625,7 +625,7 @@ int main(int argc, char** argv) {
   //helmet->transform().rotation().set_euler(0, M_PI * 0.5, 0);
   //helmet->transform().position().y() = 2.0;
   scene->add_child(helmet);
-  //scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
+  scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
   //scene->add_child(GLTFLoader{}.parse("porsche/porsche.gltf"));
 
   //auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");

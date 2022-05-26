@@ -182,7 +182,7 @@ void Renderer::RenderObject(
 
   auto& index_buffer = geometry->get_index_buffer();
 
-  command_buffers[1]->BindGraphicsPipeline(object_data.pipeline->Handle());
+  command_buffers[1]->BindGraphicsPipeline(object_data.pipeline);
   command_buffers[1]->BindGraphicsBindGroup(0, pipeline_layout, object_data.bind_group);
   command_buffers[1]->BindIndexBuffer(geo_data.ibo, index_buffer->data_type());
   command_buffers[1]->BindVertexBuffers(ArrayView<std::shared_ptr<Buffer>>{

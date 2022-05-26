@@ -85,8 +85,8 @@ struct VulkanCommandBuffer final : CommandBuffer {
     vkCmdEndRenderPass(buffer);
   }
 
-  void BindGraphicsPipeline(void* handle) override {
-    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)handle);
+  void BindGraphicsPipeline(AnyPtr<GraphicsPipeline> pipeline) override {
+    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)pipeline->Handle());
   }
 
   void BindGraphicsBindGroup(
