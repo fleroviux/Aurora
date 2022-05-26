@@ -32,7 +32,8 @@ void Renderer::Render(
   std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers,
   GameObject* scene
 ) {
-  std::vector<Renderable> render_list;
+  std::vector<Renderable> render_list_opaque;
+  std::vector<Renderable> render_list_transparent;
 
   const std::function<void(GameObject*)> record_render_list = [&](GameObject* object) {
     if (!object->visible()) {
@@ -56,7 +57,11 @@ void Renderer::Render(
                      modelview.z().z() * position.z() +
                      modelview.w().z();
 
-      render_list.push_back({object, mesh, view_z});
+      if (mesh->material->blend_state.enable) {
+        render_list_transparent.push_back({object, mesh, view_z});
+      } else {
+        render_list_opaque.push_back({object, mesh, view_z});
+      }
     }
 
     for (auto child : object->children()) record_render_list(child);
@@ -72,17 +77,22 @@ void Renderer::Render(
 
   record_render_list(scene);
 
-  //Log<Info>("Renderer: render_list size={}", render_list.size());
-
-  // This is going to be super slow :rpog:
-  const auto comparator = [](Renderable& a, Renderable& b) {
+  const auto comparator_lt = [](Renderable& a, Renderable& b) {
     return a.z < b.z;
   };
-  std::sort(render_list.begin(), render_list.end(), comparator);
+  const auto comparator_gt = [](Renderable& a, Renderable& b) {
+    return a.z > b.z;
+  };
+  std::sort(render_list_opaque.begin(), render_list_opaque.end(), comparator_lt);
+  std::sort(render_list_transparent.begin(), render_list_transparent.end(), comparator_lt);
 
   command_buffers[1]->BeginRenderPass(render_target, render_pass);
 
-  for (auto const& renderable : render_list) {
+  for (auto const& renderable : render_list_opaque) {
+    RenderObject(command_buffers, renderable.object, renderable.mesh);
+  }
+
+  for (auto const& renderable : render_list_transparent) {
     RenderObject(command_buffers, renderable.object, renderable.mesh);
   }
 
