@@ -738,6 +738,7 @@ auto Renderer::CreatePipeline(
     pipeline_builder->SetDstAlphaBlendFactor(0, blend_state.dst_alpha_factor);
     pipeline_builder->SetColorBlendOp(0, blend_state.color_op);
     pipeline_builder->SetAlphaBlendOp(0, blend_state.alpha_op);
+    pipeline_builder->SetBlendConstants(blend_state.constants[0], blend_state.constants[1], blend_state.constants[2], blend_state.constants[3]);
   }
 
   u32 binding = 0;
