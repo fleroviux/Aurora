@@ -107,6 +107,7 @@ struct VulkanRenderPass final : RenderPass {
 
     if (depth_stencil_attachment) {
       subpass_info.pDepthStencilAttachment = &depth_reference;
+      has_depth_stencil_attachment = true;
     }
 
     auto pass_info = VkRenderPassCreateInfo{
@@ -131,6 +132,14 @@ struct VulkanRenderPass final : RenderPass {
   }
 
   auto Handle() -> VkRenderPass { return render_pass_; }
+
+  auto GetNumberOfColorAttachments() -> size_t override {
+    return color_attachment_count_;
+  }
+
+  bool HasDepthStencilAttachment() override {
+    return has_depth_stencil_attachment;
+  }
 
   auto GetClearValues() -> std::vector<VkClearValue> const& { return clear_values_; }
 
@@ -157,6 +166,7 @@ private:
   VkRenderPass render_pass_;
   std::vector<VkClearValue> clear_values_;
   size_t color_attachment_count_;
+  bool has_depth_stencil_attachment = false;
 };
 
 } // namespace Aura

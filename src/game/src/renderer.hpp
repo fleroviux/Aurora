@@ -83,21 +83,10 @@ struct Renderer {
 
   auto CreatePipeline(
     AnyPtr<Geometry> geometry,
-    std::unique_ptr<PipelineLayout>& pipeline_layout,
-    std::unique_ptr<ShaderModule>& shader_vert,
-    std::unique_ptr<ShaderModule>& shader_frag
-  ) -> VkPipeline;
-
-  static void BuildPipelineGeometryInfo(
-    Geometry* geometry,
-    std::vector<VkVertexInputBindingDescription>& bindings,
-    std::vector<VkVertexInputAttributeDescription>& attributes
-  );
-
-  // TODO: make this code more sensible.
-  static auto GetVkFormatFromAttribute(
-    Geometry::Attribute const& attribute
-  ) -> VkFormat;
+    std::shared_ptr<PipelineLayout>& pipeline_layout,
+    std::shared_ptr<ShaderModule>& shader_vert,
+    std::shared_ptr<ShaderModule>& shader_frag
+  ) -> std::unique_ptr<GraphicsPipeline>;
 
   VkPhysicalDevice physical_device;
   VkDevice device;
@@ -108,10 +97,10 @@ struct Renderer {
   std::shared_ptr<GPUTexture> albedo_texture;
   std::shared_ptr<GPUTexture> normal_texture;
   std::unique_ptr<RenderTarget> render_target;
-  std::unique_ptr<RenderPass> render_pass;
+  std::shared_ptr<RenderPass> render_pass;
 
   std::shared_ptr<BindGroupLayout> bind_group_layout;
-  std::unique_ptr<PipelineLayout> pipeline_layout;
+  std::shared_ptr<PipelineLayout> pipeline_layout;
 
   struct CameraData {
     UniformBlock data;
@@ -123,8 +112,8 @@ struct Renderer {
   } camera_data;
 
   struct ProgramData {
-    std::unique_ptr<ShaderModule> shader_vert;
-    std::unique_ptr<ShaderModule> shader_frag;
+    std::shared_ptr<ShaderModule> shader_vert;
+    std::shared_ptr<ShaderModule> shader_frag;
   };
 
   struct TextureData {
@@ -139,7 +128,7 @@ struct Renderer {
     // TODO: move this stuff to the appropriate places.
     std::unique_ptr<BindGroup> bind_group;
     std::unique_ptr<Buffer> ubo;
-    VkPipeline pipeline;
+    std::unique_ptr<GraphicsPipeline> pipeline;
   };
 
   bool uploaded_example_cubemap = false;

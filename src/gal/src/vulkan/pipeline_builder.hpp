@@ -149,19 +149,22 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
   }
 
   auto Build() -> std::unique_ptr<GraphicsPipeline> override {
-    auto color_blend_attachment_info = VkPipelineColorBlendAttachmentState{
+    VkPipelineColorBlendAttachmentState color_blend_attachment_info[8];
+
+    for (auto& attach_info : color_blend_attachment_info) attach_info = {
       .blendEnable = VK_FALSE,
       .colorWriteMask = 0xF
     };
 
-    auto color_blend_info = VkPipelineColorBlendStateCreateInfo{
+    // TODO: handle color blend state properly
+    VkPipelineColorBlendStateCreateInfo color_blend_info{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
       .logicOpEnable = VK_FALSE,
       .logicOp = VK_LOGIC_OP_NO_OP,
-      .attachmentCount = 1,
-      .pAttachments = &color_blend_attachment_info,
+      .attachmentCount = (u32)own.render_pass->GetNumberOfColorAttachments(),
+      .pAttachments = color_blend_attachment_info,
       .blendConstants = {0, 0, 0, 0}
     };
 
@@ -331,6 +334,7 @@ private:
     .rasterizerDiscardEnable = VK_FALSE,
     .polygonMode = VK_POLYGON_MODE_FILL,
     .cullMode = VK_CULL_MODE_NONE,
+    .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
     .depthBiasEnable = VK_FALSE,
     .depthBiasConstantFactor = 0,
     .depthBiasClamp = 0,
@@ -354,9 +358,9 @@ private:
     .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
     .pNext = nullptr,
     .flags = 0,
-    .depthTestEnable = VK_TRUE,
-    .depthWriteEnable = VK_TRUE,
-    .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
+    .depthTestEnable = VK_FALSE,
+    .depthWriteEnable = VK_FALSE,
+    .depthCompareOp = VK_COMPARE_OP_ALWAYS,
     .depthBoundsTestEnable = VK_FALSE,
     .stencilTestEnable = VK_FALSE,
     .front = {},

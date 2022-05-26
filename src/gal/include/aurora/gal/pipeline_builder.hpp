@@ -105,7 +105,7 @@ struct GraphicsPipelineBuilder {
   virtual void SetPrimitiveTopology(PrimitiveTopology topology) = 0;
   virtual void SetPrimitiveRestartEnable(bool enable) = 0;
   virtual void ResetVertexInput() = 0;
-  virtual void AddVertexInputBinding(u32 binding, u32 stride, VertexInputRate input_rate) = 0;
+  virtual void AddVertexInputBinding(u32 binding, u32 stride, VertexInputRate input_rate = VertexInputRate::Vertex) = 0;
   virtual void AddVertexInputAttribute(
     u32 location,
     u32 binding,
