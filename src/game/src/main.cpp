@@ -352,7 +352,7 @@ struct ScreenRenderer {
   void Render(
     std::unique_ptr<CommandBuffer>& command_buffer,
     std::unique_ptr<RenderTarget>& render_target,
-    std::shared_ptr<RenderPass>& render_pass,
+    std::shared_ptr<RenderPass>& render_pass, 
     std::shared_ptr<GPUTexture>& texture
   ) {
     bind_group->Bind(1, texture, sampler);

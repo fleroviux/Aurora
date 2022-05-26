@@ -81,6 +81,55 @@ enum class VertexInputRate {
   Instance = 1
 };
 
+// equivalent to VkBlendFactor
+// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkBlendFactor.html
+enum class BlendFactor {
+  Zero = 0,
+  One = 1,
+  SrcColor = 2,
+  OneMinusSrcColor = 3,
+  DstColor = 4,
+  OneMinusDstColor = 5,
+  SrcAlpha = 6,
+  OneMinusSrcAlpha = 7,
+  DstAlpha = 8,
+  OneMinusDstAlpha = 9,
+  ConstantColor = 10,
+  OneMinusConstantColor = 11,
+  ConstantAlpha = 12,
+  OneMinusConstantAlpha = 13,
+  SrcAlphaSaturate = 14,
+  Src1Color = 15,
+  OneMinusSrc1Color = 16,
+  Src1Alpha = 17,
+  OneMinusSrc1Alpha = 18
+};
+
+// subset of VkBlendOp:
+// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkBlendOp.html
+enum class BlendOp {
+  Add = 0,
+  Subtract = 1,
+  ReverseSubtract = 2,
+  Min = 3,
+  Max = 4
+};
+
+// equivalent to VkColorComponentFlagBits:
+// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkColorComponentFlagBits.html
+enum class ColorComponent {
+  R = 1,
+  G = 2,
+  B = 4,
+  A = 8,
+  RGB = R | G | B,
+  RGBA = R | G | B | A
+};
+
+constexpr auto operator|(ColorComponent lhs, ColorComponent rhs) -> ColorComponent {
+  return static_cast<ColorComponent>(static_cast<int>(lhs) | static_cast<int>(rhs));
+}
+
 struct GraphicsPipeline {
   virtual ~GraphicsPipeline() = default;
 
@@ -114,6 +163,15 @@ struct GraphicsPipelineBuilder {
     int components,
     bool normalized
   ) = 0;
+  virtual void SetBlendEnable(size_t color_attachment, bool enable) = 0;
+  virtual void SetSrcColorBlendFactor(size_t color_attachment, BlendFactor blend_factor) = 0;
+  virtual void SetSrcAlphaBlendFactor(size_t color_attachment, BlendFactor blend_factor) = 0;
+  virtual void SetDstColorBlendFactor(size_t color_attachment, BlendFactor blend_factor) = 0;
+  virtual void SetDstAlphaBlendFactor(size_t color_attachment, BlendFactor blend_factor) = 0;
+  virtual void SetColorBlendOp(size_t color_attachment, BlendOp blend_op) = 0;
+  virtual void SetAlphaBlendOp(size_t color_attachment, BlendOp blend_op) = 0;
+  virtual void SetColorWriteMask(size_t color_attachment, ColorComponent components) = 0;
+  virtual void SetBlendConstants(float r, float g, float b, float a) = 0;
   virtual auto Build() -> std::unique_ptr<GraphicsPipeline> = 0;
 };
 

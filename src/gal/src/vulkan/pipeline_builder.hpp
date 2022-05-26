@@ -148,31 +148,65 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
     });
   }
 
+  void SetBlendEnable(size_t color_attachment, bool enable) override {
+    CheckColorAttachmentIndex(color_attachment);
+    attachment_blend_state[color_attachment].blendEnable = enable ? VK_TRUE : VK_FALSE;
+  }
+
+  void SetSrcColorBlendFactor(size_t color_attachment, BlendFactor blend_factor) override {
+    CheckColorAttachmentIndex(color_attachment);
+    attachment_blend_state[color_attachment].srcColorBlendFactor = (VkBlendFactor)blend_factor;
+  }
+
+  void SetSrcAlphaBlendFactor(size_t color_attachment, BlendFactor blend_factor) override {
+    CheckColorAttachmentIndex(color_attachment);
+    attachment_blend_state[color_attachment].srcAlphaBlendFactor = (VkBlendFactor)blend_factor;
+  }
+
+  void SetDstColorBlendFactor(size_t color_attachment, BlendFactor blend_factor) override {
+    CheckColorAttachmentIndex(color_attachment);
+    attachment_blend_state[color_attachment].dstColorBlendFactor = (VkBlendFactor)blend_factor;
+  }
+
+  void SetDstAlphaBlendFactor(size_t color_attachment, BlendFactor blend_factor) override {
+    CheckColorAttachmentIndex(color_attachment);
+    attachment_blend_state[color_attachment].dstAlphaBlendFactor = (VkBlendFactor)blend_factor;
+  }
+
+  void SetColorBlendOp(size_t color_attachment, BlendOp blend_op) override {
+    CheckColorAttachmentIndex(color_attachment);
+    attachment_blend_state[color_attachment].colorBlendOp = (VkBlendOp)blend_op;
+  }
+
+  void SetAlphaBlendOp(size_t color_attachment, BlendOp blend_op) override {
+    CheckColorAttachmentIndex(color_attachment);
+    attachment_blend_state[color_attachment].alphaBlendOp = (VkBlendOp)blend_op;
+  }
+
+  void SetColorWriteMask(size_t color_attachment, ColorComponent components) override {
+    CheckColorAttachmentIndex(color_attachment);
+    attachment_blend_state[color_attachment].colorWriteMask = (VkColorComponentFlags)components;
+  }
+
+  void SetBlendConstants(float r, float g, float b, float a) override {
+    color_blend_info.blendConstants[0] = r;
+    color_blend_info.blendConstants[1] = g;
+    color_blend_info.blendConstants[2] = b;
+    color_blend_info.blendConstants[3] = a;
+  }
+
   auto Build() -> std::unique_ptr<GraphicsPipeline> override {
-    VkPipelineColorBlendAttachmentState color_blend_attachment_info[8];
+    auto number_of_color_attachments = own.render_pass->GetNumberOfColorAttachments();
 
-    for (auto& attach_info : color_blend_attachment_info) attach_info = {
-      .blendEnable = VK_FALSE,
-      .colorWriteMask = 0xF
-    };
+    Assert(number_of_color_attachments <= kColorAttachmentLimit,
+      "VulkanGraphicsPipelineBuilder: render pass with more than 32 color attachments is unsupported.");
 
-    // TODO: handle color blend state properly
-    VkPipelineColorBlendStateCreateInfo color_blend_info{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .logicOpEnable = VK_FALSE,
-      .logicOp = VK_LOGIC_OP_NO_OP,
-      .attachmentCount = (u32)own.render_pass->GetNumberOfColorAttachments(),
-      .pAttachments = color_blend_attachment_info,
-      .blendConstants = {0, 0, 0, 0}
-    };
+    color_blend_info.attachmentCount = (u32)number_of_color_attachments;
 
     vertex_input_info.pVertexBindingDescriptions = vertex_input_bindings.data();
     vertex_input_info.vertexBindingDescriptionCount = (u32)vertex_input_bindings.size();
     vertex_input_info.pVertexAttributeDescriptions = vertex_input_attributes.data();
     vertex_input_info.vertexAttributeDescriptionCount = (u32)vertex_input_attributes.size();
-    pipeline_info.pColorBlendState = &color_blend_info;
 
     auto pipeline = VkPipeline{};
 
@@ -184,11 +218,18 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
   }
 
 private:
+  static constexpr size_t kColorAttachmentLimit = 32;
+
   void SetScissorInternal(int x, int y, int width, int height) {
     scissor.offset.x = x;
     scissor.offset.y = y;
     scissor.extent.width = width;
     scissor.extent.height = height;
+  }
+
+  void CheckColorAttachmentIndex(size_t color_attachment) {
+    Assert(color_attachment < kColorAttachmentLimit,
+      "VulkanGraphicsPipelineBuilder: color_attachment was out-of-range");
   }
 
   auto GetVertexInputAttributeFormat(VertexDataType data_type, int components, bool normalized) -> VkFormat {
@@ -387,6 +428,30 @@ private:
     .primitiveRestartEnable = VK_FALSE
   };
 
+  VkPipelineColorBlendAttachmentState attachment_blend_state[kColorAttachmentLimit]{
+    {
+      .blendEnable = VK_FALSE,
+      .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+      .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+      .colorBlendOp = VK_BLEND_OP_ADD,
+      .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+      .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+      .alphaBlendOp = VK_BLEND_OP_ADD,
+      .colorWriteMask = 0xF
+    }
+  };
+
+  VkPipelineColorBlendStateCreateInfo color_blend_info{
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = 0,
+    .logicOpEnable = VK_FALSE,
+    .logicOp = VK_LOGIC_OP_NO_OP,
+    .attachmentCount = 1,
+    .pAttachments = attachment_blend_state,
+    .blendConstants = {0, 0, 0, 0}
+  };
+
   std::vector<VkVertexInputBindingDescription> vertex_input_bindings;
   std::vector<VkVertexInputAttributeDescription> vertex_input_attributes;
 
@@ -403,7 +468,7 @@ private:
     .pRasterizationState = &rasterization_info,
     .pMultisampleState = &multisample_info,
     .pDepthStencilState = &depth_stencil_info,
-    .pColorBlendState = nullptr,
+    .pColorBlendState = &color_blend_info,
     .pDynamicState = nullptr,
     .layout = VK_NULL_HANDLE,
     .renderPass = VK_NULL_HANDLE,
