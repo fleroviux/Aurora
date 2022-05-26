@@ -6,6 +6,7 @@
 
 #include <aurora/gal/backend/vulkan.hpp>
 #include <aurora/log.hpp>
+#include <vector>
 
 namespace Aura {
 
@@ -110,6 +111,43 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
     depth_stencil_info.depthCompareOp = (VkCompareOp)compare_op;
   }
 
+  void SetPrimitiveTopology(PrimitiveTopology topology) override {
+    input_assembly_info.topology = (VkPrimitiveTopology)topology;
+  }
+
+  void SetPrimitiveRestartEnable(bool enable) override {
+    input_assembly_info.primitiveRestartEnable = enable ? VK_TRUE : VK_FALSE;
+  }
+
+  void ResetVertexInput() override {
+    vertex_input_bindings.clear();
+    vertex_input_attributes.clear();
+  }
+
+  void AddVertexInputBinding(u32 binding, u32 stride, VertexInputRate input_rate) override {
+    vertex_input_bindings.push_back({
+      .binding = binding,
+      .stride = stride,
+      .inputRate = (VkVertexInputRate)input_rate
+    });
+  }
+
+  void AddVertexInputAttribute(
+    u32 location,
+    u32 binding,
+    u32 offset,
+    VertexDataType data_type,
+    int components,
+    bool normalized
+  ) override {
+    vertex_input_attributes.push_back({
+      .location = location,
+      .binding = binding,
+      .format = GetVertexInputAttributeFormat(data_type, components, normalized),
+      .offset = offset
+    });
+  }
+
   auto Build() -> std::unique_ptr<GraphicsPipeline> override {
     auto color_blend_attachment_info = VkPipelineColorBlendAttachmentState{
       .blendEnable = VK_FALSE,
@@ -127,6 +165,10 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
       .blendConstants = {0, 0, 0, 0}
     };
 
+    vertex_input_info.pVertexBindingDescriptions = vertex_input_bindings.data();
+    vertex_input_info.vertexBindingDescriptionCount = (u32)vertex_input_bindings.size();
+    vertex_input_info.pVertexAttributeDescriptions = vertex_input_attributes.data();
+    vertex_input_info.vertexAttributeDescriptionCount = (u32)vertex_input_attributes.size();
     pipeline_info.pColorBlendState = &color_blend_info;
 
     auto pipeline = VkPipeline{};
@@ -144,6 +186,84 @@ private:
     scissor.offset.y = y;
     scissor.extent.width = width;
     scissor.extent.height = height;
+  }
+
+  auto GetVertexInputAttributeFormat(VertexDataType data_type, int components, bool normalized) -> VkFormat {
+    // TODO: optimise this with a lookup table
+    switch (data_type) {
+      case VertexDataType::SInt8: {
+        if (normalized) {
+          if (components == 1) return VK_FORMAT_R8_SNORM;
+          if (components == 2) return VK_FORMAT_R8G8_SNORM;
+          if (components == 3) return VK_FORMAT_R8G8B8_SNORM;
+          if (components == 4) return VK_FORMAT_R8G8B8A8_SNORM;
+        } else {
+          if (components == 1) return VK_FORMAT_R8_SINT;
+          if (components == 2) return VK_FORMAT_R8G8_SINT;
+          if (components == 3) return VK_FORMAT_R8G8B8_SINT;
+          if (components == 4) return VK_FORMAT_R8G8B8A8_SINT; 
+        } 
+        break;
+      }
+      case VertexDataType::UInt8: {
+        if (normalized) {
+          if (components == 1) return VK_FORMAT_R8_UNORM;
+          if (components == 2) return VK_FORMAT_R8G8_UNORM;
+          if (components == 3) return VK_FORMAT_R8G8B8_UNORM;
+          if (components == 4) return VK_FORMAT_R8G8B8A8_UNORM;
+        } else {
+          if (components == 1) return VK_FORMAT_R8_UINT;
+          if (components == 2) return VK_FORMAT_R8G8_UINT;
+          if (components == 3) return VK_FORMAT_R8G8B8_UINT;
+          if (components == 4) return VK_FORMAT_R8G8B8A8_UINT;
+        }
+        break;
+      }
+      case VertexDataType::SInt16: {
+        if (normalized) {
+          if (components == 1) return VK_FORMAT_R16_SNORM;
+          if (components == 2) return VK_FORMAT_R16G16_SNORM;
+          if (components == 3) return VK_FORMAT_R16G16B16_SNORM;
+          if (components == 4) return VK_FORMAT_R16G16B16A16_SNORM;
+        } else {
+          if (components == 1) return VK_FORMAT_R16_SINT;
+          if (components == 2) return VK_FORMAT_R16G16_SINT;
+          if (components == 3) return VK_FORMAT_R16G16B16_SINT;
+          if (components == 4) return VK_FORMAT_R16G16B16A16_SINT;
+        }
+        break;
+      }
+      case VertexDataType::UInt16: {
+        if (normalized) {
+          if (components == 1) return VK_FORMAT_R16_UNORM;
+          if (components == 2) return VK_FORMAT_R16G16_UNORM;
+          if (components == 3) return VK_FORMAT_R16G16B16_UNORM;
+          if (components == 4) return VK_FORMAT_R16G16B16A16_UNORM;
+        } else {
+          if (components == 1) return VK_FORMAT_R16_UINT;
+          if (components == 2) return VK_FORMAT_R16G16_UINT;
+          if (components == 3) return VK_FORMAT_R16G16B16_UINT;
+          if (components == 4) return VK_FORMAT_R16G16B16A16_UINT;
+        }
+        break;
+      }
+      case VertexDataType::Float16: {
+        if (components == 1) return VK_FORMAT_R16_SFLOAT;
+        if (components == 2) return VK_FORMAT_R16G16_SFLOAT;
+        if (components == 3) return VK_FORMAT_R16G16B16_SFLOAT;
+        if (components == 4) return VK_FORMAT_R16G16B16A16_SFLOAT;
+        break;
+      }
+      case VertexDataType::Float32: {
+        if (components == 1) return VK_FORMAT_R32_SFLOAT;
+        if (components == 2) return VK_FORMAT_R32G32_SFLOAT;
+        if (components == 3) return VK_FORMAT_R32G32B32_SFLOAT;
+        if (components == 4) return VK_FORMAT_R32G32B32A32_SFLOAT;
+        break;
+      }
+    }
+
+    Assert(false, "VulkanGraphicsPipelineBuilder: failed to map vertex attribute format to VkFormat");
   }
 
   VulkanGraphicsPipeline::Own own;
@@ -262,6 +382,9 @@ private:
     .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
     .primitiveRestartEnable = VK_FALSE
   };
+
+  std::vector<VkVertexInputBindingDescription> vertex_input_bindings;
+  std::vector<VkVertexInputAttributeDescription> vertex_input_attributes;
 
   VkGraphicsPipelineCreateInfo pipeline_info{
     .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,

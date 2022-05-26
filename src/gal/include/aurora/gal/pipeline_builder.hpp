@@ -7,6 +7,7 @@
 #include <aurora/gal/pipeline_layout.hpp>
 #include <aurora/gal/render_pass.hpp>
 #include <aurora/gal/shader_module.hpp>
+#include <aurora/integer.hpp>
 #include <memory>
 
 namespace Aura {
@@ -47,6 +48,39 @@ enum class CompareOp {
   Always = 7
 };
 
+// equivalent to VkPrimitiveTopology
+// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPrimitiveTopology.html
+enum class PrimitiveTopology {
+  PointList = 0,
+  LineList = 1,
+  LineStrip = 2,
+  TriangleList = 3,
+  TriangleStrip = 4,
+  TriangleFan = 5,
+  LineListWithAdjacency = 6,
+  LineStripWithAdjacency = 7,
+  TriangleListWithAdjacency = 8,
+  TriangleStripWithAdjacency = 9,
+  PatchList = 10
+};
+
+enum class VertexDataType {
+  SInt8,
+  UInt8,
+  SInt16,
+  UInt16,
+  UInt32,
+  Float16,
+  Float32
+};
+
+// equivalent to VkVertexInputRate
+// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkVertexInputRate.html
+enum class VertexInputRate {
+  Vertex = 0,
+  Instance = 1
+};
+
 struct GraphicsPipeline {
   virtual ~GraphicsPipeline() = default;
 
@@ -68,6 +102,18 @@ struct GraphicsPipelineBuilder {
   virtual void SetDepthTestEnable(bool enable) = 0;
   virtual void SetDepthWriteEnable(bool enable) = 0;
   virtual void SetDepthCompareOp(CompareOp compare_op) = 0;
+  virtual void SetPrimitiveTopology(PrimitiveTopology topology) = 0;
+  virtual void SetPrimitiveRestartEnable(bool enable) = 0;
+  virtual void ResetVertexInput() = 0;
+  virtual void AddVertexInputBinding(u32 binding, u32 stride, VertexInputRate input_rate) = 0;
+  virtual void AddVertexInputAttribute(
+    u32 location,
+    u32 binding,
+    u32 offset,
+    VertexDataType data_type,
+    int components,
+    bool normalized
+  ) = 0;
   virtual auto Build() -> std::unique_ptr<GraphicsPipeline> = 0;
 };
 

@@ -4,23 +4,13 @@
 
 #pragma once
 
+#include <aurora/gal/render_device.hpp>
 #include <aurora/renderer/gpu_resource.hpp>
 #include <aurora/array_view.hpp>
 #include <aurora/integer.hpp>
 #include <vector>
 
 namespace Aura {
-
-// TODO: move this to a more appropriate location.
-enum class VertexDataType {
-  SInt8,
-  UInt8,
-  SInt16,
-  UInt16,
-  UInt32,
-  Float16,
-  Float32
-};
 
 struct VertexBuffer final : GPUResource {
   VertexBuffer(
