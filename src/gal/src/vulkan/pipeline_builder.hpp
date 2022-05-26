@@ -82,6 +82,34 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
     pipeline_info.renderPass = ((VulkanRenderPass*)(render_pass.get()))->Handle();
   }
 
+  void SetRasterizerDiscardEnable(bool enable) override {
+    rasterization_info.rasterizerDiscardEnable = enable ? VK_TRUE : VK_FALSE;
+  }
+
+  void SetPolygonMode(PolygonMode mode) override {
+    rasterization_info.polygonMode = (VkPolygonMode)mode;
+  }
+
+  void SetPolygonCull(PolygonFace face) override {
+    rasterization_info.cullMode = (VkCullModeFlags)face;
+  }
+
+  void SetLineWidth(float width) override {
+    rasterization_info.lineWidth = width;
+  }
+
+  void SetDepthTestEnable(bool enable) override {
+    depth_stencil_info.depthTestEnable = enable ? VK_TRUE : VK_FALSE;
+  }
+
+  void SetDepthWriteEnable(bool enable) override {
+    depth_stencil_info.depthWriteEnable = enable ? VK_TRUE : VK_FALSE;
+  }
+
+  void SetDepthCompareOp(CompareOp compare_op) override {
+    depth_stencil_info.depthCompareOp = (VkCompareOp)compare_op;
+  }
+
   auto Build() -> std::unique_ptr<GraphicsPipeline> override {
     auto color_blend_attachment_info = VkPipelineColorBlendAttachmentState{
       .blendEnable = VK_FALSE,

@@ -622,12 +622,14 @@ int main(int argc, char** argv) {
   auto event = SDL_Event{};
   auto scene = new GameObject{};
   //auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf");
+  //helmet->transform().rotation().set_euler(0, M_PI * 0.5, 0);
+  //helmet->transform().position().y() = 2.0;
   //scene->add_child(helmet);
   scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
   //scene->add_child(GLTFLoader{}.parse("porsche/porsche.gltf"));
 
-  auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
-  scene->add_child(behemoth);
+  //auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
+  //scene->add_child(behemoth);
 
   //// test 1000 damaged helmets at once
   //auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf")->children()[0];
