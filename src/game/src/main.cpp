@@ -417,9 +417,7 @@ private:
   void CreateGraphicsPipeline(std::shared_ptr<RenderPass>& render_pass) {
     auto pipeline_builder = render_device->CreateGraphicsPipelineBuilder();
 
-    // TODO: make it unnecessary to set the scissor unless we really need it.
     pipeline_builder->SetViewport(0, 0, 1600, 900);
-    pipeline_builder->SetScissor(0, 0, 1600, 900);
     pipeline_builder->SetShaderModule(PipelineStage::Vertex, shader_vert);
     pipeline_builder->SetShaderModule(PipelineStage::Fragment, shader_frag);
     pipeline_builder->SetPipelineLayout(pipeline_layout);

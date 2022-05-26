@@ -47,13 +47,16 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
     viewport.y = (float)y;
     viewport.width = (float)width;
     viewport.height = (float)height;
+
+    if (!have_explicit_scissor) {
+      SetScissorInternal(x, y, width, height);
+    }
   }
 
   void SetScissor(int x, int y, int width, int height) override {
-    scissor.offset.x = x;
-    scissor.offset.y = y;
-    scissor.extent.width = width;
-    scissor.extent.height = height;
+    SetScissorInternal(x, y, width, height);
+
+    have_explicit_scissor = true;
   }
 
   void SetShaderModule(PipelineStage stage, std::shared_ptr<ShaderModule> shader_module) override {
@@ -108,9 +111,18 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
   }
 
 private:
+  void SetScissorInternal(int x, int y, int width, int height) {
+    scissor.offset.x = x;
+    scissor.offset.y = y;
+    scissor.extent.width = width;
+    scissor.extent.height = height;
+  }
+
   VulkanGraphicsPipeline::Own own;
 
   VkDevice device;
+
+  bool have_explicit_scissor = false;
 
   VkViewport viewport{
     .x = 0.0f,
