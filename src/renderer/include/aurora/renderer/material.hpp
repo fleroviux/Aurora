@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <aurora/gal/render_device.hpp>
 #include <aurora/renderer/texture.hpp>
 #include <aurora/renderer/uniform_block.hpp>
 #include <aurora/array_view.hpp>
@@ -23,6 +24,17 @@ struct Material {
     Back,
     Both
   };
+
+  struct BlendState {
+    bool enable = false;
+    BlendFactor src_color_factor = BlendFactor::SrcAlpha;
+    BlendFactor dst_color_factor = BlendFactor::OneMinusSrcAlpha;
+    BlendFactor src_alpha_factor = BlendFactor::SrcAlpha;
+    BlendFactor dst_alpha_factor = BlendFactor::OneMinusSrcAlpha;
+    BlendOp color_op = BlendOp::Add;
+    BlendOp alpha_op = BlendOp::Add;
+    float constants[4]{ 0, 0, 0, 0 };
+  } blend_state;
 
   Material(std::vector<std::string> const& compile_options = {})
       : compile_option_names_(compile_options) {

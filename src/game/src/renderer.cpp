@@ -139,6 +139,7 @@ void Renderer::RenderObject(
     // Create pipeline
     object_data.pipeline = CreatePipeline(
       geometry,
+      material,
       pipeline_layout,
       program_data.shader_vert,
       program_data.shader_frag
@@ -692,6 +693,7 @@ void Renderer::CreateBindGroupAndPipelineLayout() {
 
 auto Renderer::CreatePipeline(
   AnyPtr<Geometry> geometry,
+  AnyPtr<Material> material,
   std::shared_ptr<PipelineLayout>& pipeline_layout,
   std::shared_ptr<ShaderModule>& shader_vert,
   std::shared_ptr<ShaderModule>& shader_frag
@@ -707,12 +709,36 @@ auto Renderer::CreatePipeline(
   pipeline_builder->SetRenderPass(render_pass);
   pipeline_builder->SetRasterizerDiscardEnable(false);
   pipeline_builder->SetPolygonMode(PolygonMode::Fill);
-  pipeline_builder->SetPolygonCull(PolygonFace::Back);
+  //pipeline_builder->SetPolygonCull(PolygonFace::Back);
   pipeline_builder->SetDepthTestEnable(true);
   pipeline_builder->SetDepthWriteEnable(true);
   pipeline_builder->SetDepthCompareOp(CompareOp::LessOrEqual);
   pipeline_builder->SetPrimitiveTopology(PrimitiveTopology::TriangleList);
   pipeline_builder->SetPrimitiveRestartEnable(false);
+
+  switch (material->side()) {
+    case Material::Side::Back:
+      pipeline_builder->SetPolygonCull(PolygonFace::Front);
+      break;
+    case Material::Side::Front:
+      pipeline_builder->SetPolygonCull(PolygonFace::Back);
+      break;
+    default:
+      pipeline_builder->SetPolygonCull(PolygonFace::None);
+      break;
+  }
+
+  auto& blend_state = material->blend_state;
+
+  if (blend_state.enable) {
+    pipeline_builder->SetBlendEnable(0, true);
+    pipeline_builder->SetSrcColorBlendFactor(0, blend_state.src_color_factor);
+    pipeline_builder->SetDstColorBlendFactor(0, blend_state.dst_color_factor);
+    pipeline_builder->SetSrcAlphaBlendFactor(0, blend_state.src_alpha_factor);
+    pipeline_builder->SetDstAlphaBlendFactor(0, blend_state.dst_alpha_factor);
+    pipeline_builder->SetColorBlendOp(0, blend_state.color_op);
+    pipeline_builder->SetAlphaBlendOp(0, blend_state.alpha_op);
+  }
 
   u32 binding = 0;
 

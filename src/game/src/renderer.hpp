@@ -83,6 +83,7 @@ struct Renderer {
 
   auto CreatePipeline(
     AnyPtr<Geometry> geometry,
+    AnyPtr<Material> material,
     std::shared_ptr<PipelineLayout>& pipeline_layout,
     std::shared_ptr<ShaderModule>& shader_vert,
     std::shared_ptr<ShaderModule>& shader_frag
