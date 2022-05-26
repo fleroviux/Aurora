@@ -625,31 +625,31 @@ void Renderer::UpdateCamera(GameObject* camera) {
 
 void Renderer::CreateRenderTarget() {
   color_texture = render_device->CreateTexture2D(
-    1600,
-    900,
+    3200,
+    1800,
     GPUTexture::Format::B8G8R8A8_SRGB,
     GPUTexture::Usage::ColorAttachment | GPUTexture::Usage::Sampled
   );
 
   // TODO: use the proper format.
   albedo_texture = render_device->CreateTexture2D(
-    1600,
-    900,
+    3200,
+    1800,
     GPUTexture::Format::B8G8R8A8_SRGB,
     GPUTexture::Usage::ColorAttachment | GPUTexture::Usage::Sampled
   );
 
   // TODO: use the proper format.
   normal_texture = render_device->CreateTexture2D(
-    1600,
-    900,
+    3200,
+    1800,
     GPUTexture::Format::B8G8R8A8_SRGB,
     GPUTexture::Usage::ColorAttachment | GPUTexture::Usage::Sampled
   );
 
   depth_texture = render_device->CreateTexture2D(
-    1600,
-    900,
+    3200,
+    1800,
     GPUTexture::Format::DEPTH_F32,
     GPUTexture::Usage::DepthStencilAttachment
   );
@@ -721,9 +721,9 @@ auto Renderer::CreatePipeline(
 
   auto viewport = VkViewport{
     .x = 0,
-    .y = 900,
-    .width = 1600,
-    .height = -900,
+    .y = 1800,
+    .width = 3200,
+    .height = -1800,
     .minDepth = 0,
     .maxDepth = 1
   };
@@ -734,8 +734,8 @@ auto Renderer::CreatePipeline(
       .y = 0
     },
     .extent = VkExtent2D{
-      .width = 1600,
-      .height = 900
+      .width = 3200,
+      .height = 1800
     }
   };
 

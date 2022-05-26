@@ -404,8 +404,8 @@ private:
   void CreateSampler() {
     // TODO: specify a sampler inside the shader if possible
     sampler = render_device->CreateSampler({
-      .mag_filter = Sampler::FilterMode::Nearest,
-      .min_filter = Sampler::FilterMode::Nearest
+      .mag_filter = Sampler::FilterMode::Linear,
+      .min_filter = Sampler::FilterMode::Linear
     });
   }
 
