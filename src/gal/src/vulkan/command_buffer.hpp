@@ -133,8 +133,23 @@ struct VulkanCommandBuffer final : CommandBuffer {
     vkCmdBindIndexBuffer(this->buffer, (VkBuffer)buffer->Handle(), offset, (VkIndexType)data_type);
   }
 
-  void DrawIndexed(u32 index_count) override {
-    vkCmdDrawIndexed(buffer, index_count, 1, 0, 0, 0);
+  void Draw(
+    u32 vertex_count,
+    u32 instance_count,
+    u32 first_vertex,
+    u32 first_instance
+  ) override {
+    vkCmdDraw(buffer, vertex_count, instance_count, first_vertex, first_instance);
+  }
+
+  void DrawIndexed(
+    u32 index_count,
+    u32 instance_count,
+    u32 first_index,
+    s32 vertex_offset,
+    u32 first_instance
+  ) override {
+    vkCmdDrawIndexed(buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
   }
 
 private:

@@ -363,12 +363,10 @@ struct ScreenRenderer {
       CreateGraphicsPipeline(render_pass);
     }
 
-    auto command_buffer_ = (VkCommandBuffer)command_buffer->Handle();
-
     command_buffer->BeginRenderPass(render_target, render_pass);
     command_buffer->BindGraphicsPipeline(pipeline);
     command_buffer->BindGraphicsBindGroup(0, pipeline_layout, bind_group);
-    vkCmdDraw(command_buffer_, 3, 1, 0, 0);
+    command_buffer->Draw(3);
     command_buffer->EndRenderPass();
   }
 

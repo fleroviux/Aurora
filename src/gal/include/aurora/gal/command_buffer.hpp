@@ -62,7 +62,20 @@ struct CommandBuffer {
     size_t offset = 0
   ) = 0;
 
-  virtual void DrawIndexed(u32 index_count) = 0;
+  virtual void Draw(
+    u32 vertex_count,
+    u32 instance_count = 1,
+    u32 first_vertex = 0,
+    u32 first_instance = 0
+  ) = 0;
+
+  virtual void DrawIndexed(
+    u32 index_count,
+    u32 instance_count = 1,
+    u32 first_index = 0,
+    s32 vertex_offset = 0,
+    u32 first_instance = 0
+  ) = 0;
 };
 
 } // namespace Aura
