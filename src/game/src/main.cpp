@@ -43,7 +43,7 @@ u32 queue_family_transfer;
 
 auto get_instance_layers() -> std::vector<char const*> {
   const std::vector<char const*> kDesiredInstanceLayers {
-    //"VK_LAYER_KHRONOS_validation"
+    "VK_LAYER_KHRONOS_validation"
   };
 
   auto result = std::vector<char const*>{};
@@ -73,7 +73,7 @@ auto get_instance_layers() -> std::vector<char const*> {
 
 auto get_device_layers(VkPhysicalDevice physical_device) -> std::vector<char const*> {
   const std::vector<char const*> kDesiredDeviceLayers {
-    //"VK_LAYER_KHRONOS_validation"
+    "VK_LAYER_KHRONOS_validation"
   };
 
   auto result = std::vector<char const*>{};
