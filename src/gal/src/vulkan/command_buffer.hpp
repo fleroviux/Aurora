@@ -115,7 +115,7 @@ struct VulkanCommandBuffer final : CommandBuffer {
 
     const VkDeviceSize buffer_offsets[32] = { 0 };
 
-    Assert(buffers.size() < 32,
+    Assert(buffers.size() <= 32,
       "VulkanCommandBuffer: can't bind more than 32 vertex buffers at once");
 
     for (int i = 0; i < buffers.size(); i++) {
