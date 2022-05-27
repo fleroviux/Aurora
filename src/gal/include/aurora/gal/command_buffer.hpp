@@ -6,22 +6,17 @@
 
 #include <aurora/gal/bind_group.hpp>
 #include <aurora/gal/buffer.hpp>
+#include <aurora/gal/enums.hpp>
 #include <aurora/gal/pipeline_builder.hpp>
 #include <aurora/gal/pipeline_layout.hpp>
 #include <aurora/gal/render_target.hpp>
 #include <aurora/gal/render_pass.hpp>
+#include <aurora/gal/texture.hpp>
 #include <aurora/any_ptr.hpp>
 #include <aurora/array_view.hpp>
 #include <aurora/integer.hpp>
 
 namespace Aura {
-
-// subset of VkIndexType:
-// https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkIndexType
-enum class IndexDataType {
-  UInt16 = 0,
-  UInt32 = 1
-};
 
 struct CommandBuffer {
   enum class OneTimeSubmit {

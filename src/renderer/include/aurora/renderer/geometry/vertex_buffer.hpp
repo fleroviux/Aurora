@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <aurora/gal/render_device.hpp>
+#include <aurora/gal/enums.hpp>
 #include <aurora/renderer/gpu_resource.hpp>
 #include <aurora/array_view.hpp>
 #include <aurora/integer.hpp>

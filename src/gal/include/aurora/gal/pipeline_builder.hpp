@@ -5,130 +5,13 @@
 #pragma once
 
 #include <aurora/gal/pipeline_layout.hpp>
+#include <aurora/gal/enums.hpp>
 #include <aurora/gal/render_pass.hpp>
 #include <aurora/gal/shader_module.hpp>
 #include <aurora/integer.hpp>
 #include <memory>
 
 namespace Aura {
-
-// subset of VkPipelineStageFlagBits:
-// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPipelineStageFlagBits.html
-enum class PipelineStage {
-  Vertex   = 0x00000008,
-  Fragment = 0x00000080
-};
-
-// subset of VkPolygonMode:
-// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPolygonMode.html
-enum class PolygonMode {
-  Fill = 0,
-  Line = 1,
-  Point = 2
-};
-
-// subset of VkCullModeFlagBits:
-// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkCullModeFlagBits.html
-enum class PolygonFace {
-  None = 0,
-  Front = 1,
-  Back = 2
-};
-
-// equivalent to VkCompareOp:
-// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkCompareOp.html
-enum class CompareOp {
-  Never = 0,
-  Less = 1,
-  Equal = 2,
-  LessOrEqual = 3,
-  Greater = 4,
-  NotEqual = 5,
-  GreaterOrEqual = 6,
-  Always = 7
-};
-
-// equivalent to VkPrimitiveTopology
-// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPrimitiveTopology.html
-enum class PrimitiveTopology {
-  PointList = 0,
-  LineList = 1,
-  LineStrip = 2,
-  TriangleList = 3,
-  TriangleStrip = 4,
-  TriangleFan = 5,
-  LineListWithAdjacency = 6,
-  LineStripWithAdjacency = 7,
-  TriangleListWithAdjacency = 8,
-  TriangleStripWithAdjacency = 9,
-  PatchList = 10
-};
-
-enum class VertexDataType {
-  SInt8,
-  UInt8,
-  SInt16,
-  UInt16,
-  UInt32,
-  Float16,
-  Float32
-};
-
-// equivalent to VkVertexInputRate
-// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkVertexInputRate.html
-enum class VertexInputRate {
-  Vertex = 0,
-  Instance = 1
-};
-
-// equivalent to VkBlendFactor
-// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkBlendFactor.html
-enum class BlendFactor {
-  Zero = 0,
-  One = 1,
-  SrcColor = 2,
-  OneMinusSrcColor = 3,
-  DstColor = 4,
-  OneMinusDstColor = 5,
-  SrcAlpha = 6,
-  OneMinusSrcAlpha = 7,
-  DstAlpha = 8,
-  OneMinusDstAlpha = 9,
-  ConstantColor = 10,
-  OneMinusConstantColor = 11,
-  ConstantAlpha = 12,
-  OneMinusConstantAlpha = 13,
-  SrcAlphaSaturate = 14,
-  Src1Color = 15,
-  OneMinusSrc1Color = 16,
-  Src1Alpha = 17,
-  OneMinusSrc1Alpha = 18
-};
-
-// subset of VkBlendOp:
-// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkBlendOp.html
-enum class BlendOp {
-  Add = 0,
-  Subtract = 1,
-  ReverseSubtract = 2,
-  Min = 3,
-  Max = 4
-};
-
-// equivalent to VkColorComponentFlagBits:
-// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkColorComponentFlagBits.html
-enum class ColorComponent {
-  R = 1,
-  G = 2,
-  B = 4,
-  A = 8,
-  RGB = R | G | B,
-  RGBA = R | G | B | A
-};
-
-constexpr auto operator|(ColorComponent lhs, ColorComponent rhs) -> ColorComponent {
-  return static_cast<ColorComponent>(static_cast<int>(lhs) | static_cast<int>(rhs));
-}
 
 struct GraphicsPipeline {
   virtual ~GraphicsPipeline() = default;

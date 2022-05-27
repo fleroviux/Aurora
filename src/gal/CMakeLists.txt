@@ -28,6 +28,7 @@ set(HEADERS_PUBLIC
   include/aurora/gal/buffer.hpp
   include/aurora/gal/command_buffer.hpp
   include/aurora/gal/command_pool.hpp
+  include/aurora/gal/enums.hpp
   include/aurora/gal/pipeline_builder.hpp
   include/aurora/gal/pipeline_layout.hpp
   include/aurora/gal/render_device.hpp
