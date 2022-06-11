@@ -11,6 +11,7 @@
 #include "buffer.hpp"
 #include "command_buffer.hpp"
 #include "command_pool.hpp"
+#include "fence.hpp"
 #include "pipeline_builder.hpp"
 #include "pipeline_layout.hpp"
 #include "render_target.hpp"
@@ -131,6 +132,10 @@ struct VulkanRenderDevice final : RenderDevice {
     std::shared_ptr<CommandPool> pool
   ) -> std::unique_ptr<CommandBuffer> override {
     return std::make_unique<VulkanCommandBuffer>(device, pool);
+  }
+
+  auto CreateFence() -> std::unique_ptr<Fence> override {
+    return std::make_unique<VulkanFence>(device);
   }
 
   void SetTransferCommandBuffer(CommandBuffer* cmd_buffer) override {

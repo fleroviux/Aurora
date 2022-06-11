@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include <array>
 #include <aurora/gal/bind_group.hpp>
 #include <aurora/gal/buffer.hpp>
 #include <aurora/gal/command_buffer.hpp>
 #include <aurora/gal/command_pool.hpp>
+#include <aurora/gal/fence.hpp>
 #include <aurora/gal/pipeline_builder.hpp>
 #include <aurora/gal/pipeline_layout.hpp>
 #include <aurora/gal/render_target.hpp>
@@ -127,6 +129,8 @@ struct RenderDevice {
   virtual auto CreateCommandBuffer(
     std::shared_ptr<CommandPool> pool
   ) -> std::unique_ptr<CommandBuffer> = 0;
+
+  virtual auto CreateFence() -> std::unique_ptr<Fence> = 0;
 
   // TODO: come up with a less hacky API for this.
   virtual void SetTransferCommandBuffer(CommandBuffer* cmd_buffer) = 0;

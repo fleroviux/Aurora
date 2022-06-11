@@ -700,20 +700,7 @@ int main(int argc, char** argv) {
   auto queue_transfer = VkQueue{};
   vkGetDeviceQueue(device, queue_family_transfer, 0, &queue_transfer);
 
-  auto fence = VkFence{};
-  
-  {
-    auto fence_info = VkFenceCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0
-    };
-
-    if (vkCreateFence(device, &fence_info, nullptr, &fence) != VK_SUCCESS) {
-      std::puts("Failed to create a fence :(");
-      return -1;
-    }
-  }
+  auto fence = render_device->CreateFence();
 
   auto event = SDL_Event{};
   auto scene = new GameObject{};
@@ -721,14 +708,17 @@ int main(int argc, char** argv) {
   //scene->add_child(helmet);
   scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
 
-  auto plane = GLTFLoader{}.parse("plane/plane.gltf");
-  plane->children()[0]->get_component<Mesh>()->material = std::make_shared<GlassMaterial>();
-  plane->transform().rotation().set_euler(M_PI * 0.5, 0.0, M_PI * 0.5);
-  plane->transform().position() = Vector3{-4, 1, 0};
-  scene->add_child(plane);
+  //auto plane = GLTFLoader{}.parse("plane/plane.gltf");
+  //plane->children()[0]->get_component<Mesh>()->material = std::make_shared<GlassMaterial>();
+  //plane->transform().rotation().set_euler(M_PI * 0.5, 0.0, M_PI * 0.5);
+  //plane->transform().position() = Vector3{-4, 1, 0};
+  //scene->add_child(plane);
 
   auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
   scene->add_child(behemoth);
+
+  //auto vegetation = GLTFLoader{}.parse("pachira_aquatica_01_4k.gltf/pachira_aquatica_01_4k.gltf");
+  //scene->add_child(vegetation);
 
   //// test 1000 damaged helmets at once
   //auto helmet = GLTFLoader{}.parse("DamagedHelmet/DamagedHelmet.gltf")->children()[0];
@@ -794,9 +784,9 @@ int main(int argc, char** argv) {
 
     u32 swapchain_image_id;
 
-    vkResetFences(device, 1, &fence);
-    vkAcquireNextImageKHR(device, swapchain, u64(-1), VK_NULL_HANDLE, fence, &swapchain_image_id);
-    vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
+    fence->Reset();
+    vkAcquireNextImageKHR(device, swapchain, ~0ULL, VK_NULL_HANDLE, (VkFence)fence->Handle(), &swapchain_image_id);
+    fence->Wait();
 
     //command_buffers[0]->Begin(CommandBuffer::OneTimeSubmit::Yes);
     command_buffers[1]->Begin(CommandBuffer::OneTimeSubmit::Yes);
@@ -822,9 +812,9 @@ int main(int argc, char** argv) {
       .pSignalSemaphores = nullptr
     };
 
-    vkResetFences(device, 1, &fence);
-    vkQueueSubmit(queue_graphics, 1, &submit_info, fence);
-    vkWaitForFences(device, 1, &fence, VK_TRUE, u64(-1));
+    fence->Reset();
+    vkQueueSubmit(queue_graphics, 1, &submit_info, (VkFence)fence->Handle());
+    fence->Wait();
 
     command_buffers[0]->Begin(CommandBuffer::OneTimeSubmit::Yes);
 
