@@ -84,9 +84,10 @@ struct VulkanRenderDevice final : RenderDevice {
     u32 width,
     u32 height,
     GPUTexture::Format format,
-    GPUTexture::Usage usage
+    GPUTexture::Usage usage,
+    u32 mip_levels = 1
   ) -> std::unique_ptr<GPUTexture> override {
-    return VulkanTexture::create_cube(physical_device, device, allocator, width, height, format, usage);
+    return VulkanTexture::create_cube(physical_device, device, allocator, width, height, mip_levels, format, usage);
   }
 
   auto CreateSampler(

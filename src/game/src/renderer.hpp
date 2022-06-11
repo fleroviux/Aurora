@@ -63,6 +63,8 @@ struct Renderer {
     std::array<std::shared_ptr<Texture>, 6>& textures
   );
 
+  void GenerateMipMaps(VkCommandBuffer command_buffer, AnyPtr<GPUTexture> texture);
+
   void TransitionImageLayout(
     VkCommandBuffer command_buffer,
     AnyPtr<GPUTexture> texture,

@@ -121,6 +121,7 @@ struct VulkanTexture final : GPUTexture {
     VmaAllocator allocator,
     u32 width,
     u32 height,
+    u32 mip_levels,
     Format format,
     Usage usage
   ) -> std::unique_ptr<VulkanTexture> {
@@ -135,7 +136,7 @@ struct VulkanTexture final : GPUTexture {
         .height = height,
         .depth = 1
       },
-      .mipLevels = 1,
+      .mipLevels = mip_levels,
       .arrayLayers = 6,
       .samples = VK_SAMPLE_COUNT_1_BIT,
       .tiling = VK_IMAGE_TILING_OPTIMAL,
@@ -170,6 +171,7 @@ struct VulkanTexture final : GPUTexture {
     texture->height_ = height;
     texture->depth_ = 1;
     texture->layers_ = 6;
+    texture->mip_levels_ = mip_levels;
     texture->CreateImageViewCube();
 
     return texture;

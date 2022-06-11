@@ -269,15 +269,17 @@ constexpr auto pbr_frag = R"(
     result += ShadeDirectLight(geometry, my_light, view_dir);
 
     // Add a very simple ambient lighting term
-    result += geometry.albedo * 0.05;
+    result += geometry.albedo * 0.02;
 
-    // TODO: make environment reflection more physically reflect.
+    // TODO: make environment reflection more physically correct.
     {
       vec3 reflect_dir = reflect(-view_dir, geometry.normal);
       vec3 f0 = mix(vec3(0.04), geometry.albedo, geometry.metalness);
       float n_dot_v = dot(view_dir, geometry.normal);
-      float roughness_factor = (1.0 - geometry.roughness) * (1.0 - geometry.roughness);
-      result += texture(u_env_map, reflect_dir).rgb * FresnelSchlick(f0, n_dot_v) * roughness_factor;
+      result += textureLod(u_env_map, reflect_dir, 6.0 * geometry.roughness).rgb * FresnelSchlick(f0, n_dot_v) * (1.0 / PI);
+
+      // diffuse reflection
+      result += textureLod(u_env_map, geometry.normal, 6.0).rgb * (1.0 - geometry.metalness) * geometry.albedo;
     }
 
     result = ACESFilm(result);

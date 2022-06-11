@@ -278,8 +278,8 @@ void Renderer::UploadTexture(
   VkCommandBuffer command_buffer,
   std::shared_ptr<Texture>& texture
 ) {
-  // TODO: what is a good number of mip levels to have?
-  const int mip_count = 6;
+  // TODO: select mip count based on width/height.
+  int mip_count = 6;
 
   auto width = texture->width();
   auto height = texture->height();
@@ -365,80 +365,7 @@ void Renderer::UploadTexture(
       GPUTexture::Layout::ShaderReadOnly
     );
   } else {
-    // TODO: layout transitions
-    TransitionImageLayout(
-      command_buffer,
-      data.texture,
-      GPUTexture::Layout::CopyDst,
-      GPUTexture::Layout::CopySrc,
-      0
-    );
-
-    auto mip_width = width;
-    auto mip_height = height;
-
-    for (int i = 1; i < mip_count; i++) {
-      auto blit = VkImageBlit{
-        .srcSubresource = VkImageSubresourceLayers{
-          .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-          .mipLevel = (u32)(i - 1),
-          .baseArrayLayer = 0,
-          .layerCount = 1
-        },
-        .dstSubresource = VkImageSubresourceLayers{
-          .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-          .mipLevel = (u32)i,
-          .baseArrayLayer = 0,
-          .layerCount = 1
-        }
-      };
-
-      blit.srcOffsets[0] = { .x = 0, .y = 0, .z = 0 };
-      blit.srcOffsets[1] = { .x = (s32)mip_width, .y = (s32)mip_height, .z = 1 };
-
-      if (mip_width > 0) mip_width /= 2;
-      if (mip_height > 0) mip_height /= 2;
-
-      blit.dstOffsets[0] = { .x = 0, .y = 0, .z = 0 };
-      blit.dstOffsets[1] = { .x = (s32)mip_width, .y = (s32)mip_height, .z = 1 };
-
-      TransitionImageLayout(
-        command_buffer,
-        data.texture,
-        GPUTexture::Layout::Undefined,
-        GPUTexture::Layout::CopyDst,
-        i
-      );
-
-      // TODO: we might want to use a cubic filter if available!
-      vkCmdBlitImage(
-        command_buffer,
-        (VkImage)data.texture->handle2(),
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        (VkImage)data.texture->handle2(),
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        1, &blit,
-        VK_FILTER_LINEAR
-      );
-
-      // TODO: this is sort of redundant for the last image.
-      TransitionImageLayout(
-        command_buffer,
-        data.texture,
-        GPUTexture::Layout::CopyDst,
-        GPUTexture::Layout::CopySrc,
-        i
-      );
-    }
-
-    TransitionImageLayout(
-      command_buffer,
-      data.texture,
-      GPUTexture::Layout::CopySrc,
-      GPUTexture::Layout::ShaderReadOnly,
-      0,
-      mip_count
-    );
+    GenerateMipMaps(command_buffer, data.texture);
   }
 }
 
@@ -446,17 +373,30 @@ void Renderer::UploadTextureCube(
   VkCommandBuffer command_buffer,
   std::array<std::shared_ptr<Texture>, 6>& textures
 ) {
+  // TODO: select mip count based on width/height.
+  int mip_count = 6;
+
   // TODO: fix the texture caching.
   auto width = textures[0]->width();
   auto height = textures[0]->height();
   auto& data = texture_cache[textures[0].get()];
 
-  data.texture = render_device->CreateTextureCube(
-    width,
-    height,
-    GPUTexture::Format::R8G8B8A8_SRGB,
-    GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled
-  );
+  if (mip_count == 1) {
+    data.texture = render_device->CreateTextureCube(
+      width,
+      height,
+      GPUTexture::Format::R8G8B8A8_SRGB,
+      GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled
+    );
+  } else {
+    data.texture = render_device->CreateTextureCube(
+      width,
+      height,
+      GPUTexture::Format::R8G8B8A8_SRGB,
+      GPUTexture::Usage::CopySrc | GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled,
+      mip_count
+    );
+  }
 
   auto face_size = sizeof(u32) * width * height;
 
@@ -512,11 +452,93 @@ void Renderer::UploadTextureCube(
     &region
   );
 
+  if (mip_count == 1) {
+    TransitionImageLayout(
+      command_buffer,
+      data.texture,
+      GPUTexture::Layout::CopyDst,
+      GPUTexture::Layout::ShaderReadOnly
+    );
+  } else {
+    GenerateMipMaps(command_buffer, data.texture);
+  }
+}
+
+void Renderer::GenerateMipMaps(VkCommandBuffer command_buffer, AnyPtr<GPUTexture> texture) {
+  const int mip_count = texture->mip_levels();
+
   TransitionImageLayout(
     command_buffer,
-    data.texture,
+    texture,
     GPUTexture::Layout::CopyDst,
-    GPUTexture::Layout::ShaderReadOnly
+    GPUTexture::Layout::CopySrc,
+    0
+  );
+
+  auto mip_width = texture->width();
+  auto mip_height = texture->height();
+
+  for (int i = 1; i < mip_count; i++) {
+    auto blit = VkImageBlit{
+      .srcSubresource = VkImageSubresourceLayers{
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .mipLevel = (u32)(i - 1),
+        .baseArrayLayer = 0,
+        .layerCount = texture->layers()
+      },
+      .dstSubresource = VkImageSubresourceLayers{
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .mipLevel = (u32)i,
+        .baseArrayLayer = 0,
+        .layerCount = texture->layers()
+      }
+    };
+
+    blit.srcOffsets[0] = { .x = 0, .y = 0, .z = 0 };
+    blit.srcOffsets[1] = { .x = (s32)mip_width, .y = (s32)mip_height, .z = 1 };
+
+    if (mip_width > 1) mip_width /= 2;
+    if (mip_height > 1) mip_height /= 2;
+
+    blit.dstOffsets[0] = { .x = 0, .y = 0, .z = 0 };
+    blit.dstOffsets[1] = { .x = (s32)mip_width, .y = (s32)mip_height, .z = 1 };
+
+    TransitionImageLayout(
+      command_buffer,
+      texture,
+      GPUTexture::Layout::Undefined,
+      GPUTexture::Layout::CopyDst,
+      i
+    );
+
+    // TODO: we might want to use a cubic filter if available!
+    vkCmdBlitImage(
+      command_buffer,
+      (VkImage)texture->handle2(),
+      VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+      (VkImage)texture->handle2(),
+      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      1, &blit,
+      VK_FILTER_LINEAR
+    );
+
+    // TODO: this is sort of redundant for the last image.
+    TransitionImageLayout(
+      command_buffer,
+      texture,
+      GPUTexture::Layout::CopyDst,
+      GPUTexture::Layout::CopySrc,
+      i
+    );
+  }
+
+  TransitionImageLayout(
+    command_buffer,
+    texture,
+    GPUTexture::Layout::CopySrc,
+    GPUTexture::Layout::ShaderReadOnly,
+    0,
+    mip_count
   );
 }
 
