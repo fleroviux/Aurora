@@ -14,6 +14,8 @@ struct ArrayView {
   using iterator = T*;
   using const_iterator = T const*;
 
+  constexpr ArrayView() : data_(nullptr), size_(0) {}
+
   constexpr ArrayView(T* data, size_t size) : data_(data), size_(size) {}
 
   ArrayView(std::vector<T>& vec) : data_(vec.data()), size_(vec.size()) {}

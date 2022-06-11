@@ -71,6 +71,12 @@ struct CommandBuffer {
     s32 vertex_offset = 0,
     u32 first_instance = 0
   ) = 0;
+
+  virtual void PipelineBarrier(
+    PipelineStage src_stage,
+    PipelineStage dst_stage,
+    ArrayView<MemoryBarrier> memory_barriers = {}
+  ) = 0;
 };
 
 } // namespace Aura

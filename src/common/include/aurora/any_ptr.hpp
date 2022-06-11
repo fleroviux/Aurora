@@ -16,7 +16,7 @@ namespace Aura {
  */
 template<typename T>
 struct AnyPtr {
-  AnyPtr(T* ptr) : ptr(ptr) {}
+  AnyPtr(T* ptr = nullptr) : ptr(ptr) {}
   AnyPtr(std::unique_ptr<T> const& smart_ptr) : ptr(smart_ptr.get()) {}
   AnyPtr(std::shared_ptr<T> const& smart_ptr) : ptr(smart_ptr.get()) {}
 

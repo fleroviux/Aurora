@@ -99,23 +99,34 @@ void Renderer::Render(
   command_buffers[1]->EndRenderPass();
 
   // TODO: use a subpass dependency to transition render target image layouts.
-  TransitionImageLayout(
-    (VkCommandBuffer)command_buffers[1]->Handle(),
-    color_texture,
-    GPUTexture::Layout::ColorAttachment,
-    GPUTexture::Layout::ShaderReadOnly
-  );
-  TransitionImageLayout(
-    (VkCommandBuffer)command_buffers[1]->Handle(),
-    albedo_texture,
-    GPUTexture::Layout::ColorAttachment,
-    GPUTexture::Layout::ShaderReadOnly
-  );
-  TransitionImageLayout(
-    (VkCommandBuffer)command_buffers[1]->Handle(),
-    normal_texture,
-    GPUTexture::Layout::ColorAttachment,
-    GPUTexture::Layout::ShaderReadOnly
+  MemoryBarrier barriers[]{
+    {
+      color_texture,
+      Access::ColorAttachmentWrite,
+      Access::ShaderRead,
+      GPUTexture::Layout::ColorAttachment,
+      GPUTexture::Layout::ShaderReadOnly
+    },
+    {
+      albedo_texture,
+      Access::ColorAttachmentWrite,
+      Access::ShaderRead,
+      GPUTexture::Layout::ColorAttachment,
+      GPUTexture::Layout::ShaderReadOnly
+    },
+    {
+      normal_texture,
+      Access::ColorAttachmentWrite,
+      Access::ShaderRead,
+      GPUTexture::Layout::ColorAttachment,
+      GPUTexture::Layout::ShaderReadOnly
+    }
+  };
+
+  command_buffers[1]->PipelineBarrier(
+    PipelineStage::ColorAttachmentOutput,
+    PipelineStage::FragmentShader,
+    {barriers, 3}
   );
 }
 
@@ -713,13 +724,12 @@ auto Renderer::CreatePipeline(
   // TODO: negate y-component in the graphics backend?
   pipeline_builder->SetViewport(0, 1800, 3200, -1800);
   pipeline_builder->SetScissor(0, 0, 3200, 1800);
-  pipeline_builder->SetShaderModule(PipelineStage::Vertex, shader_vert);
-  pipeline_builder->SetShaderModule(PipelineStage::Fragment, shader_frag);
+  pipeline_builder->SetShaderModule(PipelineStage::VertexShader, shader_vert);
+  pipeline_builder->SetShaderModule(PipelineStage::FragmentShader, shader_frag);
   pipeline_builder->SetPipelineLayout(pipeline_layout);
   pipeline_builder->SetRenderPass(render_pass);
   pipeline_builder->SetRasterizerDiscardEnable(false);
   pipeline_builder->SetPolygonMode(PolygonMode::Fill);
-  //pipeline_builder->SetPolygonCull(PolygonFace::Back);
   pipeline_builder->SetDepthTestEnable(true);
   pipeline_builder->SetDepthWriteEnable(true);
   pipeline_builder->SetDepthCompareOp(CompareOp::LessOrEqual);

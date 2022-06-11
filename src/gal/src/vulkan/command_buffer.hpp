@@ -152,6 +152,77 @@ struct VulkanCommandBuffer final : CommandBuffer {
     vkCmdDrawIndexed(buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
   }
 
+  void PipelineBarrier(
+    PipelineStage src_stage,
+    PipelineStage dst_stage,
+    ArrayView<MemoryBarrier> memory_barriers
+  ) override {
+    const auto barrier_count = memory_barriers.size();
+
+    VkImageMemoryBarrier vk_image_barriers[barrier_count];
+    VkBufferMemoryBarrier vk_buffer_barriers[barrier_count];
+    VkMemoryBarrier vk_memory_barriers[barrier_count];
+
+    u32 image_barrier_count = 0;
+    u32 buffer_barrier_count = 0;
+    u32 memory_barrier_count = 0;
+
+    for (auto& barrier : memory_barriers) {
+      if (barrier.type == MemoryBarrier::Type::Texture) {
+        auto& texture_info = barrier.texture_info;
+
+        vk_image_barriers[image_barrier_count++] = {
+          .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+          .pNext = nullptr,
+          .srcAccessMask = (VkAccessFlags)barrier.src_access_mask,
+          .dstAccessMask = (VkAccessFlags)barrier.dst_access_mask,
+          .oldLayout = (VkImageLayout)texture_info.src_layout,
+          .newLayout = (VkImageLayout)texture_info.dst_layout,
+          .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+          .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+          .image = (VkImage)texture_info.texture->handle2(),
+          .subresourceRange = {
+            .aspectMask = (VkImageAspectFlags)texture_info.range.aspect,
+            .baseMipLevel = texture_info.range.mip_base,
+            .levelCount = texture_info.range.mip_count,
+            .baseArrayLayer = texture_info.range.layer_base,
+            .layerCount = texture_info.range.layer_count
+          }
+        };
+      } else if (barrier.type == MemoryBarrier::Type::Buffer) {
+        auto& buffer_info = barrier.buffer_info;
+
+        vk_buffer_barriers[buffer_barrier_count++] = {
+          .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+          .pNext = nullptr,
+          .srcAccessMask = (VkAccessFlags)barrier.src_access_mask,
+          .dstAccessMask = (VkAccessFlags)barrier.dst_access_mask,
+          .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+          .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+          .buffer = (VkBuffer)buffer_info.buffer->Handle(),
+          .offset = buffer_info.offset,
+          .size = buffer_info.size
+        };
+      } else {
+        vk_memory_barriers[memory_barrier_count++] = {
+          .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+          .pNext = nullptr,
+          .srcAccessMask = (VkAccessFlags)barrier.src_access_mask,
+          .dstAccessMask = (VkAccessFlags)barrier.dst_access_mask
+        };
+      }
+    }
+
+    vkCmdPipelineBarrier(
+      buffer,
+      (VkPipelineStageFlags)src_stage,
+      (VkPipelineStageFlags)dst_stage, 0,
+      memory_barrier_count, vk_memory_barriers,
+      buffer_barrier_count, vk_buffer_barriers,
+      image_barrier_count, vk_image_barriers
+    );
+  }
+
 private:
   VkDevice device;
   VkCommandBuffer buffer;

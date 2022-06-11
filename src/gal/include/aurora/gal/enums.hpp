@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include <aurora/gal/buffer.hpp>
+#include <aurora/gal/texture.hpp>
+#include <aurora/integer.hpp>
+
 namespace Aura {
 
 // subset of VkIndexType:
@@ -126,10 +130,29 @@ constexpr auto operator|(ColorComponent lhs, ColorComponent rhs) -> ColorCompone
 
 // subset of VkPipelineStageFlagBits:
 // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPipelineStageFlagBits.html
-enum class PipelineStage {
-  Vertex = 0x00000008,
-  Fragment = 0x00000080
+enum class PipelineStage : u32 {
+  TopOfPipe = 0x00000001,
+  DrawIndirect = 0x00000002,
+  VertexInput = 0x00000004,
+  VertexShader = 0x00000008,
+  TessellationControlShader = 0x00000010,
+  TessellationEvaluationShader = 0x00000020,
+  GeometryShader = 0x00000040,
+  FragmentShader = 0x00000080,
+  EarlyFragmentTests = 0x00000100,
+  LateFragmentTests = 0x00000200,
+  ColorAttachmentOutput = 0x00000400,
+  ComputeShader = 0x00000800,
+  Transfer = 0x00001000,
+  BottomOfPipe = 0x00002000,
+  Host = 0x00004000,
+  AllGraphics = 0x00008000,
+  AllCommands = 0x00010000
 };
+
+constexpr auto operator|(PipelineStage lhs, PipelineStage rhs) -> PipelineStage {
+  return static_cast<PipelineStage>(static_cast<int>(lhs) | static_cast<int>(rhs));
+}
 
 // subset of VkAccessFlagBits:
 // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkAccessFlagBits.html
@@ -156,5 +179,61 @@ enum class Access : u32 {
 constexpr auto operator|(Access lhs, Access rhs) -> Access {
   return static_cast<Access>(static_cast<int>(lhs) | static_cast<u32>(rhs));
 }
+
+struct MemoryBarrier {
+  enum class Type {
+    Memory,
+    Texture,
+    Buffer
+  } type;
+
+  Access src_access_mask;
+  Access dst_access_mask;
+
+  struct {
+    AnyPtr<GPUTexture> texture;
+    GPUTexture::SubresourceRange range;
+    GPUTexture::Layout src_layout;
+    GPUTexture::Layout dst_layout;
+  } texture_info;
+
+  struct {
+    AnyPtr<Buffer> buffer;
+    u64 offset = 0;
+    u64 size = ~0ULL;
+  } buffer_info;
+
+  MemoryBarrier() {}
+
+  MemoryBarrier(Access src_access_mask, Access dst_access_mask)
+    : type(Type::Memory)
+    , src_access_mask(src_access_mask)
+    , dst_access_mask(dst_access_mask) {}
+
+  MemoryBarrier(
+    AnyPtr<GPUTexture> texture,
+    Access src_access_mask,
+    Access dst_access_mask,
+    GPUTexture::Layout src_layout,
+    GPUTexture::Layout dst_layout,
+    GPUTexture::SubresourceRange range = {}
+  )   : type(Type::Texture)
+      , src_access_mask(src_access_mask)
+      , dst_access_mask(dst_access_mask)
+      , texture_info({texture, range, src_layout, dst_layout}) {
+  }
+
+  MemoryBarrier(
+    AnyPtr<Buffer> buffer,
+    Access src_access_mask,
+    Access dst_access_mask,
+    u64 offset = 0,
+    u64 size = ~0ULL
+  )   : type(Type::Buffer)
+      , src_access_mask(src_access_mask)
+      , dst_access_mask(dst_access_mask)
+      , buffer_info({buffer, offset, size}) {
+  }
+};
 
 } // namespace Aura

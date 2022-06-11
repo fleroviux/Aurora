@@ -416,8 +416,8 @@ private:
     auto pipeline_builder = render_device->CreateGraphicsPipelineBuilder();
 
     pipeline_builder->SetViewport(0, 0, 1600, 900);
-    pipeline_builder->SetShaderModule(PipelineStage::Vertex, shader_vert);
-    pipeline_builder->SetShaderModule(PipelineStage::Fragment, shader_frag);
+    pipeline_builder->SetShaderModule(PipelineStage::VertexShader, shader_vert);
+    pipeline_builder->SetShaderModule(PipelineStage::FragmentShader, shader_frag);
     pipeline_builder->SetPipelineLayout(pipeline_layout);
     pipeline_builder->SetRenderPass(render_pass);
 

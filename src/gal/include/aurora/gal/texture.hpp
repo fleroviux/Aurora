@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include <aurora/any_ptr.hpp>
 #include <aurora/integer.hpp>
 
 namespace Aura {
 
 // TODO: make naming scheme consistent.
 struct GPUTexture {
-  // Subset of VkImageLayout:
+  // subset of VkImageLayout:
   // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkImageLayout
   enum class Layout {
     Undefined = 0,
@@ -30,7 +31,7 @@ struct GPUTexture {
     _3D
   };
 
-  // Subset of VkFormat:
+  // subset of VkFormat:
   // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkFormat
   // TODO: find a subset of formats that work on all targeted platforms.
   enum class Format {
@@ -39,7 +40,7 @@ struct GPUTexture {
     DEPTH_F32 = 126
   };
 
-  // Subset of VkImageUsageFlagBits:
+  // subset of VkImageUsageFlagBits:
   // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkImageUsageFlagBits
   enum class Usage : u32 {
     CopySrc = 0x00000001,
@@ -48,6 +49,23 @@ struct GPUTexture {
     Storage = 0x00000008,
     ColorAttachment = 0x00000010,
     DepthStencilAttachment = 0x00000020
+  };
+
+  // subset of VkImageAspectFlags:
+  // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkImageAspectFlagBits.html
+  enum class Aspect : u32 {
+    Color = 0x00000001,
+    Depth = 0x00000002,
+    Stencil = 0x00000004,
+    Metadata = 0x00000008
+  };
+
+  struct SubresourceRange {
+    Aspect aspect = Aspect::Color;
+    u32 mip_base = 0;
+    u32 mip_count = 1;
+    u32 layer_base = 0;
+    u32 layer_count = 1;
   };
 
   virtual ~GPUTexture() = default;
@@ -64,11 +82,12 @@ struct GPUTexture {
   virtual auto mip_levels() const -> u32 = 0;
 };
 
-constexpr auto operator|(
-  GPUTexture::Usage lhs,
-  GPUTexture::Usage rhs
-) -> GPUTexture::Usage {
-  return (GPUTexture::Usage)((u32)lhs | (u32)rhs);
+constexpr auto operator|(GPUTexture::Usage lhs, GPUTexture::Usage rhs) -> GPUTexture::Usage {
+  return static_cast<GPUTexture::Usage>(static_cast<u32>(lhs) | static_cast<u32>(rhs));
+}
+
+constexpr auto operator|(GPUTexture::Aspect lhs, GPUTexture::Aspect rhs) -> GPUTexture::Aspect {
+  return static_cast<GPUTexture::Aspect>(static_cast<u32>(lhs) | static_cast<u32>(rhs));
 }
 
 } // namespace Aura

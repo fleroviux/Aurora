@@ -62,11 +62,11 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
 
   void SetShaderModule(PipelineStage stage, std::shared_ptr<ShaderModule> shader_module) override {
     switch (stage) {
-      case PipelineStage::Vertex:
+      case PipelineStage::VertexShader:
         own.shader_vert = shader_module;
         pipeline_stages[0].module = (VkShaderModule)shader_module->Handle();
         break;
-      case PipelineStage::Fragment:
+      case PipelineStage::FragmentShader:
         own.shader_frag = shader_module;
         pipeline_stages[1].module = (VkShaderModule)shader_module->Handle();
         break;
