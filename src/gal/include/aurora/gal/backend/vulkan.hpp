@@ -13,10 +13,11 @@ struct VulkanRenderDeviceOptions {
   VkInstance instance;
   VkPhysicalDevice physical_device;
   VkDevice device;
+  u32 queue_family_graphics;
 };
 
 auto CreateVulkanRenderDevice(
-  VulkanRenderDeviceOptions options
+  VulkanRenderDeviceOptions const& options
 ) -> std::unique_ptr<RenderDevice>;
 
 } // namespace Aura

@@ -20,6 +20,9 @@ struct ArrayView {
 
   ArrayView(std::vector<T>& vec) : data_(vec.data()), size_(vec.size()) {}
 
+  template<size_t size>
+  ArrayView(std::array<T, size>& array) : data_(array.data()), size_(size) {}
+
   constexpr auto cbegin() const -> const_iterator {
     return data();
   }

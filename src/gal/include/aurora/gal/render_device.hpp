@@ -12,6 +12,7 @@
 #include <aurora/gal/fence.hpp>
 #include <aurora/gal/pipeline_builder.hpp>
 #include <aurora/gal/pipeline_layout.hpp>
+#include <aurora/gal/queue.hpp>
 #include <aurora/gal/render_target.hpp>
 #include <aurora/gal/sampler.hpp>
 #include <aurora/gal/shader_module.hpp>
@@ -131,6 +132,8 @@ struct RenderDevice {
   ) -> std::unique_ptr<CommandBuffer> = 0;
 
   virtual auto CreateFence() -> std::unique_ptr<Fence> = 0;
+
+  virtual auto GraphicsQueue() -> Queue* = 0;
 
   // TODO: come up with a less hacky API for this.
   virtual void SetTransferCommandBuffer(CommandBuffer* cmd_buffer) = 0;

@@ -697,9 +697,6 @@ int main(int argc, char** argv) {
   auto queue_graphics = VkQueue{};
   vkGetDeviceQueue(device, queue_family_graphics, 0, &queue_graphics);
 
-  auto queue_transfer = VkQueue{};
-  vkGetDeviceQueue(device, queue_family_transfer, 0, &queue_transfer);
-
   auto fence = render_device->CreateFence();
 
   auto event = SDL_Event{};
@@ -796,7 +793,7 @@ int main(int argc, char** argv) {
     command_buffers[0]->End();
     command_buffers[1]->End();
 
-    VkCommandBuffer command_buffer_handles[2]{
+    /*VkCommandBuffer command_buffer_handles[2]{
       (VkCommandBuffer)command_buffers[0]->Handle(),
       (VkCommandBuffer)command_buffers[1]->Handle()
     };
@@ -810,10 +807,14 @@ int main(int argc, char** argv) {
       .pCommandBuffers = command_buffer_handles,
       .signalSemaphoreCount = 0,
       .pSignalSemaphores = nullptr
-    };
+    };*/
+
+    //const std::array<CommandBuffer*, 
+
+    std::array<CommandBuffer*, 2> command_bufs{command_buffers[0].get(), command_buffers[1].get()};
 
     fence->Reset();
-    vkQueueSubmit(queue_graphics, 1, &submit_info, (VkFence)fence->Handle());
+    render_device->GraphicsQueue()->Submit(command_bufs, fence);
     fence->Wait();
 
     command_buffers[0]->Begin(CommandBuffer::OneTimeSubmit::Yes);

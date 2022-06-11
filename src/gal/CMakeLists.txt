@@ -16,6 +16,7 @@ set(HEADERS
   src/vulkan/fence.hpp
   src/vulkan/pipeline_builder.hpp
   src/vulkan/pipeline_layout.hpp
+  src/vulkan/queue.hpp
   src/vulkan/render_pass.hpp
   src/vulkan/render_target.hpp
   src/vulkan/sampler.hpp
@@ -33,6 +34,7 @@ set(HEADERS_PUBLIC
   include/aurora/gal/fence.hpp
   include/aurora/gal/pipeline_builder.hpp
   include/aurora/gal/pipeline_layout.hpp
+  include/aurora/gal/queue.hpp
   include/aurora/gal/render_device.hpp
   include/aurora/gal/render_pass.hpp
   include/aurora/gal/render_target.hpp

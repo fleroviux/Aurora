@@ -14,6 +14,7 @@
 #include "fence.hpp"
 #include "pipeline_builder.hpp"
 #include "pipeline_layout.hpp"
+#include "queue.hpp"
 #include "render_target.hpp"
 #include "sampler.hpp"
 #include "shader_module.hpp"
@@ -22,12 +23,13 @@
 namespace Aura {
 
 struct VulkanRenderDevice final : RenderDevice {
-  VulkanRenderDevice(VulkanRenderDeviceOptions options)
+  VulkanRenderDevice(VulkanRenderDeviceOptions const& options)
       : instance(options.instance)
       , physical_device(options.physical_device)
       , device(options.device) {
     CreateVmaAllocator();
     CreateDescriptorPool();
+    CreateQueues(options);
   }
 
  ~VulkanRenderDevice() {
@@ -138,6 +140,10 @@ struct VulkanRenderDevice final : RenderDevice {
     return std::make_unique<VulkanFence>(device);
   }
 
+  auto GraphicsQueue() -> Queue* override {
+    return graphics_queue.get();
+  }
+
   void SetTransferCommandBuffer(CommandBuffer* cmd_buffer) override {
     transfer_cmd_buffer = (VulkanCommandBuffer*)cmd_buffer;
   }
@@ -189,16 +195,23 @@ private:
     }
   }
 
+  void CreateQueues(VulkanRenderDeviceOptions const& options) {
+    VkQueue graphics;
+    vkGetDeviceQueue(device, options.queue_family_graphics, 0, &graphics);
+    graphics_queue = std::make_unique<VulkanQueue>(graphics);
+  }
+
   VkInstance instance;
   VkPhysicalDevice physical_device;
   VkDevice device;
   VkDescriptorPool descriptor_pool;
   VmaAllocator allocator;
   VulkanCommandBuffer* transfer_cmd_buffer;
+  std::unique_ptr<VulkanQueue> graphics_queue;
 };
 
 auto CreateVulkanRenderDevice(
-  VulkanRenderDeviceOptions options
+  VulkanRenderDeviceOptions const& options
 ) -> std::unique_ptr<RenderDevice> {
   return std::make_unique<VulkanRenderDevice>(options);
 }
