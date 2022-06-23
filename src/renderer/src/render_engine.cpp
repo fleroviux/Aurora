@@ -7,7 +7,7 @@
 #include <aurora/renderer/render_pipeline_base.hpp>
 
 #include "cache/geometry_cache.hpp"
-#include "forward_render_pipeline.hpp"
+#include "forward/forward_render_pipeline.hpp"
 
 namespace Aura {
 

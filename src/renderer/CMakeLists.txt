@@ -7,14 +7,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 
 set(SOURCES
   src/cache/geometry_cache.cpp
-  src/forward_render_pipeline.cpp
+  src/forward/forward_render_pipeline.cpp
   src/render_engine.cpp
   src/texture.cpp
 )
 
 set(HEADERS
   src/cache/geometry_cache.hpp
-  src/forward_render_pipeline.hpp
+  src/forward/forward_render_pipeline.hpp
   src/pbr.glsl.hpp
 )
 
@@ -37,7 +37,7 @@ set(HEADERS_PUBLIC
 find_package(Vulkan REQUIRED)
 
 add_library(Aurora-Renderer ${SOURCES} ${HEADERS} ${HEADERS_PUBLIC})
-target_include_directories(Aurora-Renderer PRIVATE ${GLEW_INCLUDE_DIRS})
+target_include_directories(Aurora-Renderer PRIVATE src ${GLEW_INCLUDE_DIRS})
 target_include_directories(Aurora-Renderer PUBLIC include)
 target_link_libraries(Aurora-Renderer PUBLIC Aurora-Scene)
 target_link_libraries(Aurora-Renderer PRIVATE Aurora-GAL stb shaderc Vulkan::Vulkan)
