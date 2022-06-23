@@ -458,7 +458,7 @@ struct Application {
   void Initialize2() {
     CreateSwapChainRenderTargets();
     screen_renderer.Initialize(render_device);
-    renderer.Initialize(physical_device, device, render_device);
+    renderer = std::make_unique<Renderer>(render_device);
   }
 
   void Render(
@@ -466,13 +466,13 @@ struct Application {
     GameObject* scene,
     u32 image_id
   ) {
-    renderer.Render(command_buffers, scene);
+    renderer->Render(command_buffers, scene);
 
     screen_renderer.Render(
       command_buffers[1],
       render_targets[image_id],
       render_pass,
-      renderer.color_texture
+      renderer->color_texture
     );
   }
 
@@ -522,7 +522,7 @@ struct Application {
   std::shared_ptr<RenderPass> render_pass;
 
   ScreenRenderer screen_renderer;
-  Renderer renderer;
+  std::unique_ptr<Renderer> renderer;
 };
 
 struct GlassMaterial final : Material {

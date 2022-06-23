@@ -23,11 +23,7 @@
 namespace Aura {
 
 struct Renderer {
-  void Initialize(
-    VkPhysicalDevice physical_device,
-    VkDevice device,
-    std::shared_ptr<RenderDevice> render_device
-  );
+  Renderer(std::shared_ptr<RenderDevice> render_device);
 
   void Render(
     std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers,
@@ -91,8 +87,6 @@ struct Renderer {
     std::shared_ptr<ShaderModule>& shader_frag
   ) -> std::unique_ptr<GraphicsPipeline>;
 
-  VkPhysicalDevice physical_device;
-  VkDevice device;
   std::shared_ptr<RenderDevice> render_device;
 
   std::shared_ptr<GPUTexture> color_texture;

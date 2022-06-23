@@ -13,14 +13,8 @@
 
 namespace Aura {
 
-void Renderer::Initialize(
-  VkPhysicalDevice physical_device,
-  VkDevice device,
-  std::shared_ptr<RenderDevice> render_device
-) {
-  this->physical_device = physical_device;
-  this->device = device;
-  this->render_device = render_device;
+Renderer::Renderer(std::shared_ptr<RenderDevice> render_device)
+    : render_device(render_device) {
   CreateCameraUniformBlock();
   CreateRenderTarget();
   CreateBindGroupAndPipelineLayout();
