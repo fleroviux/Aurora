@@ -793,24 +793,6 @@ int main(int argc, char** argv) {
     command_buffers[0]->End();
     command_buffers[1]->End();
 
-    /*VkCommandBuffer command_buffer_handles[2]{
-      (VkCommandBuffer)command_buffers[0]->Handle(),
-      (VkCommandBuffer)command_buffers[1]->Handle()
-    };
-    const auto submit_info = VkSubmitInfo{
-      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-      .pNext = nullptr,
-      .waitSemaphoreCount = 0,
-      .pWaitSemaphores = nullptr,
-      .pWaitDstStageMask = nullptr,
-      .commandBufferCount = 2,
-      .pCommandBuffers = command_buffer_handles,
-      .signalSemaphoreCount = 0,
-      .pSignalSemaphores = nullptr
-    };*/
-
-    //const std::array<CommandBuffer*, 
-
     std::array<CommandBuffer*, 2> command_bufs{command_buffers[0].get(), command_buffers[1].get()};
 
     fence->Reset();
