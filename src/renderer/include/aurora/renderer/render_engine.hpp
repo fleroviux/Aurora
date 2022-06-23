@@ -4,14 +4,29 @@
 
 #pragma once
 
+#include <aurora/gal/render_device.hpp>
+#include <aurora/scene/game_object.hpp>
 #include <memory>
 
 namespace Aura {
 
-struct RenderEngineBase {
-  virtual ~RenderEngineBase() = 0;
+struct RenderEngineOptions {
+  std::shared_ptr<RenderDevice> render_device;
 };
 
-auto CreateRenderEngine() -> std::unique_ptr<RenderEngineBase>;
+struct RenderEngineBase {
+  virtual ~RenderEngineBase() = default;
+
+  virtual void Render(
+    GameObject* scene,
+    std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers
+  ) = 0;
+
+  virtual auto GetOutputTexture() -> GPUTexture* = 0;
+};
+
+auto CreateRenderEngine(
+  RenderEngineOptions const& options
+) -> std::unique_ptr<RenderEngineBase>;
 
 } // namespace Aura

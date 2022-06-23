@@ -7,12 +7,12 @@
 #include <aurora/renderer/component/camera.hpp>
 #include <aurora/renderer/component/mesh.hpp>
 #include <aurora/renderer/component/scene.hpp>
+#include <aurora/renderer/render_engine.hpp>
 #include <aurora/scene/game_object.hpp>
 
 #include "../../gal/src/vulkan/render_pass.hpp"
 
 #include "gltf_loader.hpp"
-#include "renderer.hpp"
 
 using namespace Aura;
 
@@ -353,7 +353,7 @@ struct ScreenRenderer {
     std::unique_ptr<CommandBuffer>& command_buffer,
     std::unique_ptr<RenderTarget>& render_target,
     std::shared_ptr<RenderPass>& render_pass, 
-    std::shared_ptr<GPUTexture>& texture
+    GPUTexture* texture
   ) {
     bind_group->Bind(1, texture, sampler);
 
@@ -458,7 +458,7 @@ struct Application {
   void Initialize2() {
     CreateSwapChainRenderTargets();
     screen_renderer.Initialize(render_device);
-    renderer = std::make_unique<Renderer>(render_device);
+    render_engine = CreateRenderEngine(RenderEngineOptions{render_device});
   }
 
   void Render(
@@ -466,13 +466,13 @@ struct Application {
     GameObject* scene,
     u32 image_id
   ) {
-    renderer->Render(command_buffers, scene);
+    render_engine->Render(scene, command_buffers);
 
     screen_renderer.Render(
       command_buffers[1],
       render_targets[image_id],
       render_pass,
-      renderer->color_texture
+      render_engine->GetOutputTexture()
     );
   }
 
@@ -522,7 +522,7 @@ struct Application {
   std::shared_ptr<RenderPass> render_pass;
 
   ScreenRenderer screen_renderer;
-  std::unique_ptr<Renderer> renderer;
+  std::unique_ptr<RenderEngineBase> render_engine;
 };
 
 struct GlassMaterial final : Material {
