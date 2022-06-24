@@ -8,7 +8,6 @@
 #include <aurora/renderer/component/camera.hpp>
 #include <aurora/renderer/component/mesh.hpp>
 #include <aurora/renderer/material.hpp>
-#include <aurora/renderer/render_pipeline_base.hpp>
 #include <aurora/renderer/texture.hpp>
 #include <aurora/renderer/uniform_block.hpp>
 #include <type_traits>
@@ -18,6 +17,7 @@
 #include <vulkan/vulkan.h>
 
 #include "cache/geometry_cache.hpp"
+#include "render_pipeline_base.hpp"
 
 namespace Aura {
 

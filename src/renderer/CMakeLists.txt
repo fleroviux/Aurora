@@ -15,6 +15,7 @@ set(SOURCES
 set(HEADERS
   src/cache/geometry_cache.hpp
   src/forward/forward_render_pipeline.hpp
+  src/render_pipeline_base.hpp
   src/pbr.glsl.hpp
 )
 
@@ -28,7 +29,6 @@ set(HEADERS_PUBLIC
   include/aurora/renderer/gpu_resource.hpp
   include/aurora/renderer/material.hpp
   include/aurora/renderer/render_engine.hpp
-  include/aurora/renderer/render_pipeline_base.hpp
   include/aurora/renderer/texture.hpp
   include/aurora/renderer/uniform_block.hpp
 )

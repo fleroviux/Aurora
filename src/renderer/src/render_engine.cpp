@@ -4,10 +4,10 @@
 
 #include <aurora/renderer/component/scene.hpp>
 #include <aurora/renderer/render_engine.hpp>
-#include <aurora/renderer/render_pipeline_base.hpp>
 
 #include "cache/geometry_cache.hpp"
 #include "forward/forward_render_pipeline.hpp"
+#include "render_pipeline_base.hpp"
 
 namespace Aura {
 
