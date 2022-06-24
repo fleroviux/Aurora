@@ -33,7 +33,9 @@ struct ForwardRenderPipeline final : RenderPipelineBase {
     std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers
   ) override;
 
-  auto GetOutputTexture() -> GPUTexture* override;
+  auto GetColorTexture() -> GPUTexture* override;
+  auto GetDepthTexture() -> GPUTexture* override;
+  auto GetNormalTexture() -> GPUTexture* override;
 
 private:
   using ProgramKey = std::pair<std::type_index, u32>;

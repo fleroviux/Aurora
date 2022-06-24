@@ -355,7 +355,7 @@ struct ScreenRenderer {
     std::shared_ptr<RenderPass>& render_pass, 
     GPUTexture* texture
   ) {
-    bind_group->Bind(1, texture, sampler);
+    bind_group->Bind(1, texture, sampler, GPUTexture::Layout::ShaderReadOnly);
 
     render_pass->SetClearColor(0, 1, 0, 0, 1);
 
@@ -705,11 +705,11 @@ int main(int argc, char** argv) {
   //scene->add_child(helmet);
   scene->add_child(GLTFLoader{}.parse("Sponza/Sponza.gltf"));
 
-  //auto plane = GLTFLoader{}.parse("plane/plane.gltf");
-  //plane->children()[0]->get_component<Mesh>()->material = std::make_shared<GlassMaterial>();
-  //plane->transform().rotation().set_euler(M_PI * 0.5, 0.0, M_PI * 0.5);
-  //plane->transform().position() = Vector3{-4, 1, 0};
-  //scene->add_child(plane);
+  /*auto plane = GLTFLoader{}.parse("plane/plane.gltf");
+  plane->children()[0]->get_component<Mesh>()->material = std::make_shared<GlassMaterial>();
+  plane->transform().rotation().set_euler(M_PI * 0.5, 0.0, M_PI * 0.5);
+  plane->transform().position() = Vector3{-4, 1, 0};
+  scene->add_child(plane);*/
 
   auto behemoth = GLTFLoader{}.parse("behemoth/behemoth.gltf");
   scene->add_child(behemoth);

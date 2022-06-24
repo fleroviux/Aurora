@@ -287,6 +287,6 @@ constexpr auto pbr_frag = R"(
 
     frag_color = vec4(result, 1.0);
     frag_albedo = vec4(geometry.albedo, geometry.metalness);
-    frag_normal = vec4(geometry.normal, geometry.roughness);
+    frag_normal = vec4(geometry.normal * 0.5 + 0.5, geometry.roughness);
   }
 )";

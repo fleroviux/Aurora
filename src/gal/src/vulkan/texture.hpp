@@ -238,6 +238,7 @@ private:
     switch (format) {
       case Format::R8G8B8A8_SRGB:
       case Format::B8G8R8A8_SRGB:
+      case Format::R32G32B32A32_SFLOAT:
         return VK_IMAGE_ASPECT_COLOR_BIT;
       case Format::DEPTH_F32:
         return VK_IMAGE_ASPECT_DEPTH_BIT;

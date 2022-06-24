@@ -111,18 +111,36 @@ void ForwardRenderPipeline::Render(
       Access::ShaderRead,
       GPUTexture::Layout::ColorAttachment,
       GPUTexture::Layout::ShaderReadOnly
+    },
+    {
+      depth_texture,
+      Access::DepthStencilAttachmentWrite,
+      Access::ShaderRead,
+      GPUTexture::Layout::DepthStencilAttachment,
+      GPUTexture::Layout::DepthReadOnly,
+      {
+        GPUTexture::Aspect::Depth
+      }
     }
   };
 
   command_buffers[1]->PipelineBarrier(
-    PipelineStage::ColorAttachmentOutput,
+    PipelineStage::ColorAttachmentOutput | PipelineStage::LateFragmentTests,
     PipelineStage::FragmentShader,
-    {barriers, 3}
+    {barriers, 4}
   );
 }
 
-auto ForwardRenderPipeline::GetOutputTexture() -> GPUTexture* {
+auto ForwardRenderPipeline::GetColorTexture() -> GPUTexture* {
   return color_texture.get();
+}
+
+auto ForwardRenderPipeline::GetDepthTexture() -> GPUTexture* {
+  return depth_texture.get();
+}
+
+auto ForwardRenderPipeline::GetNormalTexture() -> GPUTexture* {
+  return normal_texture.get();
 }
 
 void ForwardRenderPipeline::CreateCameraUniformBlock() {
@@ -164,10 +182,10 @@ void ForwardRenderPipeline::CreateRenderTarget() {
     3200,
     1800,
     GPUTexture::Format::DEPTH_F32,
-    GPUTexture::Usage::DepthStencilAttachment
+    GPUTexture::Usage::DepthStencilAttachment | GPUTexture::Usage::Sampled
   );
 
-  render_target = render_device->CreateRenderTarget({ color_texture, albedo_texture, normal_texture }, depth_texture);
+  render_target = render_device->CreateRenderTarget({color_texture, albedo_texture, normal_texture}, depth_texture);
   render_pass = render_target->CreateRenderPass();
 
   render_pass->SetClearColor(0, 0.01, 0.01, 0.01, 1.0);
@@ -338,12 +356,12 @@ void ForwardRenderPipeline::RenderObject(
 
       auto& data = match->second;
 
-      object_data.bind_group->Bind(3 + i, data.texture, data.sampler);
+      object_data.bind_group->Bind(3 + i, data.texture, data.sampler, GPUTexture::Layout::ShaderReadOnly);
     }
   }
 
   auto& cube_entry = texture_cache[cubemap_handle];
-  object_data.bind_group->Bind(34, cube_entry.texture, cube_entry.sampler);
+  object_data.bind_group->Bind(34, cube_entry.texture, cube_entry.sampler, GPUTexture::Layout::ShaderReadOnly);
 
   // Update and bind material UBO
   auto& uniforms = material->get_uniforms();

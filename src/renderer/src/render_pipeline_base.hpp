@@ -21,7 +21,9 @@ struct RenderPipelineBase {
     std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers
   ) = 0;
 
-  virtual auto GetOutputTexture() -> GPUTexture* = 0;
+  virtual auto GetColorTexture() -> GPUTexture* = 0;
+  virtual auto GetDepthTexture() -> GPUTexture* = 0;
+  virtual auto GetNormalTexture() -> GPUTexture* = 0;
 };
 
 } // namespace Aura

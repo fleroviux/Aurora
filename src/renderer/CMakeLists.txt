@@ -7,6 +7,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 
 set(SOURCES
   src/cache/geometry_cache.cpp
+  src/effect/ssr/ssr_effect.cpp
   src/forward/forward_render_pipeline.cpp
   src/render_engine.cpp
   src/texture.cpp
@@ -14,6 +15,8 @@ set(SOURCES
 
 set(HEADERS
   src/cache/geometry_cache.hpp
+  src/effect/ssr/shader/test.glsl.hpp
+  src/effect/ssr/ssr_effect.hpp
   src/forward/forward_render_pipeline.hpp
   src/render_pipeline_base.hpp
   src/pbr.glsl.hpp

@@ -45,6 +45,7 @@ struct GPUTexture {
   enum class Format {
     R8G8B8A8_SRGB = 43,
     B8G8R8A8_SRGB = 50,
+    R32G32B32A32_SFLOAT = 109,
     DEPTH_F32 = 126
   };
 

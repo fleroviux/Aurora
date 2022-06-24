@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022
+ * Copyright (C) 2022 fleroviux
  */
 
 #include "geometry_cache.hpp"
