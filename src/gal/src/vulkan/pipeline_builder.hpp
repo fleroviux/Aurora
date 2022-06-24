@@ -6,6 +6,7 @@
 
 #include <aurora/gal/backend/vulkan.hpp>
 #include <aurora/log.hpp>
+#include <array>
 #include <vector>
 
 namespace Aura {
@@ -41,6 +42,16 @@ private:
 
 struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
   VulkanGraphicsPipelineBuilder(VkDevice device) : device(device) {
+    attachment_blend_state.fill({
+      .blendEnable = VK_FALSE,
+      .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+      .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+      .colorBlendOp = VK_BLEND_OP_ADD,
+      .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+      .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+      .alphaBlendOp = VK_BLEND_OP_ADD,
+      .colorWriteMask = 0xF
+    });
   }
 
   void SetViewport(int x, int y, int width, int height) override {
@@ -120,43 +131,35 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
   }
 
   void SetBlendEnable(size_t color_attachment, bool enable) override {
-    CheckColorAttachmentIndex(color_attachment);
-    attachment_blend_state[color_attachment].blendEnable = enable ? VK_TRUE : VK_FALSE;
+    attachment_blend_state.at(color_attachment).blendEnable = enable ? VK_TRUE : VK_FALSE;
   }
 
   void SetSrcColorBlendFactor(size_t color_attachment, BlendFactor blend_factor) override {
-    CheckColorAttachmentIndex(color_attachment);
-    attachment_blend_state[color_attachment].srcColorBlendFactor = (VkBlendFactor)blend_factor;
+    attachment_blend_state.at(color_attachment).srcColorBlendFactor = (VkBlendFactor)blend_factor;
   }
 
   void SetSrcAlphaBlendFactor(size_t color_attachment, BlendFactor blend_factor) override {
-    CheckColorAttachmentIndex(color_attachment);
-    attachment_blend_state[color_attachment].srcAlphaBlendFactor = (VkBlendFactor)blend_factor;
+    attachment_blend_state.at(color_attachment).srcAlphaBlendFactor = (VkBlendFactor)blend_factor;
   }
 
   void SetDstColorBlendFactor(size_t color_attachment, BlendFactor blend_factor) override {
-    CheckColorAttachmentIndex(color_attachment);
-    attachment_blend_state[color_attachment].dstColorBlendFactor = (VkBlendFactor)blend_factor;
+    attachment_blend_state.at(color_attachment).dstColorBlendFactor = (VkBlendFactor)blend_factor;
   }
 
   void SetDstAlphaBlendFactor(size_t color_attachment, BlendFactor blend_factor) override {
-    CheckColorAttachmentIndex(color_attachment);
-    attachment_blend_state[color_attachment].dstAlphaBlendFactor = (VkBlendFactor)blend_factor;
+    attachment_blend_state.at(color_attachment).dstAlphaBlendFactor = (VkBlendFactor)blend_factor;
   }
 
   void SetColorBlendOp(size_t color_attachment, BlendOp blend_op) override {
-    CheckColorAttachmentIndex(color_attachment);
-    attachment_blend_state[color_attachment].colorBlendOp = (VkBlendOp)blend_op;
+    attachment_blend_state.at(color_attachment).colorBlendOp = (VkBlendOp)blend_op;
   }
 
   void SetAlphaBlendOp(size_t color_attachment, BlendOp blend_op) override {
-    CheckColorAttachmentIndex(color_attachment);
-    attachment_blend_state[color_attachment].alphaBlendOp = (VkBlendOp)blend_op;
+    attachment_blend_state.at(color_attachment).alphaBlendOp = (VkBlendOp)blend_op;
   }
 
   void SetColorWriteMask(size_t color_attachment, ColorComponent components) override {
-    CheckColorAttachmentIndex(color_attachment);
-    attachment_blend_state[color_attachment].colorWriteMask = (VkColorComponentFlags)components;
+    attachment_blend_state.at(color_attachment).colorWriteMask = (VkColorComponentFlags)components;
   }
 
   void SetBlendConstants(float r, float g, float b, float a) override {
@@ -225,11 +228,6 @@ private:
     scissor.offset.y = y;
     scissor.extent.width = width;
     scissor.extent.height = height;
-  }
-
-  void CheckColorAttachmentIndex(size_t color_attachment) {
-    Assert(color_attachment < kColorAttachmentLimit,
-      "VulkanGraphicsPipelineBuilder: color_attachment was out-of-range");
   }
 
   auto GetVertexInputAttributeFormat(VertexDataType data_type, int components, bool normalized) -> VkFormat {
@@ -428,18 +426,7 @@ private:
     .primitiveRestartEnable = VK_FALSE
   };
 
-  VkPipelineColorBlendAttachmentState attachment_blend_state[kColorAttachmentLimit]{
-    {
-      .blendEnable = VK_FALSE,
-      .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-      .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-      .colorBlendOp = VK_BLEND_OP_ADD,
-      .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-      .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-      .alphaBlendOp = VK_BLEND_OP_ADD,
-      .colorWriteMask = 0xF
-    }
-  };
+  std::array<VkPipelineColorBlendAttachmentState, kColorAttachmentLimit> attachment_blend_state;
 
   VkPipelineColorBlendStateCreateInfo color_blend_info{
     .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
@@ -448,7 +435,7 @@ private:
     .logicOpEnable = VK_FALSE,
     .logicOp = VK_LOGIC_OP_NO_OP,
     .attachmentCount = 1,
-    .pAttachments = attachment_blend_state,
+    .pAttachments = attachment_blend_state.data(),
     .blendConstants = {0, 0, 0, 0}
   };
 
