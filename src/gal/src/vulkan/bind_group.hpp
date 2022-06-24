@@ -66,12 +66,13 @@ struct VulkanBindGroup final : BindGroup {
   void Bind(
     u32 binding,
     AnyPtr<GPUTexture> texture,
-    AnyPtr<Sampler> sampler
+    AnyPtr<Sampler> sampler,
+    GPUTexture::Layout layout
   ) override {
     auto image_info = VkDescriptorImageInfo{
       .sampler = (VkSampler)sampler->Handle(),
       .imageView = (VkImageView)texture->handle(),
-      .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL // TODO
+      .imageLayout = (VkImageLayout)layout
     };
 
     auto write_descriptor_set = VkWriteDescriptorSet{

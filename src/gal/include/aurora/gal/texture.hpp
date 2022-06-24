@@ -22,7 +22,15 @@ struct GPUTexture {
     ShaderReadOnly = 5,
     CopySrc = 6,
     CopyDst = 7,
-    PresentSrc = 1000001002
+
+    // VK_KHR_swapchain
+    PresentSrc = 1000001002,
+
+    // Vulkan 1.2
+    DepthAttachment = 1000241000,
+    DepthReadOnly = 1000241001,
+    StencilAttachment = 1000241002,
+    StencilReadOnly = 1000241003,
   };
 
   enum class Grade {
