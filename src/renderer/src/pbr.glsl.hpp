@@ -160,14 +160,6 @@ constexpr auto pbr_frag = R"(
 
   layout (binding = 34) uniform samplerCube u_env_map;
 
-  vec3 sRGBToLinear(vec3 color) {
-    return color;
-  }
-
-  vec3 LinearTosRGB(vec3 color) {
-    return color;
-  }
-
   // Source: https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
   vec3 ACESFilm(vec3 x) {
     float a = 2.51f;
@@ -234,8 +226,6 @@ constexpr auto pbr_frag = R"(
       vec4 diffuse = vec4(1.0);
     #endif
 
-    diffuse.rgb = sRGBToLinear(diffuse.rgb);
-
     float metalness = u_metalness;
     float roughness = u_roughness;
 
@@ -268,9 +258,6 @@ constexpr auto pbr_frag = R"(
     my_light.color = vec3(10.0);
     result += ShadeDirectLight(geometry, my_light, view_dir);
 
-    // Add a very simple ambient lighting term
-    result += geometry.albedo * 0.02;
-
     // TODO: make environment reflection more physically correct.
     {
       vec3 reflect_dir = reflect(-view_dir, geometry.normal);
@@ -283,10 +270,9 @@ constexpr auto pbr_frag = R"(
     }
 
     result = ACESFilm(result);
-    result = LinearTosRGB(result);
 
     frag_color = vec4(result, 1.0);
     frag_albedo = vec4(geometry.albedo, geometry.metalness);
-    frag_normal = vec4(geometry.normal * 0.5 + 0.5, geometry.roughness);
+    frag_normal = vec4((u_view * vec4(geometry.normal, 0.0)).xyz * 0.5 + 0.5, geometry.roughness);
   }
 )";

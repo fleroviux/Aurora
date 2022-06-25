@@ -6,7 +6,7 @@
 #include <aurora/log.hpp>
 #include <shaderc/shaderc.hpp>
 
-#include "shader/test.glsl.hpp"
+#include "shader/raytrace.glsl.hpp"
 #include "ssr_effect.hpp"
 
 namespace Aura {
@@ -116,7 +116,7 @@ void SSREffect::CreateShaderModules() {
   options.SetOptimizationLevel(shaderc_optimization_level_performance);
 
   auto result_vert = compiler.CompileGlslToSpv(
-    ssr_test_vert,
+    raytrace_vert,
     shaderc_shader_kind::shaderc_vertex_shader,
     "main.vert",
     options
@@ -128,7 +128,7 @@ void SSREffect::CreateShaderModules() {
   }
 
   auto result_frag = compiler.CompileGlslToSpv(
-    ssr_test_frag,
+    raytrace_frag,
     shaderc_shader_kind::shaderc_fragment_shader,
     "main.frag",
     options
