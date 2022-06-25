@@ -102,7 +102,7 @@ struct Rotation {
 
 private:
   void calculate_matrix() {
-    mat = quat.to_rotation_matrix();
+    mat = quat.ToRotationMatrix();
   }
 
   Matrix4 mat;
