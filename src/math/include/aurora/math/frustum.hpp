@@ -56,9 +56,9 @@ struct Frustum {
   bool contains_box(Box3 const& box) const {
     for (auto& plane : planes) {
       auto point = Vector3{
-        plane.x() > 0 ? box.max.x() : box.min.x(),
-        plane.y() > 0 ? box.max.y() : box.min.y(),
-        plane.z() > 0 ? box.max.z() : box.min.z()
+        plane.x() > 0 ? box.Max().x() : box.Min().x(),
+        plane.y() > 0 ? box.Max().y() : box.Min().y(),
+        plane.z() > 0 ? box.Max().z() : box.Min().z()
       };
 
       if (plane.get_distance_to_point(point) < 0) {

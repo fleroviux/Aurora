@@ -25,8 +25,11 @@ namespace Aura {
  *   v7 = (max.x, max.y, max.z)
  */
 struct Box3 {
-  Vector3 min; /**< the lower-left vertex */
-  Vector3 max; /**< the upper-right vertex */
+  auto Min() -> Vector3& { return min; }
+  auto Max() -> Vector3& { return max; }
+
+  auto Min() const -> Vector3 const& { return min; }
+  auto Max() const -> Vector3 const& { return max; }
 
   /**
    * Apply a matrix transform on each vertex of this bounding box.
@@ -36,7 +39,7 @@ struct Box3 {
    * @param matrix the matrix transform
    * @return the transformed bounding box
    */
-  auto apply_matrix(Matrix4 const& matrix) const -> Box3 {
+  auto ApplyMatrix(Matrix4 const& matrix) const -> Box3 {
     Box3 box;
 
     auto min_x = matrix.x().xyz() * min.x();
@@ -81,6 +84,10 @@ struct Box3 {
 
     return box;
   }
+
+private:
+  Vector3 min; /**< the lower-left vertex */
+  Vector3 max; /**< the upper-right vertex */
 };
 
 } // namespace Aura

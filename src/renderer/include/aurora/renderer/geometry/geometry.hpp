@@ -92,13 +92,13 @@ struct Geometry final : GPUResource {
       return;
     }
 
-    bounding_box.min.x() = +std::numeric_limits<float>::infinity();
-    bounding_box.min.y() = +std::numeric_limits<float>::infinity();
-    bounding_box.min.z() = +std::numeric_limits<float>::infinity();
+    bounding_box.Min().x() = +std::numeric_limits<float>::infinity();
+    bounding_box.Min().y() = +std::numeric_limits<float>::infinity();
+    bounding_box.Min().z() = +std::numeric_limits<float>::infinity();
 
-    bounding_box.max.x() = -std::numeric_limits<float>::infinity();
-    bounding_box.max.y() = -std::numeric_limits<float>::infinity();
-    bounding_box.max.z() = -std::numeric_limits<float>::infinity();
+    bounding_box.Max().x() = -std::numeric_limits<float>::infinity();
+    bounding_box.Max().y() = -std::numeric_limits<float>::infinity();
+    bounding_box.Max().z() = -std::numeric_limits<float>::infinity();
 
     auto& buffer = vertex_buffers[position_attribute->buffer];
     auto  length = buffer->size() / buffer->stride();
@@ -107,13 +107,13 @@ struct Geometry final : GPUResource {
     for (size_t i = 0; i < length; i++) {
       auto position = buffer->read<Vector3>(i, offset, 0);
 
-      bounding_box.min.x() = std::min(bounding_box.min.x(), position.x());
-      bounding_box.min.y() = std::min(bounding_box.min.y(), position.y());
-      bounding_box.min.z() = std::min(bounding_box.min.z(), position.z());
+      bounding_box.Min().x() = std::min(bounding_box.Min().x(), position.x());
+      bounding_box.Min().y() = std::min(bounding_box.Min().y(), position.y());
+      bounding_box.Min().z() = std::min(bounding_box.Min().z(), position.z());
 
-      bounding_box.max.x() = std::max(bounding_box.max.x(), position.x());
-      bounding_box.max.y() = std::max(bounding_box.max.y(), position.y());
-      bounding_box.max.z() = std::max(bounding_box.max.z(), position.z());
+      bounding_box.Max().x() = std::max(bounding_box.Max().x(), position.x());
+      bounding_box.Max().y() = std::max(bounding_box.Max().y(), position.y());
+      bounding_box.Max().z() = std::max(bounding_box.Max().z(), position.z());
     }
 
     have_bounding_box = true;
