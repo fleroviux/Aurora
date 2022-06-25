@@ -120,11 +120,7 @@ struct RenderDevice {
 
   virtual auto CreateGraphicsPipelineBuilder() -> std::unique_ptr<GraphicsPipelineBuilder> = 0;
 
-  // TODO: better handle queue families
-  virtual auto CreateCommandPool(
-    u32 queue_family,
-    CommandPool::Usage usage
-  ) -> std::shared_ptr<CommandPool> = 0;
+  virtual auto CreateGraphicsCommandPool(CommandPool::Usage usage) -> std::shared_ptr<CommandPool> = 0;
 
   virtual auto CreateCommandBuffer(
     std::shared_ptr<CommandPool> pool

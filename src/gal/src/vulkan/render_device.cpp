@@ -25,10 +25,11 @@ struct VulkanRenderDevice final : RenderDevice {
   VulkanRenderDevice(VulkanRenderDeviceOptions const& options)
       : instance(options.instance)
       , physical_device(options.physical_device)
-      , device(options.device) {
+      , device(options.device)
+      , queue_family_graphics(options.queue_family_graphics) {
     CreateVmaAllocator();
     CreateDescriptorPool();
-    CreateQueues(options);
+    CreateQueues();
   }
 
  ~VulkanRenderDevice() {
@@ -121,12 +122,8 @@ struct VulkanRenderDevice final : RenderDevice {
     return std::make_unique<VulkanGraphicsPipelineBuilder>(device);
   }
 
-  // TODO: better handle queue families
-  auto CreateCommandPool(
-    u32 queue_family,
-    CommandPool::Usage usage
-  ) -> std::shared_ptr<CommandPool> override {
-    return std::make_shared<VulkanCommandPool>(device, queue_family, usage);
+  auto CreateGraphicsCommandPool(CommandPool::Usage usage) -> std::shared_ptr<CommandPool> override {
+    return std::make_shared<VulkanCommandPool>(device, queue_family_graphics, usage);
   }
 
   auto CreateCommandBuffer(
@@ -194,9 +191,9 @@ private:
     }
   }
 
-  void CreateQueues(VulkanRenderDeviceOptions const& options) {
+  void CreateQueues() {
     VkQueue graphics;
-    vkGetDeviceQueue(device, options.queue_family_graphics, 0, &graphics);
+    vkGetDeviceQueue(device, queue_family_graphics, 0, &graphics);
     graphics_queue = std::make_unique<VulkanQueue>(graphics);
   }
 
@@ -207,6 +204,7 @@ private:
   VmaAllocator allocator;
   VulkanCommandBuffer* transfer_cmd_buffer;
   std::unique_ptr<VulkanQueue> graphics_queue;
+  u32 queue_family_graphics;
 };
 
 auto CreateVulkanRenderDevice(

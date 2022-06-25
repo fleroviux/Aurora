@@ -678,10 +678,8 @@ int main(int argc, char** argv) {
 
   auto& render_device = app.render_device;
 
-  auto command_pool = render_device->CreateCommandPool(
-    queue_family_graphics,
-    CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer
-  );
+  auto command_pool = render_device->CreateGraphicsCommandPool(
+    CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer);
 
   auto command_buffers = std::array<std::unique_ptr<CommandBuffer>, 2>{};
   command_buffers[0] = render_device->CreateCommandBuffer(command_pool);
