@@ -32,15 +32,15 @@ struct Plane {
   Plane(Vec3 const& normal, T distance = NumericConstants<T>::zero()) : normal(normal), distance(distance) {
   }
 
-  auto X() -> T& { return normal.x(); }
-  auto Y() -> T& { return normal.y(); }
-  auto Z() -> T& { return normal.z(); }
-  auto W() -> T& { return normal.w(); }
+  auto X() -> T& { return normal.X(); }
+  auto Y() -> T& { return normal.Y(); }
+  auto Z() -> T& { return normal.Z(); }
+  auto W() -> T& { return normal.W(); }
 
-  auto X() const -> T { return normal.x(); }
-  auto Y() const -> T { return normal.y(); }
-  auto Z() const -> T { return normal.z(); }
-  auto W() const -> T { return normal.w(); }
+  auto X() const -> T { return normal.X(); }
+  auto Y() const -> T { return normal.Y(); }
+  auto Z() const -> T { return normal.Z(); }
+  auto W() const -> T { return normal.W(); }
 
   /**
    * Get the normal vector of this plane.
@@ -80,18 +80,18 @@ struct Plane {
    * @return the signed distance
    */
   auto GetDistanceToPoint(Vec3 const& point) const -> T {
-    return point.x() * normal.x() +
-           point.y() * normal.y() +
-           point.z() * normal.z() - distance;
+    return point.X() * normal.X() +
+           point.Y() * normal.Y() +
+           point.Z() * normal.Z() - distance;
   }
 
 private:
   Vec3 normal{
-    NumericConstants<T>::zero(),
-    NumericConstants<T>::one(),
-    NumericConstants<T>::zero()
+    NumericConstants<T>::Zero(),
+    NumericConstants<T>::One(),
+    NumericConstants<T>::Zero()
   };
-  T distance = NumericConstants<T>::zero();
+  T distance = NumericConstants<T>::Zero();
 };
 
 } // namespace Aura::detail

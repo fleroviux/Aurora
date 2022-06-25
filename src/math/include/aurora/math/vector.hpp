@@ -193,7 +193,7 @@ struct Vector {
    * @param other the other vector
    * @return the scalar result
    */
-  auto dot(Derived const& other) const -> T {
+  auto Dot(Derived const& other) const -> T {
     T result{};
     for (uint i = 0; i < n; i++)
       result += data[i] * other[i];
@@ -207,16 +207,16 @@ struct Vector {
    * @param b the vector at `factor = 1`
    * @return the interpolated result vector
    */
-  static auto lerp(Derived const& a, Derived const& b, T factor) -> Derived {
+  static auto Lerp(Derived const& a, Derived const& b, T factor) -> Derived {
     Derived result{};
-    T one_minus_factor = NumericConstants<T>::one() - factor;
+    T one_minus_factor = NumericConstants<T>::One() - factor;
     for (uint i = 0; i < n; i++)
       result[i] = a[i] * one_minus_factor + b[i] * factor;
     return result;
   }
 
 protected:
-  T data[n] { NumericConstants<T>::zero() }; /**< the `n` components of the vector. */
+  T data[n] { NumericConstants<T>::Zero() }; /**< the `n` components of the vector. */
 };
 
 /**
@@ -237,11 +237,11 @@ struct Vector2 : Vector<Derived, T, 2> {
     this->data[1] = y;
   }
 
-  auto x() -> T& { return this->data[0]; }
-  auto y() -> T& { return this->data[1]; }
+  auto X() -> T& { return this->data[0]; }
+  auto Y() -> T& { return this->data[1]; }
 
-  auto x() const -> T { return this->data[0]; }
-  auto y() const -> T { return this->data[1]; }
+  auto X() const -> T { return this->data[0]; }
+  auto Y() const -> T { return this->data[1]; }
 };
 
 /**
@@ -263,13 +263,13 @@ struct Vector3 : Vector<Derived, T, 3> {
     this->data[2] = z;
   }
 
-  auto x() -> T& { return this->data[0]; }
-  auto y() -> T& { return this->data[1]; }
-  auto z() -> T& { return this->data[2]; }
+  auto X() -> T& { return this->data[0]; }
+  auto Y() -> T& { return this->data[1]; }
+  auto Z() -> T& { return this->data[2]; }
 
-  auto x() const -> T { return this->data[0]; }
-  auto y() const -> T { return this->data[1]; }
-  auto z() const -> T { return this->data[2]; }
+  auto X() const -> T { return this->data[0]; }
+  auto Y() const -> T { return this->data[1]; }
+  auto Z() const -> T { return this->data[2]; }
 
   /**
    * Calculate the cross product of this vector with another vector.
@@ -278,7 +278,7 @@ struct Vector3 : Vector<Derived, T, 3> {
    * @param other the other vector
    * @returm the result vector
    */
-  auto cross(Vector3 const& other) const -> Vector3 {
+  auto Cross(Vector3 const& other) const -> Vector3 {
     return {
       this->data[1] * other[2] - this->data[2] * other[1],
       this->data[2] * other[0] - this->data[0] * other[2],
@@ -312,23 +312,23 @@ struct Vector4 : Vector<Derived, T, 4> {
    * Construct a Vector4 from a Vector3 and a scalar w-component.
    */
   Vector4(Vec3 const& xyz, T w = NumericConstants<T>::one()) {
-    this->data[0] = xyz.x();
-    this->data[1] = xyz.y();
-    this->data[2] = xyz.z();
+    this->data[0] = xyz.X();
+    this->data[1] = xyz.Y();
+    this->data[2] = xyz.Z();
     this->data[3] = w;
   }
 
-  auto x() -> T& { return this->data[0]; }
-  auto y() -> T& { return this->data[1]; }
-  auto z() -> T& { return this->data[2]; }
-  auto w() -> T& { return this->data[3]; }
+  auto X() -> T& { return this->data[0]; }
+  auto Y() -> T& { return this->data[1]; }
+  auto Z() -> T& { return this->data[2]; }
+  auto W() -> T& { return this->data[3]; }
 
-  auto x() const -> T { return this->data[0]; }
-  auto y() const -> T { return this->data[1]; }
-  auto z() const -> T { return this->data[2]; }
-  auto w() const -> T { return this->data[3]; }
+  auto X() const -> T { return this->data[0]; }
+  auto Y() const -> T { return this->data[1]; }
+  auto Z() const -> T { return this->data[2]; }
+  auto W() const -> T { return this->data[3]; }
 
-  auto xyz() const -> Vec3 { return Vec3{x(), y(), z()}; }
+  auto XYZ() const -> Vec3 { return Vec3{X(), Y(), Z()}; }
 };
 
 } // namespace Aura::detail
@@ -350,8 +350,8 @@ struct Vector3 final : detail::Vector3<Vector3, float> {
    * Calculate the euclidean length of this vector.
    * @return the calculated length
    */
-  auto length() const -> float {
-    return std::sqrt(dot(*this));
+  auto Length() const -> float {
+    return std::sqrt(Dot(*this));
   }
 
   /**
@@ -359,8 +359,8 @@ struct Vector3 final : detail::Vector3<Vector3, float> {
    * If this vector is the zero vector then this operation is undefined.
    * @return a reference to this vector
    */
-  auto normalize() -> Vector3& {
-    *this *= 1.0f / length();
+  auto Normalize() -> Vector3& {
+    *this *= 1.0f / Length();
     return *this;
   }
 };

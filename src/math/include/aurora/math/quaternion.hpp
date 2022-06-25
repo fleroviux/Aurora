@@ -37,7 +37,7 @@ struct Quaternion {
   /**
    * Construct a Quaternion from a Vector3.
    */
-  Quaternion(Vec3 const& vec3) : data{NumericConstants<T>::zero(), vec3.x(), vec3.y(), vec3.z()} {}
+  Quaternion(Vec3 const& vec3) : data{NumericConstants<T>::Zero(), vec3.x(), vec3.y(), vec3.z()} {}
 
   /**
    * Access a component of the quaternion via its index (between `0` and `3`).
@@ -204,7 +204,7 @@ struct Quaternion {
    * @return the inverse quaternion
    */
   auto Inverse() const -> Derived {
-    return ~(*this) * (NumericConstants<T>::one() / LengthSquared());
+    return ~(*this) * (NumericConstants<T>::One() / LengthSquared());
   }
 
   /**
@@ -234,7 +234,7 @@ struct Quaternion {
    */
   auto Cross(Derived const& rhs) const -> Derived {
     return Derived{
-      NumericConstants<T>::zero(),
+      NumericConstants<T>::Zero(),
       Y() * rhs.Z() - Z() * rhs.Y(),
       Z() * rhs.X() - X() * rhs.Z(),
       X() * rhs.Y() - Y() * rhs.X()
@@ -243,10 +243,10 @@ struct Quaternion {
 
 private:
   T data[4] {
-    NumericConstants<T>::one(),
-    NumericConstants<T>::zero(),
-    NumericConstants<T>::zero(),
-    NumericConstants<T>::zero()
+    NumericConstants<T>::One(),
+    NumericConstants<T>::Zero(),
+    NumericConstants<T>::Zero(),
+    NumericConstants<T>::Zero()
   }; /**< the four components of this quaternion. */
 };
 
@@ -326,7 +326,7 @@ struct Quaternion final : detail::Quaternion<Quaternion, Vector3, float> {
       0
     };
 
-    mat.W().w() = 1;
+    mat.W().W() = 1;
     return mat;
   }
 
@@ -399,7 +399,7 @@ struct Quaternion final : detail::Quaternion<Quaternion, Vector3, float> {
     auto c = std::cos(a);
     auto s = std::sin(a);
 
-    return Quaternion{c, axis.x() * s, axis.y() * s, axis.z() * s};
+    return Quaternion{c, axis.X() * s, axis.Y() * s, axis.Z() * s};
   }
 
   /**

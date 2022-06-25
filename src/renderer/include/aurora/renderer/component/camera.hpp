@@ -94,15 +94,15 @@ private:
   void update() {
     projection = Matrix4::PerspectiveVK(field_of_view, aspect_ratio, near, far);
 
-    float x = 1 / projection.X().x();
-    float y = 1 / projection.Y().y();
+    float x = 1 / projection.X().X();
+    float y = 1 / projection.Y().Y();
 
     frustum.SetPlane(Frustum::Side::NZ, Plane{Vector3{ 0,  0, -1}, -near});
     frustum.SetPlane(Frustum::Side::PZ, Plane{Vector3{ 0,  0,  1}, -far });
-    frustum.SetPlane(Frustum::Side::NX, Plane{Vector3{ 1 , 0, -x}.normalize(), 0});
-    frustum.SetPlane(Frustum::Side::PX, Plane{Vector3{-1 , 0, -x}.normalize(), 0});
-    frustum.SetPlane(Frustum::Side::NY, Plane{Vector3{ 0,  1, -y}.normalize(), 0});
-    frustum.SetPlane(Frustum::Side::PY, Plane{Vector3{ 0, -1, -y}.normalize(), 0});
+    frustum.SetPlane(Frustum::Side::NX, Plane{Vector3{ 1 , 0, -x}.Normalize(), 0});
+    frustum.SetPlane(Frustum::Side::PX, Plane{Vector3{-1 , 0, -x}.Normalize(), 0});
+    frustum.SetPlane(Frustum::Side::NY, Plane{Vector3{ 0,  1, -y}.Normalize(), 0});
+    frustum.SetPlane(Frustum::Side::PY, Plane{Vector3{ 0, -1, -y}.Normalize(), 0});
   }
 
   float field_of_view = 45.0;

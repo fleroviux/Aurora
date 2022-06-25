@@ -28,27 +28,27 @@ struct Rotation {
     auto euler = Vector3{};
     auto sin_y = -mat[0][2];
 
-    euler.y() = std::asin(std::clamp(sin_y, -1.0f, +1.0f));
+    euler.Y() = std::asin(std::clamp(sin_y, -1.0f, +1.0f));
 
     // Guard against gimbal lock when Y=-90°/+90° (X and Z rotate around the same axis).
     if (std::abs(sin_y) <= cos0_threshold) {
       auto sin_x_cos_y = mat[1][2];
       auto cos_x_cos_y = mat[2][2];
-      euler.x() = std::atan2(sin_x_cos_y, cos_x_cos_y);
+      euler.X() = std::atan2(sin_x_cos_y, cos_x_cos_y);
 
       auto sin_z_cos_y = mat[0][1];
       auto cos_z_cos_y = mat[0][0];
-      euler.z() = std::atan2(sin_z_cos_y, cos_z_cos_y);
+      euler.Z() = std::atan2(sin_z_cos_y, cos_z_cos_y);
     } else {
-      euler.x() = std::atan2(mat[1][0], mat[2][0]);
-      euler.z() = 0;
+      euler.X() = std::atan2(mat[1][0], mat[2][0]);
+      euler.Z() = 0;
     }
 
     return euler;
   }
 
   void set_euler(Vector3 const& euler) {
-    set_euler(euler.x(), euler.y(), euler.z());
+    set_euler(euler.X(), euler.Y(), euler.Z());
   }
 
   void set_euler(float x, float y, float z) {

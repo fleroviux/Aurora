@@ -8,28 +8,28 @@ namespace Aura {
 
 template<typename T>
 struct NumericConstants {
-  // static constexpr auto zero() -> T;
-  // static constexpr auto one()  -> T;
+  // static constexpr auto Zero() -> T;
+  // static constexpr auto One()  -> T;
 };
 
 template<>
 struct NumericConstants<float> {
-  static constexpr auto zero() -> float {
+  static constexpr auto Zero() -> float {
     return 0;
   }
   
-  static constexpr auto one() -> float {
+  static constexpr auto One() -> float {
     return 1;
   }
 };
 
 template<>
 struct NumericConstants<double> {
-  static constexpr auto zero() -> double {
+  static constexpr auto Zero() -> double {
     return 0;
   }
   
-  static constexpr auto one() -> double {
+  static constexpr auto One() -> double {
     return 1;
   }
 };

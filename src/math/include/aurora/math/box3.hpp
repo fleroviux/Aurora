@@ -42,13 +42,13 @@ struct Box3 {
   auto ApplyMatrix(Matrix4 const& matrix) const -> Box3 {
     Box3 box;
 
-    auto min_x = matrix.X().xyz() * min.x();
-    auto max_x = matrix.X().xyz() * max.x();
-    auto min_y = matrix.Y().xyz() * min.y();
-    auto max_y = matrix.Y().xyz() * max.y();
-    auto min_z = matrix.Z().xyz() * min.z();
-    auto max_z = matrix.Z().xyz() * max.z();
-    auto translation = matrix.W().xyz();
+    auto min_x = matrix.X().XYZ() * min.X();
+    auto max_x = matrix.X().XYZ() * max.X();
+    auto min_y = matrix.Y().XYZ() * min.Y();
+    auto max_y = matrix.Y().XYZ() * max.Y();
+    auto min_z = matrix.Z().XYZ() * min.Z();
+    auto max_z = matrix.Z().XYZ() * max.Z();
+    auto translation = matrix.W().XYZ();
 
     Vector3 v[8];
     v[0] = min_x + min_y + min_z + translation;
@@ -73,13 +73,13 @@ struct Box3 {
     };
 
     for (int i = 0; i < 8; i++) {
-      box.min.x() = std::min(box.min.x(), v[i].x());
-      box.min.y() = std::min(box.min.y(), v[i].y());
-      box.min.z() = std::min(box.min.z(), v[i].z());
+      box.min.X() = std::min(box.min.X(), v[i].X());
+      box.min.Y() = std::min(box.min.Y(), v[i].Y());
+      box.min.Z() = std::min(box.min.Z(), v[i].Z());
 
-      box.max.x() = std::max(box.max.x(), v[i].x());
-      box.max.y() = std::max(box.max.y(), v[i].y());
-      box.max.z() = std::max(box.max.z(), v[i].z());
+      box.max.X() = std::max(box.max.X(), v[i].X());
+      box.max.Y() = std::max(box.max.Y(), v[i].Y());
+      box.max.Z() = std::max(box.max.Z(), v[i].Z());
     }
 
     return box;

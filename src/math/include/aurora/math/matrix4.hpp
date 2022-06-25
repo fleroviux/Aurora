@@ -159,9 +159,9 @@ struct Matrix4 {
     for (uint row = 0; row < 4; row++) {
       for (uint col = 0; col < 4; col++) {
         if (row == col) {
-          result[col][row] = NumericConstants<T>::one();
+          result[col][row] = NumericConstants<T>::One();
         } else {
-          result[col][row] = NumericConstants<T>::zero();
+          result[col][row] = NumericConstants<T>::Zero();
         }
       }
     }
@@ -205,7 +205,7 @@ struct Matrix4 final : detail::Matrix4<Matrix4, Vector4, float> {
    * @return the scale matrix
    */
   static auto Scale(Vector3 const& vec) -> Matrix4 {
-    return Scale(vec.x(), vec.y(), vec.z());
+    return Scale(vec.X(), vec.Y(), vec.Z());
   }
 
   /**
@@ -286,7 +286,7 @@ struct Matrix4 final : detail::Matrix4<Matrix4, Vector4, float> {
    * @return the translation matrix
    */
   static auto Translation(Vector3 const& vec) -> Matrix4 {
-    return Matrix4::Translation(vec.x(), vec.y(), vec.z());
+    return Matrix4::Translation(vec.X(), vec.Y(), vec.Z());
   }
 
   /**

@@ -736,7 +736,7 @@ int main(int argc, char** argv) {
 
   auto camera = new GameObject{};
   camera->add_component<PerspectiveCamera>();
-  camera->transform().position().z() = 3;
+  camera->transform().position().Z() = 3;
   scene->add_child(camera);
   scene->add_component<Scene>(camera);
 
@@ -749,19 +749,19 @@ int main(int argc, char** argv) {
     auto const& camera_local = camera->transform().local();
 
     if (state[SDL_SCANCODE_W]) {
-      camera->transform().position() -= camera_local[2].xyz() * 0.05;
+      camera->transform().position() -= camera_local[2].XYZ() * 0.05;
     }
 
     if (state[SDL_SCANCODE_S]) {
-      camera->transform().position() += camera_local[2].xyz() * 0.05;
+      camera->transform().position() += camera_local[2].XYZ() * 0.05;
     }
 
     if (state[SDL_SCANCODE_A]) {
-      camera->transform().position() -= camera_local[0].xyz() * 0.05;
+      camera->transform().position() -= camera_local[0].XYZ() * 0.05;
     }
 
     if (state[SDL_SCANCODE_D]) {
-      camera->transform().position() += camera_local[0].xyz() * 0.05;
+      camera->transform().position() += camera_local[0].XYZ() * 0.05;
     }
 
     if (state[SDL_SCANCODE_UP])    x += 0.01;
