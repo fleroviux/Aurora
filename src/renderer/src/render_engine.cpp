@@ -36,7 +36,7 @@ struct RenderEngine final : RenderEngineBase {
     ssr_effect->Render(camera, command_buffers[1], render_texture, render_target, color_texture, depth_texture, normal_texture);
   }
 
-  auto GetOutputTexture() -> GPUTexture* override {
+  auto GetOutputTexture() -> Texture* override {
     // TODO: return our render texture
     //return render_pipeline->GetOutputTexture();
     return render_texture.get();
@@ -53,7 +53,7 @@ private:
 
   void CreateRenderTarget() {
     render_texture = render_device->CreateTexture2D(
-      3200, 1800, GPUTexture::Format::B8G8R8A8_SRGB, GPUTexture::Usage::ColorAttachment | GPUTexture::Usage::Sampled);
+      3200, 1800, Texture::Format::B8G8R8A8_SRGB, Texture::Usage::ColorAttachment | Texture::Usage::Sampled);
 
     render_target = render_device->CreateRenderTarget({render_texture});
   }
@@ -66,7 +66,7 @@ private:
   std::shared_ptr<GeometryCache> geometry_cache;
   std::unique_ptr<RenderPipelineBase> render_pipeline;
 
-  std::shared_ptr<GPUTexture> render_texture;
+  std::shared_ptr<Texture> render_texture;
   std::unique_ptr<RenderTarget> render_target;
 
   std::unique_ptr<SSREffect> ssr_effect;

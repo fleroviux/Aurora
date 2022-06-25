@@ -9,7 +9,7 @@
 
 namespace Aura {
 
-struct VulkanTexture final : GPUTexture {
+struct VulkanTexture final : Texture {
  ~VulkanTexture() override {
     vkDestroyImageView(device_, image_view_, nullptr);
     if (image_owned_) {
@@ -17,16 +17,16 @@ struct VulkanTexture final : GPUTexture {
     }
   }
 
-  auto handle() -> void* override { return (void*)image_view_; }
-  auto handle2() -> void* override { return (void*)image_; }
-  auto grade() const -> Grade override { return grade_; }
-  auto format() const -> Format override { return format_; };
-  auto usage() const -> Usage override { return usage_; }
-  auto width() const -> u32 override { return width_; }
-  auto height() const -> u32 override { return height_; }
-  auto depth() const -> u32 override { return depth_; }
-  auto layers() const -> u32 override { return layers_; }
-  auto mip_levels() const -> u32 override { return mip_levels_; }
+  auto HandleView() -> void* override { return (void*)image_view_; }
+  auto Handle() -> void* override { return (void*)image_; }
+  auto GetGrade() const -> Grade override { return grade_; }
+  auto GetFormat() const -> Format override { return format_; };
+  auto GetUsage() const -> Usage override { return usage_; }
+  auto GetWidth() const -> u32 override { return width_; }
+  auto GetHeight() const -> u32 override { return height_; }
+  auto GetDepth() const -> u32 override { return depth_; }
+  auto GetLayerCount() const -> u32 override { return layers_; }
+  auto GetMipCount() const -> u32 override { return mip_levels_; }
 
   static auto create(
     VkPhysicalDevice physical_device,
@@ -192,9 +192,9 @@ private:
         .a = VK_COMPONENT_SWIZZLE_A,
       },
       .subresourceRange = VkImageSubresourceRange{
-        .aspectMask = GetImageAspectFromFormat(format()),
+        .aspectMask = GetImageAspectFromFormat(GetFormat()),
         .baseMipLevel = 0,
-        .levelCount = mip_levels(),
+        .levelCount = GetMipCount(),
         .baseArrayLayer = 0,
         .layerCount = 1
       }
@@ -220,9 +220,9 @@ private:
         .a = VK_COMPONENT_SWIZZLE_A,
       },
       .subresourceRange = VkImageSubresourceRange{
-        .aspectMask = GetImageAspectFromFormat(format()),
+        .aspectMask = GetImageAspectFromFormat(GetFormat()),
         .baseMipLevel = 0,
-        .levelCount = mip_levels(),
+        .levelCount = GetMipCount(),
         .baseArrayLayer = 0,
         .layerCount = 6
       }

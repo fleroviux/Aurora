@@ -64,13 +64,13 @@ struct VulkanBindGroup final : BindGroup {
 
   void Bind(
     u32 binding,
-    AnyPtr<GPUTexture> texture,
+    AnyPtr<Texture> texture,
     AnyPtr<Sampler> sampler,
-    GPUTexture::Layout layout
+    Texture::Layout layout
   ) override {
     auto image_info = VkDescriptorImageInfo{
       .sampler = (VkSampler)sampler->Handle(),
-      .imageView = (VkImageView)texture->handle(),
+      .imageView = (VkImageView)texture->HandleView(),
       .imageLayout = (VkImageLayout)layout
     };
 

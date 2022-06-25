@@ -13,14 +13,14 @@ namespace Aura {
 struct VulkanRenderTarget final : RenderTarget {
   VulkanRenderTarget(
     VkDevice device,
-    std::vector<std::shared_ptr<GPUTexture>> const& color_attachments,
-    std::shared_ptr<GPUTexture> depth_stencil_attachment
+    std::vector<std::shared_ptr<Texture>> const& color_attachments,
+    std::shared_ptr<Texture> depth_stencil_attachment
   )   : device(device)
       , color_attachments(color_attachments)
       , depth_stencil_attachment(depth_stencil_attachment) {
     auto image_views = std::vector<VkImageView>{};
 
-    GPUTexture* first_attachment = nullptr;
+    Texture* first_attachment = nullptr;
 
     if (color_attachments.size() > 0) {
       first_attachment = color_attachments[0].get();
@@ -30,17 +30,17 @@ struct VulkanRenderTarget final : RenderTarget {
       first_attachment = depth_stencil_attachment.get();
     }
 
-    width_ = first_attachment->width();
-    height_ = first_attachment->height();
+    width_ = first_attachment->GetWidth();
+    height_ = first_attachment->GetHeight();
 
     render_pass = CreateRenderPass();
 
     for (auto& texture : color_attachments) {
-      image_views.push_back((VkImageView)texture->handle());
+      image_views.push_back((VkImageView)texture->HandleView());
     }
 
     if (depth_stencil_attachment) {
-      image_views.push_back((VkImageView)depth_stencil_attachment->handle());
+      image_views.push_back((VkImageView)depth_stencil_attachment->HandleView());
     }
 
     auto info = VkFramebufferCreateInfo{
@@ -85,8 +85,8 @@ private:
   VkDevice device;
   VkFramebuffer framebuffer;
   std::unique_ptr<RenderPass> render_pass;
-  std::vector<std::shared_ptr<GPUTexture>> color_attachments;
-  std::shared_ptr<GPUTexture> depth_stencil_attachment;
+  std::vector<std::shared_ptr<Texture>> color_attachments;
+  std::shared_ptr<Texture> depth_stencil_attachment;
   u32 width_;
   u32 height_;
 };

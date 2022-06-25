@@ -13,9 +13,9 @@ namespace Aura {
 struct VulkanRenderPass final : RenderPass {
   VulkanRenderPass(
     VkDevice device,
-    std::vector<std::shared_ptr<GPUTexture>> const& color_attachments,
+    std::vector<std::shared_ptr<Texture>> const& color_attachments,
     std::vector<RenderPass::Descriptor> const& color_descriptors,
-    std::shared_ptr<GPUTexture> depth_stencil_attachment,
+    std::shared_ptr<Texture> depth_stencil_attachment,
     RenderPass::Descriptor depth_stencil_descriptor
   )   : device_(device) {
     auto attachments = std::vector<VkAttachmentDescription>{};
@@ -30,7 +30,7 @@ struct VulkanRenderPass final : RenderPass {
 
       attachments.push_back(VkAttachmentDescription{
         .flags = 0,
-        .format = (VkFormat)texture->format(),
+        .format = (VkFormat)texture->GetFormat(),
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = (VkAttachmentLoadOp)descriptor.load_op,
         .storeOp = (VkAttachmentStoreOp)descriptor.store_op,
@@ -63,17 +63,17 @@ struct VulkanRenderPass final : RenderPass {
       auto layout_src = depth_stencil_descriptor.layout_src;
       auto layout_dst = depth_stencil_descriptor.layout_dst;
 
-      if (layout_src == GPUTexture::Layout::ColorAttachment) {
-        layout_src = GPUTexture::Layout::DepthStencilAttachment;
+      if (layout_src == Texture::Layout::ColorAttachment) {
+        layout_src = Texture::Layout::DepthStencilAttachment;
       }
 
-      if (layout_dst == GPUTexture::Layout::ColorAttachment) {
-        layout_dst = GPUTexture::Layout::DepthStencilAttachment;
+      if (layout_dst == Texture::Layout::ColorAttachment) {
+        layout_dst = Texture::Layout::DepthStencilAttachment;
       }
 
       attachments.push_back(VkAttachmentDescription{
         .flags = 0,
-        .format = (VkFormat)depth_stencil_attachment->format(),
+        .format = (VkFormat)depth_stencil_attachment->GetFormat(),
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = (VkAttachmentLoadOp)depth_stencil_descriptor.load_op,
         .storeOp = (VkAttachmentStoreOp)depth_stencil_descriptor.store_op,

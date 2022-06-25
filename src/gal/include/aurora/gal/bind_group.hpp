@@ -62,9 +62,9 @@ struct BindGroup {
 
   virtual void Bind(
     u32 binding,
-    AnyPtr<GPUTexture> texture,
+    AnyPtr<Texture> texture,
     AnyPtr<Sampler> sampler,
-    GPUTexture::Layout layout
+    Texture::Layout layout
   ) = 0;
 };
 

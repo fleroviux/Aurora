@@ -190,10 +190,10 @@ struct MemoryBarrier {
   Access dst_access_mask;
 
   struct {
-    AnyPtr<GPUTexture> texture;
-    GPUTexture::SubresourceRange range;
-    GPUTexture::Layout src_layout;
-    GPUTexture::Layout dst_layout;
+    AnyPtr<Texture> texture;
+    Texture::SubresourceRange range;
+    Texture::Layout src_layout;
+    Texture::Layout dst_layout;
   } texture_info;
 
   struct {
@@ -210,12 +210,12 @@ struct MemoryBarrier {
     , dst_access_mask(dst_access_mask) {}
 
   MemoryBarrier(
-    AnyPtr<GPUTexture> texture,
+    AnyPtr<Texture> texture,
     Access src_access_mask,
     Access dst_access_mask,
-    GPUTexture::Layout src_layout,
-    GPUTexture::Layout dst_layout,
-    GPUTexture::SubresourceRange range = {}
+    Texture::Layout src_layout,
+    Texture::Layout dst_layout,
+    Texture::SubresourceRange range = {}
   )   : type(Type::Texture)
       , src_access_mask(src_access_mask)
       , dst_access_mask(dst_access_mask)

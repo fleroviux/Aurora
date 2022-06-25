@@ -27,8 +27,8 @@ struct RenderPass {
     LoadOp stencil_load_op = LoadOp::DontCare;
     StoreOp store_op = StoreOp::Store;
     StoreOp stencil_store_op = StoreOp::DontCare;
-    GPUTexture::Layout layout_src = GPUTexture::Layout::Undefined;
-    GPUTexture::Layout layout_dst = GPUTexture::Layout::ColorAttachment;
+    Texture::Layout layout_src = Texture::Layout::Undefined;
+    Texture::Layout layout_dst = Texture::Layout::ColorAttachment;
   };
 
   virtual ~RenderPass() = default;

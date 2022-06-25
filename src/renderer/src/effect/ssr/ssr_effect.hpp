@@ -17,11 +17,11 @@ struct SSREffect {
   void Render(
     GameObject* camera,
     AnyPtr<CommandBuffer> command_buffer,
-    AnyPtr<GPUTexture> render_texture,
+    AnyPtr<Texture> render_texture,
     AnyPtr<RenderTarget> render_target,
-    AnyPtr<GPUTexture> color_texture,
-    AnyPtr<GPUTexture> depth_texture,
-    AnyPtr<GPUTexture> normal_texture
+    AnyPtr<Texture> color_texture,
+    AnyPtr<Texture> depth_texture,
+    AnyPtr<Texture> normal_texture
   );
 
 private:

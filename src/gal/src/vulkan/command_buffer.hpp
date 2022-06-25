@@ -179,7 +179,7 @@ struct VulkanCommandBuffer final : CommandBuffer {
           .newLayout = (VkImageLayout)texture_info.dst_layout,
           .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
           .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-          .image = (VkImage)texture_info.texture->handle2(),
+          .image = (VkImage)texture_info.texture->Handle(),
           .subresourceRange = {
             .aspectMask = (VkImageAspectFlags)texture_info.range.aspect,
             .baseMipLevel = texture_info.range.mip_base,

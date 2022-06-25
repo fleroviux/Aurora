@@ -22,11 +22,11 @@ SSREffect::SSREffect(std::shared_ptr<RenderDevice> render_device)
 void SSREffect::Render(
   GameObject* camera,
   AnyPtr<CommandBuffer> command_buffer,
-  AnyPtr<GPUTexture> render_texture,
+  AnyPtr<Texture> render_texture,
   AnyPtr<RenderTarget> render_target,
-  AnyPtr<GPUTexture> color_texture,
-  AnyPtr<GPUTexture> depth_texture,
-  AnyPtr<GPUTexture> normal_texture
+  AnyPtr<Texture> color_texture,
+  AnyPtr<Texture> depth_texture,
+  AnyPtr<Texture> normal_texture
 ) {
   // TODO(fleroviux): fix this absolutely atrocious terribleness
   if (pipeline == nullptr) {
@@ -47,9 +47,9 @@ void SSREffect::Render(
 
   uniform_buffer->Update(uniform_block.data(), uniform_block.size());
 
-  bind_group->Bind(0, color_texture, sampler, GPUTexture::Layout::ShaderReadOnly);
-  bind_group->Bind(1, depth_texture, sampler, GPUTexture::Layout::DepthReadOnly);
-  bind_group->Bind(2, normal_texture, sampler, GPUTexture::Layout::ShaderReadOnly);
+  bind_group->Bind(0, color_texture, sampler, Texture::Layout::ShaderReadOnly);
+  bind_group->Bind(1, depth_texture, sampler, Texture::Layout::DepthReadOnly);
+  bind_group->Bind(2, normal_texture, sampler, Texture::Layout::ShaderReadOnly);
 
   command_buffer->BeginRenderPass(render_target, render_pass);
   command_buffer->BindGraphicsPipeline(pipeline);
@@ -61,8 +61,8 @@ void SSREffect::Render(
     render_texture,
     Access::ColorAttachmentWrite,
     Access::ShaderRead,
-    GPUTexture::Layout::ColorAttachment,
-    GPUTexture::Layout::ShaderReadOnly
+    Texture::Layout::ColorAttachment,
+    Texture::Layout::ShaderReadOnly
   };
 
   command_buffer->PipelineBarrier(

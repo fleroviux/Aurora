@@ -352,9 +352,9 @@ struct ScreenRenderer {
     std::unique_ptr<CommandBuffer>& command_buffer,
     std::unique_ptr<RenderTarget>& render_target,
     std::shared_ptr<RenderPass>& render_pass, 
-    GPUTexture* texture
+    Texture* texture
   ) {
-    bind_group->Bind(1, texture, sampler, GPUTexture::Layout::ShaderReadOnly);
+    bind_group->Bind(1, texture, sampler, Texture::Layout::ShaderReadOnly);
 
     render_pass->SetClearColor(0, 1, 0, 0, 1);
 
@@ -493,10 +493,10 @@ struct Application {
     vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, swapchain_images.data());
 
     for (auto swapchain_image : swapchain_images) {
-      auto texture = (std::shared_ptr<GPUTexture>)render_device->CreateTexture2DFromSwapchainImage(
+      auto texture = (std::shared_ptr<Texture>)render_device->CreateTexture2DFromSwapchainImage(
         1600,
         900,
-        GPUTexture::Format::B8G8R8A8_SRGB,
+        Texture::Format::B8G8R8A8_SRGB,
         (void*)swapchain_image
       );
 
@@ -507,8 +507,8 @@ struct Application {
 
     render_pass = render_targets[0]->CreateRenderPass({ RenderPass::Descriptor{
       //.load_op = RenderPass::LoadOp::DontCare,
-      .layout_src = GPUTexture::Layout::Undefined,
-      .layout_dst = GPUTexture::Layout::PresentSrc
+      .layout_src = Texture::Layout::Undefined,
+      .layout_dst = Texture::Layout::PresentSrc
     }});
   }
 
@@ -615,8 +615,8 @@ struct GlassMaterial final : Material {
     return uniforms;
   }
 
-  auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture>> override {
-    return ArrayView<std::shared_ptr<Texture>>{nullptr, 0};
+  auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture2D>> override {
+    return ArrayView<std::shared_ptr<Texture2D>>{nullptr, 0};
   }
 private:
   UniformBlock uniforms;

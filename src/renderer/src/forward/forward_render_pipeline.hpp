@@ -32,9 +32,9 @@ struct ForwardRenderPipeline final : RenderPipelineBase {
     std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers
   ) override;
 
-  auto GetColorTexture() -> GPUTexture* override;
-  auto GetDepthTexture() -> GPUTexture* override;
-  auto GetNormalTexture() -> GPUTexture* override;
+  auto GetColorTexture() -> Texture* override;
+  auto GetDepthTexture() -> Texture* override;
+  auto GetNormalTexture() -> Texture* override;
 
 private:
   using ProgramKey = std::pair<std::type_index, u32>;
@@ -72,23 +72,23 @@ private:
 
   void UploadTexture(
     VkCommandBuffer command_buffer,
-    std::shared_ptr<Texture>& texture
+    std::shared_ptr<Texture2D>& texture
   );
 
   void UploadTextureCube(
     VkCommandBuffer command_buffer,
-    std::array<std::shared_ptr<Texture>, 6>& textures
+    std::array<std::shared_ptr<Texture2D>, 6>& textures
   );
 
   // TODO: move the following methods to the graphics backend:
 
-  void GenerateMipMaps(VkCommandBuffer command_buffer, AnyPtr<GPUTexture> texture);
+  void GenerateMipMaps(VkCommandBuffer command_buffer, AnyPtr<Texture> texture);
 
   void TransitionImageLayout(
     VkCommandBuffer command_buffer,
-    AnyPtr<GPUTexture> texture,
-    GPUTexture::Layout old_layout,
-    GPUTexture::Layout new_layout,
+    AnyPtr<Texture> texture,
+    Texture::Layout old_layout,
+    Texture::Layout new_layout,
     u32 base_mip = 0,
     u32 mip_count = 1
   );
@@ -110,7 +110,7 @@ private:
     std::shared_ptr<ShaderModule> shader_frag;
   };
   struct TextureData {
-    std::unique_ptr<GPUTexture> texture;
+    std::unique_ptr<Texture> texture;
     std::unique_ptr<Sampler> sampler;
     std::unique_ptr<Buffer> buffer;
   };
@@ -124,15 +124,15 @@ private:
   };
   std::shared_ptr<GeometryCache> geometry_cache;
   std::unordered_map<ProgramKey, ProgramData, pair_hash> program_cache;
-  std::unordered_map<Texture*, TextureData> texture_cache;
+  std::unordered_map<Texture2D*, TextureData> texture_cache;
   std::unordered_map<GameObject*, ObjectData> object_cache;
   std::unordered_map<Material*, std::unique_ptr<Buffer>> material_ubo;
 
   // Render target and pass
-  std::shared_ptr<GPUTexture> color_texture;
-  std::shared_ptr<GPUTexture> depth_texture;
-  std::shared_ptr<GPUTexture> albedo_texture;
-  std::shared_ptr<GPUTexture> normal_texture;
+  std::shared_ptr<Texture> color_texture;
+  std::shared_ptr<Texture> depth_texture;
+  std::shared_ptr<Texture> albedo_texture;
+  std::shared_ptr<Texture> normal_texture;
   std::unique_ptr<RenderTarget> render_target;
   std::shared_ptr<RenderPass> render_pass;
 
@@ -142,7 +142,7 @@ private:
 
   // Example cubemap
   bool uploaded_example_cubemap = false;
-  Texture* cubemap_handle = nullptr;
+  Texture2D* cubemap_handle = nullptr;
 };
 
 } // namespace Aura

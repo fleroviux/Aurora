@@ -8,8 +8,7 @@
 
 namespace Aura {
 
-// TODO: make naming scheme consistent.
-struct GPUTexture {
+struct Texture {
   // subset of VkImageLayout:
   // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkImageLayout
   enum class Layout {
@@ -76,26 +75,26 @@ struct GPUTexture {
     u32 layer_count = 1;
   };
 
-  virtual ~GPUTexture() = default;
+  virtual ~Texture() = default;
 
-  virtual auto handle() -> void* = 0;
-  virtual auto handle2() -> void* = 0;
-  virtual auto grade() const -> Grade = 0;
-  virtual auto format() const -> Format = 0;
-  virtual auto usage() const -> Usage = 0;
-  virtual auto width() const -> u32 = 0;
-  virtual auto height() const -> u32 = 0;
-  virtual auto depth() const -> u32 = 0;
-  virtual auto layers() const -> u32 = 0;
-  virtual auto mip_levels() const -> u32 = 0;
+  virtual auto HandleView() -> void* = 0;
+  virtual auto Handle() -> void* = 0;
+  virtual auto GetGrade() const -> Grade = 0;
+  virtual auto GetFormat() const -> Format = 0;
+  virtual auto GetUsage() const -> Usage = 0;
+  virtual auto GetWidth() const -> u32 = 0;
+  virtual auto GetHeight() const -> u32 = 0;
+  virtual auto GetDepth() const -> u32 = 0;
+  virtual auto GetLayerCount() const -> u32 = 0;
+  virtual auto GetMipCount() const -> u32 = 0;
 };
 
-constexpr auto operator|(GPUTexture::Usage lhs, GPUTexture::Usage rhs) -> GPUTexture::Usage {
-  return static_cast<GPUTexture::Usage>(static_cast<u32>(lhs) | static_cast<u32>(rhs));
+constexpr auto operator|(Texture::Usage lhs, Texture::Usage rhs) -> Texture::Usage {
+  return static_cast<Texture::Usage>(static_cast<u32>(lhs) | static_cast<u32>(rhs));
 }
 
-constexpr auto operator|(GPUTexture::Aspect lhs, GPUTexture::Aspect rhs) -> GPUTexture::Aspect {
-  return static_cast<GPUTexture::Aspect>(static_cast<u32>(lhs) | static_cast<u32>(rhs));
+constexpr auto operator|(Texture::Aspect lhs, Texture::Aspect rhs) -> Texture::Aspect {
+  return static_cast<Texture::Aspect>(static_cast<u32>(lhs) | static_cast<u32>(rhs));
 }
 
 } // namespace Aura

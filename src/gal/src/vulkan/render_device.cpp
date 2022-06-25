@@ -67,29 +67,29 @@ struct VulkanRenderDevice final : RenderDevice {
   auto CreateTexture2D(
     u32 width,
     u32 height,
-    GPUTexture::Format format,
-    GPUTexture::Usage usage,
+    Texture::Format format,
+    Texture::Usage usage,
     u32 mip_levels = 1
-  ) -> std::unique_ptr<GPUTexture> override {
+  ) -> std::unique_ptr<Texture> override {
     return VulkanTexture::create(physical_device, device, allocator, width, height, mip_levels, format, usage);
   }
 
   auto CreateTexture2DFromSwapchainImage(
     u32 width,
     u32 height,
-    GPUTexture::Format format,
+    Texture::Format format,
     void* image_handle
-  ) -> std::unique_ptr<GPUTexture> override {
+  ) -> std::unique_ptr<Texture> override {
     return VulkanTexture::from_swapchain_image(device, width, height, format, (VkImage)image_handle);
   }
 
   auto CreateTextureCube(
     u32 width,
     u32 height,
-    GPUTexture::Format format,
-    GPUTexture::Usage usage,
+    Texture::Format format,
+    Texture::Usage usage,
     u32 mip_levels = 1
-  ) -> std::unique_ptr<GPUTexture> override {
+  ) -> std::unique_ptr<Texture> override {
     return VulkanTexture::create_cube(physical_device, device, allocator, width, height, mip_levels, format, usage);
   }
 
@@ -100,8 +100,8 @@ struct VulkanRenderDevice final : RenderDevice {
   }
 
   auto CreateRenderTarget(
-    std::vector<std::shared_ptr<GPUTexture>> const& color_attachments,
-    std::shared_ptr<GPUTexture> depth_stencil_attachment = {}
+    std::vector<std::shared_ptr<Texture>> const& color_attachments,
+    std::shared_ptr<Texture> depth_stencil_attachment = {}
   ) -> std::unique_ptr<RenderTarget> override {
     return std::make_unique<VulkanRenderTarget>(device, color_attachments, depth_stencil_attachment);
   }
