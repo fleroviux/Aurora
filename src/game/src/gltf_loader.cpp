@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2021 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #include <aurora/log.hpp>
 #include <fstream>

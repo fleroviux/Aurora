@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #include <aurora/math/matrix4.hpp>
 #include <aurora/scene/component.hpp>

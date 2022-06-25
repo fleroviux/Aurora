@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2021 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #include <aurora/math/quaternion.hpp>
 #include <aurora/scene/game_object.hpp>

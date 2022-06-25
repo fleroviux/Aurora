@@ -1,7 +1,6 @@
 
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #include <aurora/gal/backend/vulkan.hpp>
 #include <aurora/renderer/component/camera.hpp>
