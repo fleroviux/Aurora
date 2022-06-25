@@ -59,15 +59,15 @@ struct Matrix4 {
     return data[i];
   }
 
-  auto x() -> Vec4& { return data[0]; }
-  auto y() -> Vec4& { return data[1]; }
-  auto z() -> Vec4& { return data[2]; }
-  auto w() -> Vec4& { return data[3]; }
+  auto X() -> Vec4& { return data[0]; }
+  auto Y() -> Vec4& { return data[1]; }
+  auto Z() -> Vec4& { return data[2]; }
+  auto W() -> Vec4& { return data[3]; }
 
-  auto x() const -> Vec4 const& { return data[0]; }
-  auto y() const -> Vec4 const& { return data[1]; }
-  auto z() const -> Vec4 const& { return data[2]; }
-  auto w() const -> Vec4 const& { return data[3]; }
+  auto X() const -> Vec4 const& { return data[0]; }
+  auto Y() const -> Vec4 const& { return data[1]; }
+  auto Z() const -> Vec4 const& { return data[2]; }
+  auto W() const -> Vec4 const& { return data[3]; }
 
   /**
    * Apply this matrix on a four-dimensional vector.
@@ -101,7 +101,7 @@ struct Matrix4 {
    * If this matrix is not invertable (determinant = 0) then the operation is undefined.
    * @return the inverted matrix
    */
-  auto inverse() const -> Derived {
+  auto Inverse() const -> Derived {
     // Adapted from this code: https://stackoverflow.com/a/44446912
     auto a2323 = data[2][2] * data[3][3] - data[3][2] * data[2][3];
     auto a1323 = data[1][2] * data[3][3] - data[3][2] * data[1][3];
@@ -153,7 +153,7 @@ struct Matrix4 {
    * Get a new identity matrix.
    * @return the identity matrix
    */
-  static auto identity() -> Derived {
+  static auto Identity() -> Derived {
     Derived result{};
 
     for (uint row = 0; row < 4; row++) {
@@ -189,7 +189,7 @@ struct Matrix4 final : detail::Matrix4<Matrix4, Vector4, float> {
    * @param z z-axis scale
    * @return the scale matrix
    */
-  static auto scale(float x, float y, float z) -> Matrix4 {
+  static auto Scale(float x, float y, float z) -> Matrix4 {
     return Matrix4{{
       x, 0, 0, 0,
       0, y, 0, 0,
@@ -204,8 +204,8 @@ struct Matrix4 final : detail::Matrix4<Matrix4, Vector4, float> {
    * @param vec the Vector3 that encodes the x-, y- and z-axis scale
    * @return the scale matrix
    */
-  static auto scale(Vector3 const& vec) -> Matrix4 {
-    return scale(vec.x(), vec.y(), vec.z());
+  static auto Scale(Vector3 const& vec) -> Matrix4 {
+    return Scale(vec.x(), vec.y(), vec.z());
   }
 
   /**
@@ -214,7 +214,7 @@ struct Matrix4 final : detail::Matrix4<Matrix4, Vector4, float> {
    * @param radians the angle in radians
    * @return the rotation matrix
    */
-  static auto rotation_x(float radians) -> Matrix4 {
+  static auto RotationX(float radians) -> Matrix4 {
     auto cos = std::cos(radians);
     auto sin = std::sin(radians);
 
@@ -232,7 +232,7 @@ struct Matrix4 final : detail::Matrix4<Matrix4, Vector4, float> {
    * @param radians the angle in radians
    * @return the rotation matrix
    */
-  static auto rotation_y(float radians) -> Matrix4 {
+  static auto RotationY(float radians) -> Matrix4 {
     auto cos = std::cos(radians);
     auto sin = std::sin(radians);
 
@@ -250,7 +250,7 @@ struct Matrix4 final : detail::Matrix4<Matrix4, Vector4, float> {
    * @param radians the angle in radians
    * @return the rotation matrix
    */
-  static auto rotation_z(float radians) -> Matrix4 {
+  static auto RotationZ(float radians) -> Matrix4 {
     auto cos = std::cos(radians);
     auto sin = std::sin(radians);
 
@@ -270,7 +270,7 @@ struct Matrix4 final : detail::Matrix4<Matrix4, Vector4, float> {
    * @param z z-axis translation
    * @return the translation matrix
    */
-  static auto translation(float x, float y, float z) -> Matrix4 {
+  static auto Translation(float x, float y, float z) -> Matrix4 {
     return Matrix4{{
       1, 0, 0, x,
       0, 1, 0, y,
@@ -285,8 +285,8 @@ struct Matrix4 final : detail::Matrix4<Matrix4, Vector4, float> {
    * @param vec the Vector3 that encodes the x-, y- and z-axis translation
    * @return the translation matrix
    */
-  static auto translation(Vector3 const& vec) -> Matrix4 {
-    return Matrix4::translation(vec.x(), vec.y(), vec.z());
+  static auto Translation(Vector3 const& vec) -> Matrix4 {
+    return Matrix4::Translation(vec.x(), vec.y(), vec.z());
   }
 
   /**
@@ -298,7 +298,7 @@ struct Matrix4 final : detail::Matrix4<Matrix4, Vector4, float> {
    * @param far          far clipping plane distance (from origin)
    * @return the projection matrix
    */
-  static auto perspective_gl(
+  static auto PerspectiveGL(
     float fov_y,
     float aspect_ratio,
     float near,
@@ -329,7 +329,7 @@ struct Matrix4 final : detail::Matrix4<Matrix4, Vector4, float> {
    * @param far          far clipping plane distance (from origin)
    * @return the projection matrix
    */
-  static auto perspective_vk(
+  static auto PerspectiveVK(
     float fov_y,
     float aspect_ratio,
     float near,
@@ -362,7 +362,7 @@ struct Matrix4 final : detail::Matrix4<Matrix4, Vector4, float> {
    * @param far    far clipping plane distance
    * @return the projection matrix
    */
-  static auto orthographic_gl(
+  static auto OrthographicGL(
     float left,
     float right,
     float bottom,

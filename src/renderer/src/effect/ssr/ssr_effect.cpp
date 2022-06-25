@@ -41,7 +41,7 @@ void SSREffect::Render(
     auto cam = camera->get_component<PerspectiveCamera>();
     auto& projection = cam->get_projection();
     uniform_block.get<Matrix4>("projection") = projection;
-    uniform_block.get<Matrix4>("projection_inverse") = projection.inverse();
+    uniform_block.get<Matrix4>("projection_inverse") = projection.Inverse();
   } else {
     Assert(false, "SSREffect: unsupported camera type");
   }

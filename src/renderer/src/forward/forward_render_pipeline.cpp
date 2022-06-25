@@ -44,10 +44,10 @@ void ForwardRenderPipeline::Render(
     // TODO: calculate view * world here and use it both for sorting and for culling.
     if (mesh && mesh->visible && IsObjectInsideCameraFrustum(modelview, mesh->geometry)) {
       auto& position = transform.position();
-      auto  view_z = modelview.x().z() * position.x() +
-                     modelview.y().z() * position.y() +
-                     modelview.z().z() * position.z() +
-                     modelview.w().z();
+      auto  view_z = modelview.X().z() * position.x() +
+                     modelview.Y().z() * position.y() +
+                     modelview.Z().z() * position.z() +
+                     modelview.W().z();
 
       if (mesh->material->blend_state.enable) {
         render_list_transparent.push_back({object, mesh, view_z});
@@ -412,7 +412,7 @@ void ForwardRenderPipeline::UpdateCamera(GameObject* camera) {
     Assert(false, "Renderer: camera does not hold a camera component");
   }
 
-  *camera_data.view = camera->transform().world().inverse();
+  *camera_data.view = camera->transform().world().Inverse();
 
   camera_data.ubo->Update(camera_data.data.data(), camera_data.data.size());
 }

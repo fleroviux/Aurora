@@ -92,10 +92,10 @@ struct PerspectiveCamera final : Camera {
 
 private:
   void update() {
-    projection = Matrix4::perspective_vk(field_of_view, aspect_ratio, near, far);
+    projection = Matrix4::PerspectiveVK(field_of_view, aspect_ratio, near, far);
 
-    float x = 1 / projection.x().x();
-    float y = 1 / projection.y().y();
+    float x = 1 / projection.X().x();
+    float y = 1 / projection.Y().y();
 
     frustum.SetPlane(Frustum::Side::NZ, Plane{Vector3{ 0,  0, -1}, -near});
     frustum.SetPlane(Frustum::Side::PZ, Plane{Vector3{ 0,  0,  1}, -far });
@@ -217,8 +217,8 @@ private:
     frustum.SetPlane(Frustum::Side::NY, Plane{Vector3{ 0,  1, -1},  bottom});
     frustum.SetPlane(Frustum::Side::PY, Plane{Vector3{ 0, -1, -1},  top});
 
-    // TODO: adjust depth range from -1 ... +1 to 0 ... 1
-    projection = Matrix4::orthographic_gl(left, right, bottom, top, near, far);
+    // TODO: fix the depth range
+    projection = Matrix4::OrthographicGL(left, right, bottom, top, near, far);
   }
 
   float left = -1.0;

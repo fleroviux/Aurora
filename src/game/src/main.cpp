@@ -389,7 +389,7 @@ private:
 
   void CreateUniformBuffer() {
     // TODO: get rid of this once we reworked the shader
-    auto transform = Matrix4::perspective_vk(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0);
+    auto transform = Matrix4::PerspectiveVK(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0);
 
     ubo = render_device->CreateBufferWithData(
       Aura::Buffer::Usage::UniformBuffer,

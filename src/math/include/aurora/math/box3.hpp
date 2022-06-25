@@ -42,13 +42,13 @@ struct Box3 {
   auto ApplyMatrix(Matrix4 const& matrix) const -> Box3 {
     Box3 box;
 
-    auto min_x = matrix.x().xyz() * min.x();
-    auto max_x = matrix.x().xyz() * max.x();
-    auto min_y = matrix.y().xyz() * min.y();
-    auto max_y = matrix.y().xyz() * max.y();
-    auto min_z = matrix.z().xyz() * min.z();
-    auto max_z = matrix.z().xyz() * max.z();
-    auto translation = matrix.w().xyz();
+    auto min_x = matrix.X().xyz() * min.x();
+    auto max_x = matrix.X().xyz() * max.x();
+    auto min_y = matrix.Y().xyz() * min.y();
+    auto max_y = matrix.Y().xyz() * max.y();
+    auto min_z = matrix.Z().xyz() * min.z();
+    auto max_z = matrix.Z().xyz() * max.z();
+    auto translation = matrix.W().xyz();
 
     Vector3 v[8];
     v[0] = min_x + min_y + min_z + translation;

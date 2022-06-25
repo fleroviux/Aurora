@@ -305,28 +305,28 @@ struct Quaternion final : detail::Quaternion<Quaternion, Vector3, float> {
 
     auto mat = Matrix4{};
 
-    mat.x() = Vector4{
+    mat.X() = Vector4{
       1 - 2 * (zz + yy),
       2 * (xy + wz),
       2 * (xz - wy),
       0
     };
 
-    mat.y() = Vector4{
+    mat.Y() = Vector4{
       2 * (xy - wz),
       1 - 2 * (xx + zz),
       2 * (yz + wx),
       0
     };
 
-    mat.z() = Vector4{
+    mat.Z() = Vector4{
       2 * (xz + wy),
       2 * (yz - wx),
       1 - 2 * (xx + yy),
       0
     };
 
-    mat.w().w() = 1;
+    mat.W().w() = 1;
     return mat;
   }
 
