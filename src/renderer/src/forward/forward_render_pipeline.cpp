@@ -393,7 +393,7 @@ void ForwardRenderPipeline::RenderObject(
 bool ForwardRenderPipeline::IsObjectInsideCameraFrustum(Matrix4 const& modelview, std::shared_ptr<Geometry> const& geometry) {
   auto aabb = geometry->get_bounding_box().ApplyMatrix(modelview);
 
-  return camera_data.frustum->contains_box(aabb);
+  return camera_data.frustum->ContainsBox(aabb);
 }
 
 void ForwardRenderPipeline::UpdateCamera(GameObject* camera) {
