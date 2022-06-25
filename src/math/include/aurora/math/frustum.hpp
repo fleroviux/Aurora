@@ -56,12 +56,12 @@ struct Frustum {
   bool ContainsBox(Box3 const& box) const {
     for (auto& plane : planes) {
       auto point = Vector3{
-        plane.x() > 0 ? box.Max().x() : box.Min().x(),
-        plane.y() > 0 ? box.Max().y() : box.Min().y(),
-        plane.z() > 0 ? box.Max().z() : box.Min().z()
+        plane.X() > 0 ? box.Max().x() : box.Min().x(),
+        plane.Y() > 0 ? box.Max().y() : box.Min().y(),
+        plane.Z() > 0 ? box.Max().z() : box.Min().z()
       };
 
-      if (plane.get_distance_to_point(point) < 0) {
+      if (plane.GetDistanceToPoint(point) < 0) {
         return false;
       }
     }

@@ -32,21 +32,21 @@ struct Plane {
   Plane(Vec3 const& normal, T distance = NumericConstants<T>::zero()) : normal(normal), distance(distance) {
   }
 
-  auto x() -> T& { return normal.x(); }
-  auto y() -> T& { return normal.y(); }
-  auto z() -> T& { return normal.z(); }
-  auto w() -> T& { return normal.w(); }
+  auto X() -> T& { return normal.x(); }
+  auto Y() -> T& { return normal.y(); }
+  auto Z() -> T& { return normal.z(); }
+  auto W() -> T& { return normal.w(); }
 
-  auto x() const -> T { return normal.x(); }
-  auto y() const -> T { return normal.y(); }
-  auto z() const -> T { return normal.z(); }
-  auto w() const -> T { return normal.w(); }
+  auto X() const -> T { return normal.x(); }
+  auto Y() const -> T { return normal.y(); }
+  auto Z() const -> T { return normal.z(); }
+  auto W() const -> T { return normal.w(); }
 
   /**
    * Get the normal vector of this plane.
    * @return the normal vector
    */
-  auto get_normal() const -> Vec3 {
+  auto GetNormal() const -> Vec3 {
     return normal;
   }
 
@@ -55,21 +55,21 @@ struct Plane {
    * 
    * @param normal the normal vector
    */
-  void set_normal(Vec3 const& normal) {
+  void SetNormal(Vec3 const& normal) {
     this->normal = normal;
   }
 
   /**
    * Get the signed distance of this plane from the origin.
    */
-  auto get_distance() const -> T {
+  auto GetDistance() const -> T {
     return distance;
   }
 
   /**
    * Set the signed distance from the origin for this plane.
    */
-  void set_distance(T distance) {
+  void SetDistance(T distance) {
     this->distance = distance;
   }
 
@@ -79,7 +79,7 @@ struct Plane {
    * @param point the point
    * @return the signed distance
    */
-  auto get_distance_to_point(Vec3 const& point) const -> T {
+  auto GetDistanceToPoint(Vec3 const& point) const -> T {
     return point.x() * normal.x() +
            point.y() * normal.y() +
            point.z() * normal.z() - distance;
