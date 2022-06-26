@@ -69,9 +69,9 @@ struct VulkanRenderDevice final : RenderDevice {
     u32 height,
     Texture::Format format,
     Texture::Usage usage,
-    u32 mip_levels = 1
+    u32 mip_count = 1
   ) -> std::unique_ptr<Texture> override {
-    return VulkanTexture::Create2D(physical_device, device, allocator, width, height, mip_levels, format, usage);
+    return VulkanTexture::Create2D(device, allocator, width, height, mip_count, format, usage);
   }
 
   auto CreateTexture2DFromSwapchainImage(
@@ -88,9 +88,9 @@ struct VulkanRenderDevice final : RenderDevice {
     u32 height,
     Texture::Format format,
     Texture::Usage usage,
-    u32 mip_levels = 1
+    u32 mip_count = 1
   ) -> std::unique_ptr<Texture> override {
-    return VulkanTexture::CreateCube(physical_device, device, allocator, width, height, mip_levels, format, usage);
+    return VulkanTexture::CreateCube(device, allocator, width, height, mip_count, format, usage);
   }
 
   auto CreateSampler(

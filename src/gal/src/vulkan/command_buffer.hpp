@@ -182,9 +182,9 @@ struct VulkanCommandBuffer final : CommandBuffer {
           .image = (VkImage)texture_info.texture->Handle(),
           .subresourceRange = {
             .aspectMask = (VkImageAspectFlags)texture_info.range.aspect,
-            .baseMipLevel = texture_info.range.mip_base,
+            .baseMipLevel = texture_info.range.base_mip,
             .levelCount = texture_info.range.mip_count,
-            .baseArrayLayer = texture_info.range.layer_base,
+            .baseArrayLayer = texture_info.range.base_layer,
             .layerCount = texture_info.range.layer_count
           }
         };

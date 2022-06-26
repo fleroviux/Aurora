@@ -76,66 +76,27 @@ struct VulkanTexture final : Texture {
   }
 
   static auto Create2D(
-    VkPhysicalDevice physical_device,
     VkDevice device,
     VmaAllocator allocator,
     u32 width,
     u32 height,
-    u32 mip_levels,
+    u32 mip_count,
     Format format,
     Usage usage
   ) -> std::unique_ptr<VulkanTexture> {
-    auto image_info = VkImageCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .imageType = VK_IMAGE_TYPE_2D,
-      .format = (VkFormat)format,
-      .extent = VkExtent3D{
-        .width = width,
-        .height = height,
-        .depth = 1
-      },
-      .mipLevels = mip_levels,
-      .arrayLayers = 1,
-      .samples = VK_SAMPLE_COUNT_1_BIT,
-      .tiling = VK_IMAGE_TILING_OPTIMAL,
-      .usage = (VkImageUsageFlags)usage,
-      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-      .queueFamilyIndexCount = 0,
-      .pQueueFamilyIndices = nullptr,
-      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
-    };
+    return Create(device, allocator, format, usage, Grade::_2D, View::Type::_2D, width, height, 1, mip_count);
+  }
 
-    auto alloc_info = VmaAllocationCreateInfo{
-      .usage = VMA_MEMORY_USAGE_AUTO
-    };
-
-    auto image = VkImage{};
-    auto allocation = VmaAllocation{};
-
-    if (vmaCreateImage(allocator, &image_info, &alloc_info, &image, &allocation, nullptr) != VK_SUCCESS) {
-      Assert(false, "VulkanTexture: failed to create image");
-    }
-
-    auto texture = std::make_unique<VulkanTexture>();
-
-    texture->device = device;
-    texture->allocator = allocator;
-    texture->allocation = allocation;
-    texture->image = image;
-    texture->grade = Grade::_2D;
-    texture->format = format;
-    texture->usage = usage;
-    texture->width = width;
-    texture->height = height;
-    texture->depth = 1;
-    texture->range = { (Aspect)GetImageAspectFromFormat(format), 0, mip_levels, 0, 1 };
-    texture->image_owned = true;
-    texture->default_view = texture->CreateView(
-      View::Type::_2D, format, texture->DefaultSubresourceRange());
-
-    return texture;
+  static auto CreateCube(
+    VkDevice device,
+    VmaAllocator allocator,
+    u32 width,
+    u32 height,
+    u32 mip_count,
+    Format format,
+    Usage usage
+  ) -> std::unique_ptr<VulkanTexture> {
+    return Create(device, allocator, format, usage, Grade::_2D, View::Type::Cube, width, height, 1, mip_count, 6);
   }
 
   static auto Create2DFromSwapchain(
@@ -155,7 +116,7 @@ struct VulkanTexture final : Texture {
     texture->width = width;
     texture->height = height;
     texture->depth = 1;
-    texture->range = { (Aspect)GetImageAspectFromFormat(format), 0, 1, 0, 1 };
+    texture->range = { (Aspect)GetAspectBits(format), 0, 1, 0, 1 };
     texture->image_owned = false;
     texture->default_view = texture->CreateView(
       View::Type::_2D, format, texture->DefaultSubresourceRange());
@@ -163,29 +124,40 @@ struct VulkanTexture final : Texture {
     return texture;
   }
 
-  static auto CreateCube(
-    VkPhysicalDevice physical_device,
+private:
+  static auto Create(
     VkDevice device,
     VmaAllocator allocator,
+    Format format,
+    Usage usage,
+    Grade grade,
+    View::Type default_view_type,
     u32 width,
     u32 height,
-    u32 mip_levels,
-    Format format,
-    Usage usage
+    u32 depth = 1,
+    u32 mip_count = 1,
+    u32 layer_count = 1,
+    VkImageCreateFlags flags = 0
   ) -> std::unique_ptr<VulkanTexture> {
+    auto texture = std::make_unique<VulkanTexture>();
+
+    if (default_view_type == View::Type::Cube || default_view_type == View::Type::CubeArray) {
+      flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    }
+
     auto image_info = VkImageCreateInfo{
       .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
       .pNext = nullptr,
-      .flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
-      .imageType = VK_IMAGE_TYPE_2D,
+      .flags = flags,
+      .imageType = (VkImageType)grade,
       .format = (VkFormat)format,
       .extent = VkExtent3D{
         .width = width,
         .height = height,
-        .depth = 1
+        .depth = depth
       },
-      .mipLevels = mip_levels,
-      .arrayLayers = 6,
+      .mipLevels = mip_count,
+      .arrayLayers = layer_count,
       .samples = VK_SAMPLE_COUNT_1_BIT,
       .tiling = VK_IMAGE_TILING_OPTIMAL,
       .usage = (VkImageUsageFlags)usage,
@@ -199,35 +171,27 @@ struct VulkanTexture final : Texture {
       .usage = VMA_MEMORY_USAGE_AUTO
     };
 
-    auto image = VkImage{};
-    auto allocation = VmaAllocation{};
-
-    if (vmaCreateImage(allocator, &image_info, &alloc_info, &image, &allocation, nullptr) != VK_SUCCESS) {
+    if (vmaCreateImage(allocator, &image_info, &alloc_info, &texture->image, &texture->allocation, nullptr) != VK_SUCCESS) {
       Assert(false, "VulkanTexture: failed to create image");
     }
 
-    auto texture = std::make_unique<VulkanTexture>();
-
     texture->device = device;
     texture->allocator = allocator;
-    texture->allocation = allocation;
-    texture->image = image;
-    texture->grade = Grade::_2D;
+    texture->grade = grade;
     texture->format = format;
     texture->usage = usage;
     texture->width = width;
     texture->height = height;
-    texture->depth = 1;
-    texture->range = { (Aspect)GetImageAspectFromFormat(format), 0, mip_levels, 0, 6 };
+    texture->depth = depth;
+    texture->range = { (Aspect)GetAspectBits(format), 0, mip_count, 0, layer_count };
     texture->image_owned = true;
     texture->default_view = texture->CreateView(
-      View::Type::Cube, format, texture->DefaultSubresourceRange());
+      default_view_type, format, texture->DefaultSubresourceRange());
 
     return texture;
   }
 
-private:
-  static auto GetImageAspectFromFormat(Format format) -> VkImageAspectFlags {
+  static auto GetAspectBits(Format format) -> VkImageAspectFlags {
     switch (format) {
       case Format::R8G8B8A8_SRGB:
       case Format::B8G8R8A8_SRGB:

@@ -50,10 +50,12 @@ struct Texture {
     StencilReadOnly = 1000241003,
   };
 
+  // equivalent to VkImageType:
+  // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkImageType.html
   enum class Grade {
-    _1D,
-    _2D,
-    _3D
+    _1D = 0,
+    _2D = 1,
+    _3D = 2
   };
 
   // subset of VkFormat:
@@ -87,11 +89,10 @@ struct Texture {
   };
 
   struct SubresourceRange {
-    // TODO: rename mip_base and layer_base
     Aspect aspect = Aspect::Color;
-    u32 mip_base = 0;
+    u32 base_mip = 0;
     u32 mip_count = 1;
-    u32 layer_base = 0;
+    u32 base_layer = 0;
     u32 layer_count = 1;
   };
 

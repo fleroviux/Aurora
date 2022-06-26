@@ -33,9 +33,9 @@ struct VulkanTextureView final : Texture::View {
       },
       .subresourceRange = VkImageSubresourceRange{
         .aspectMask = (VkImageAspectFlags)range.aspect,
-        .baseMipLevel = range.mip_base,
+        .baseMipLevel = range.base_mip,
         .levelCount = range.mip_count,
-        .baseArrayLayer = range.layer_base,
+        .baseArrayLayer = range.base_layer,
         .layerCount = range.layer_count
       }
     };
@@ -66,7 +66,7 @@ struct VulkanTextureView final : Texture::View {
   }
 
   auto GetBaseMip() const -> u32 override {
-    return range.mip_base;
+    return range.base_mip;
   }
 
   auto GetMipCount() const -> u32 override {
@@ -74,7 +74,7 @@ struct VulkanTextureView final : Texture::View {
   }
 
   auto GetBaseLayer() const -> u32 override {
-    return range.layer_base;
+    return range.base_layer;
   }
 
   auto GetLayerCount() const -> u32 override {

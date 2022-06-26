@@ -83,7 +83,7 @@ struct RenderDevice {
     u32 height,
     Texture::Format format,
     Texture::Usage usage,
-    u32 mip_levels = 1
+    u32 mip_count = 1
   ) -> std::unique_ptr<Texture> = 0;
 
   virtual auto CreateTexture2DFromSwapchainImage(
@@ -98,7 +98,7 @@ struct RenderDevice {
     u32 height,
     Texture::Format format,
     Texture::Usage usage,
-    u32 mip_levels = 1
+    u32 mip_count = 1
   ) -> std::unique_ptr<Texture> = 0;
 
   virtual auto CreateSampler(
