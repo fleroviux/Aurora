@@ -22,15 +22,6 @@ struct RenderPass {
     DontCare = 1
   };
 
-  struct Descriptor {
-    LoadOp load_op = LoadOp::Clear;
-    LoadOp stencil_load_op = LoadOp::DontCare;
-    StoreOp store_op = StoreOp::Store;
-    StoreOp stencil_store_op = StoreOp::DontCare;
-    Texture::Layout layout_src = Texture::Layout::Undefined;
-    Texture::Layout layout_dst = Texture::Layout::ColorAttachment;
-  };
-
   virtual ~RenderPass() = default;
 
   virtual auto GetNumberOfColorAttachments() -> size_t = 0;

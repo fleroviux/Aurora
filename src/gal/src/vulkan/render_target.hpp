@@ -6,7 +6,7 @@
 #include <aurora/gal/backend/vulkan.hpp>
 #include <aurora/log.hpp>
 
-#include "render_pass.hpp"
+#include "render_pass_builder.hpp"
 
 namespace Aura {
 
