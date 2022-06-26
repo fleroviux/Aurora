@@ -14,7 +14,6 @@ SSREffect::SSREffect(std::shared_ptr<RenderDevice> render_device)
     : render_device(render_device) {
   CreateUBO();
   CreateBindGroupAndPipelineLayout();
-  CreateSampler();
   CreateShaderModules();
   //CreateGraphicsPipeline();
 }
@@ -47,6 +46,7 @@ void SSREffect::Render(
 
   uniform_buffer->Update(uniform_block.data(), uniform_block.size());
 
+  auto sampler = render_device->DefaultNearestSampler();
   bind_group->Bind(0, color_texture, sampler, Texture::Layout::ShaderReadOnly);
   bind_group->Bind(1, depth_texture, sampler, Texture::Layout::DepthReadOnly);
   bind_group->Bind(2, normal_texture, sampler, Texture::Layout::ShaderReadOnly);
@@ -99,11 +99,6 @@ void SSREffect::CreateBindGroupAndPipelineLayout() {
   bind_group->Bind(3, uniform_buffer, BindGroupLayout::Entry::Type::UniformBuffer);
 
   pipeline_layout = render_device->CreatePipelineLayout({bind_group_layout});
-}
-
-void SSREffect::CreateSampler() {
-  // TODO: have the render device expose default samplers.
-  sampler = render_device->CreateSampler(Sampler::Config{});
 }
 
 void SSREffect::CreateShaderModules() {

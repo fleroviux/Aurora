@@ -99,6 +99,30 @@ struct VulkanRenderDevice final : RenderDevice {
     return std::make_unique<VulkanSampler>(device, config);
   }
 
+  auto DefaultNearestSampler() -> Sampler* override {
+    if (!default_nearest_sampler) {
+      default_nearest_sampler = CreateSampler(Sampler::Config{
+        .mag_filter = Sampler::FilterMode::Nearest,
+        .min_filter = Sampler::FilterMode::Nearest,
+        .mip_filter = Sampler::FilterMode::Nearest
+      });
+    }
+
+    return default_nearest_sampler.get();
+  }
+
+  auto DefaultLinearSampler() -> Sampler* override {
+    if (!default_linear_sampler) {
+      default_linear_sampler = CreateSampler(Sampler::Config{
+        .mag_filter = Sampler::FilterMode::Linear,
+        .min_filter = Sampler::FilterMode::Linear,
+        .mip_filter = Sampler::FilterMode::Linear
+      });
+    }
+
+    return default_linear_sampler.get();
+  }
+
   auto CreateRenderTarget(
     std::vector<std::shared_ptr<Texture>> const& color_attachments,
     std::shared_ptr<Texture> depth_stencil_attachment = {}
@@ -205,6 +229,9 @@ private:
   VulkanCommandBuffer* transfer_cmd_buffer;
   std::unique_ptr<VulkanQueue> graphics_queue;
   u32 queue_family_graphics;
+
+  std::unique_ptr<Sampler> default_nearest_sampler;
+  std::unique_ptr<Sampler> default_linear_sampler;
 };
 
 auto CreateVulkanRenderDevice(

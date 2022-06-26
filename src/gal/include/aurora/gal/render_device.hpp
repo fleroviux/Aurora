@@ -105,6 +105,9 @@ struct RenderDevice {
     Sampler::Config const& config
   ) -> std::unique_ptr<Sampler> = 0;
 
+  virtual auto DefaultNearestSampler() -> Sampler* = 0;
+  virtual auto DefaultLinearSampler() -> Sampler* = 0;
+
   virtual auto CreateRenderTarget(
     std::vector<std::shared_ptr<Texture>> const& color_attachments,
     std::shared_ptr<Texture> depth_stencil_attachment = {}
