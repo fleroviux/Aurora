@@ -505,11 +505,14 @@ struct Application {
       render_targets.push_back(std::move(render_target));
     }
 
-    render_pass = render_targets[0]->CreateRenderPass({ RenderPass::Descriptor{
-      //.load_op = RenderPass::LoadOp::DontCare,
-      .layout_src = Texture::Layout::Undefined,
-      .layout_dst = Texture::Layout::PresentSrc
-    }});
+    auto render_pass_builder = render_device->CreateRenderPassBuilder();
+
+    render_pass_builder->SetColorAttachment(0, {
+      Texture::Format::B8G8R8A8_SRGB,
+      Texture::Layout::Undefined,
+      Texture::Layout::PresentSrc
+    });
+    render_pass = render_pass_builder->Build();
   }
 
   VkInstance instance;

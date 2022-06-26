@@ -130,6 +130,10 @@ struct VulkanRenderDevice final : RenderDevice {
     return std::make_unique<VulkanRenderTarget>(device, color_attachments, depth_stencil_attachment);
   }
 
+  auto CreateRenderPassBuilder() -> std::unique_ptr<RenderPassBuilder> override {
+    return std::make_unique<VulkanRenderPassBuilder>(device);
+  }
+
   auto CreateBindGroupLayout(
     std::vector<BindGroupLayout::Entry> const& entries
   ) -> std::shared_ptr<BindGroupLayout> override {

@@ -29,8 +29,19 @@ void SSREffect::Render(
 ) {
   // TODO(fleroviux): fix this absolutely atrocious terribleness
   if (pipeline == nullptr) {
-    render_pass = render_target->CreateRenderPass({ {
-    } });
+    //render_pass = render_target->CreateRenderPass({ {
+    //}});
+
+    auto render_pass_builder = render_device->CreateRenderPassBuilder();
+
+    render_pass_builder->SetColorAttachment(0, {
+      Texture::Format::B8G8R8A8_SRGB,
+      Texture::Layout::Undefined,
+      Texture::Layout::ShaderReadOnly
+    });
+
+    render_pass = render_pass_builder->Build();
+
     CreateGraphicsPipeline(render_pass);
   }
 
@@ -57,7 +68,7 @@ void SSREffect::Render(
   command_buffer->Draw(3);
   command_buffer->EndRenderPass();
 
-  auto barrier = MemoryBarrier{
+  /*auto barrier = MemoryBarrier{
     render_texture,
     Access::ColorAttachmentWrite,
     Access::ShaderRead,
@@ -69,7 +80,7 @@ void SSREffect::Render(
     PipelineStage::ColorAttachmentOutput,
     PipelineStage::FragmentShader,
     {&barrier, 1}
-  );
+  );*/
 }
 
 void SSREffect::CreateUBO() {

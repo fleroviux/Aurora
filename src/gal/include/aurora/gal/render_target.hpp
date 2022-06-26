@@ -14,11 +14,6 @@ struct RenderTarget {
   virtual auto handle() -> void* = 0;
   virtual auto width()  -> u32 = 0;
   virtual auto height() -> u32 = 0;
-  
-  virtual auto CreateRenderPass(
-    std::vector<RenderPass::Descriptor> const& color_descriptors = {{}},
-    RenderPass::Descriptor depth_stencil_descriptor = {}
-  ) -> std::unique_ptr<RenderPass> = 0;
 };
 
 }; // namespace Aura

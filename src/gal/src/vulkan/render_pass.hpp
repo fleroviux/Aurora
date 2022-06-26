@@ -4,6 +4,7 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <aurora/gal/backend/vulkan.hpp>
 #include <aurora/log.hpp>
 #include <vector>
@@ -13,117 +14,14 @@ namespace Aura {
 struct VulkanRenderPass final : RenderPass {
   VulkanRenderPass(
     VkDevice device,
-    std::vector<std::shared_ptr<Texture>> const& color_attachments,
-    std::vector<RenderPass::Descriptor> const& color_descriptors,
-    std::shared_ptr<Texture> depth_stencil_attachment,
-    RenderPass::Descriptor depth_stencil_descriptor
-  )   : device_(device) {
-    auto attachments = std::vector<VkAttachmentDescription>{};
-    auto references = std::vector<VkAttachmentReference>{};
-
-    Assert(color_attachments.size() == 0 || color_descriptors.size() > 0,
-      "VulkanRenderPass: must have at least one color descriptor when using a color attachment");
-
-    for (auto& texture : color_attachments) {
-      auto index = attachments.size();
-      auto& descriptor = color_descriptors[std::min(index, color_descriptors.size() - 1)];
-
-      attachments.push_back(VkAttachmentDescription{
-        .flags = 0,
-        .format = (VkFormat)texture->GetFormat(),
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = (VkAttachmentLoadOp)descriptor.load_op,
-        .storeOp = (VkAttachmentStoreOp)descriptor.store_op,
-        .stencilLoadOp = (VkAttachmentLoadOp)descriptor.stencil_load_op,
-        .stencilStoreOp = (VkAttachmentStoreOp)descriptor.stencil_store_op,
-        .initialLayout = (VkImageLayout)descriptor.layout_src,
-        .finalLayout = (VkImageLayout)descriptor.layout_dst
-      });
-
-      references.push_back(VkAttachmentReference{
-        .attachment = (u32)index,
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-      });
-
-      clear_values_.push_back(VkClearValue{
-        .color = VkClearColorValue{
-          .float32 = {0, 0, 0, 1}
-        }
-      });
-    }
-
-    color_attachment_count_ = color_attachments.size();
-
-    auto depth_reference = VkAttachmentReference{
-      .attachment = (u32)attachments.size(),
-      .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-    };
-
-    if (depth_stencil_attachment) {
-      auto layout_src = depth_stencil_descriptor.layout_src;
-      auto layout_dst = depth_stencil_descriptor.layout_dst;
-
-      if (layout_src == Texture::Layout::ColorAttachment) {
-        layout_src = Texture::Layout::DepthStencilAttachment;
-      }
-
-      if (layout_dst == Texture::Layout::ColorAttachment) {
-        layout_dst = Texture::Layout::DepthStencilAttachment;
-      }
-
-      attachments.push_back(VkAttachmentDescription{
-        .flags = 0,
-        .format = (VkFormat)depth_stencil_attachment->GetFormat(),
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = (VkAttachmentLoadOp)depth_stencil_descriptor.load_op,
-        .storeOp = (VkAttachmentStoreOp)depth_stencil_descriptor.store_op,
-        .stencilLoadOp = (VkAttachmentLoadOp)depth_stencil_descriptor.stencil_load_op,
-        .stencilStoreOp = (VkAttachmentStoreOp)depth_stencil_descriptor.stencil_store_op,
-        .initialLayout = (VkImageLayout)layout_src,
-        .finalLayout = (VkImageLayout)layout_dst
-      });
-
-      clear_values_.push_back(VkClearValue{
-        .depthStencil = VkClearDepthStencilValue{
-          .depth = 1,
-          .stencil = 0
-        }
-      });
-    }
-
-    auto subpass_info = VkSubpassDescription{
-      .flags = 0,
-      .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-      .inputAttachmentCount = 0,
-      .pInputAttachments = nullptr,
-      .colorAttachmentCount = (u32)references.size(),
-      .pColorAttachments = references.data(),
-      .pResolveAttachments = nullptr,
-      .pDepthStencilAttachment = nullptr,
-      .preserveAttachmentCount = 0,
-      .pPreserveAttachments = nullptr
-    };
-
-    if (depth_stencil_attachment) {
-      subpass_info.pDepthStencilAttachment = &depth_reference;
-      has_depth_stencil_attachment = true;
-    }
-
-    auto pass_info = VkRenderPassCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .attachmentCount = (u32)attachments.size(),
-      .pAttachments = attachments.data(),
-      .subpassCount = 1,
-      .pSubpasses = &subpass_info,
-      .dependencyCount = 0,
-      .pDependencies = nullptr
-    };
-
-    if (vkCreateRenderPass(device_, &pass_info, nullptr, &render_pass_) != VK_SUCCESS) {
-      Assert(false, "VulkanRenderPass: failed to create render pass");
-    }
+    VkRenderPass render_pass,
+    size_t color_attachment_count,
+    bool have_depth_stencil_attachment
+  )   : device_(device)
+      , render_pass_(render_pass)
+      , color_attachment_count_(color_attachment_count)
+      , has_depth_stencil_attachment(have_depth_stencil_attachment) {
+    clear_values_.resize(color_attachment_count_ + (have_depth_stencil_attachment ? 1 : 0));
   }
 
  ~VulkanRenderPass() {
@@ -166,6 +64,236 @@ private:
   std::vector<VkClearValue> clear_values_;
   size_t color_attachment_count_;
   bool has_depth_stencil_attachment = false;
+};
+
+struct VulkanRenderPassBuilder final : RenderPassBuilder {
+  VulkanRenderPassBuilder(VkDevice device) : device(device) {
+    const auto attachment_init = VkAttachmentDescription{
+      .flags = 0,
+      .format = VK_FORMAT_B8G8R8A8_SRGB,
+      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+      .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+      .stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE,
+      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+      .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    };
+
+    for (size_t i = 0; i < kMaxColorAttachments; i++) {
+      color_attachments[i] = attachment_init;
+    }
+
+    depth_stencil_attachment = attachment_init;
+    depth_stencil_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  }
+
+  // TODO: auto-expand number of color attachments?
+
+  void SetColorAttachmentCount(size_t count) override {
+    color_attachment_count = count;
+  }
+
+  void SetColorAttachment(size_t id, AttachmentConfig const& config) override {
+    SetColorAttachmentFormat(id, config.format);
+    SetColorAttachmentSrcLayout(id, config.layout_src);
+    SetColorAttachmentDstLayout(id, config.layout_dst);
+    SetColorAttachmentLoadOp(id, config.load_op);
+    SetColorAttachmentStoreOp(id, config.store_op);
+  }
+
+  void SetColorAttachmentFormat(size_t id, Texture::Format format) override {
+    Expand(id);
+    color_attachments.at(id).format = (VkFormat)format;
+  }
+
+  void SetColorAttachmentSrcLayout(size_t id, Texture::Layout layout) override {
+    Expand(id);
+    color_attachments.at(id).initialLayout = (VkImageLayout)layout;
+  }
+
+  void SetColorAttachmentDstLayout(size_t id, Texture::Layout layout) override {
+    Expand(id);
+    color_attachments.at(id).finalLayout = (VkImageLayout)layout;
+  }
+
+  void SetColorAttachmentLoadOp(size_t id, RenderPass::LoadOp op) override {
+    Expand(id);
+    color_attachments.at(id).loadOp = (VkAttachmentLoadOp)op;
+  }
+
+  void SetColorAttachmentStoreOp(size_t id, RenderPass::StoreOp op) override {
+    Expand(id);
+    color_attachments.at(id).storeOp = (VkAttachmentStoreOp)op;
+  }
+
+  void ClearDepthAttachment() override {
+    have_depth_stencil_attachment = false;
+  }
+
+  void SetDepthAttachment(AttachmentConfig const& config) override {
+    SetDepthAttachmentFormat(config.format);
+    SetDepthAttachmentSrcLayout(config.layout_src);
+    SetDepthAttachmentDstLayout(config.layout_dst);
+    SetDepthAttachmentLoadOp(config.load_op);
+    SetDepthAttachmentStoreOp(config.store_op);
+    SetDepthAttachmentStencilLoadOp(config.load_op_stencil);
+    SetDepthAttachmentStencilStoreOp(config.store_op_stencil);
+  }
+
+  void SetDepthAttachmentFormat(Texture::Format format) override {
+    depth_stencil_attachment.format = (VkFormat)format;
+    have_depth_stencil_attachment = true;
+  }
+
+  void SetDepthAttachmentSrcLayout(Texture::Layout layout) override {
+    depth_stencil_attachment.initialLayout = (VkImageLayout)layout;
+    have_depth_stencil_attachment = true;
+  }
+
+  void SetDepthAttachmentDstLayout(Texture::Layout layout) override {
+    depth_stencil_attachment.finalLayout = (VkImageLayout)layout;
+    have_depth_stencil_attachment = true;
+  }
+
+  void SetDepthAttachmentLoadOp(RenderPass::LoadOp op) override {
+    depth_stencil_attachment.loadOp = (VkAttachmentLoadOp)op;
+    have_depth_stencil_attachment = true;
+  }
+
+  void SetDepthAttachmentStoreOp(RenderPass::StoreOp op) override {
+    depth_stencil_attachment.storeOp = (VkAttachmentStoreOp)op;
+    have_depth_stencil_attachment = true;
+  }
+
+  void SetDepthAttachmentStencilLoadOp(RenderPass::LoadOp op) override {
+    depth_stencil_attachment.stencilLoadOp = (VkAttachmentLoadOp)op;
+    have_depth_stencil_attachment = true;
+  }
+
+  void SetDepthAttachmentStencilStoreOp(RenderPass::StoreOp op) override {
+    depth_stencil_attachment.stencilStoreOp = (VkAttachmentStoreOp)op;
+    have_depth_stencil_attachment = true;
+  }
+
+  auto Build() const -> std::unique_ptr<RenderPass> override {
+    bool have_color_layout_transition = false;
+    bool have_depth_layout_transition = false;
+
+    size_t attachment_count = color_attachment_count;
+
+    if (have_depth_stencil_attachment) {
+      attachment_count++;
+    }
+
+    VkAttachmentDescription attachments[attachment_count];
+    VkAttachmentReference references[attachment_count];
+
+    for (size_t i = 0; i < color_attachment_count; i++) {
+      attachments[i] = color_attachments[i];
+      references[i].attachment = i;
+      references[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+      auto final_layout = attachments[i].finalLayout;
+
+      if (final_layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL &&
+          final_layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+      ) {
+        have_color_layout_transition = true;
+      }
+    }
+
+    if (have_depth_stencil_attachment) {
+      auto& attachment = attachments[color_attachment_count];
+      auto& reference = references[color_attachment_count];
+
+      attachment = depth_stencil_attachment;
+      reference.attachment = color_attachment_count;
+      reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+      if (attachment.finalLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+        have_depth_layout_transition = true;
+      }
+    }
+
+    auto subpass = VkSubpassDescription{};
+    subpass.flags = 0;
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.inputAttachmentCount = 0;
+    subpass.pInputAttachments = nullptr;
+    subpass.colorAttachmentCount = color_attachment_count;
+    subpass.pColorAttachments = references;
+    subpass.pResolveAttachments = nullptr;
+
+    if (have_depth_stencil_attachment) {
+      subpass.pDepthStencilAttachment = &references[color_attachment_count];
+    } else {
+      subpass.pDepthStencilAttachment = nullptr;
+    }
+
+    auto info = VkRenderPassCreateInfo{};
+    info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    info.pNext = nullptr;
+    info.flags = 0;
+    info.attachmentCount = attachment_count;
+    info.pAttachments = attachments;
+    info.subpassCount = 1;
+    info.pSubpasses = &subpass;
+
+    VkSubpassDependency dependency;
+
+    if (have_color_layout_transition || have_depth_layout_transition) {
+      // TODO: expose dstStageMask and dstAccessMask to the user.
+      dependency.srcSubpass = 0;
+      dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+      dependency.srcStageMask = 0;
+      dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+      dependency.srcAccessMask = 0;
+      dependency.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+      dependency.dependencyFlags = 0;
+
+      if (have_color_layout_transition) {
+        dependency.srcStageMask |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+      }
+
+      if (have_depth_layout_transition) {
+        // TODO: confirm that the srcStageMask is correct.
+        dependency.srcStageMask |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        dependency.srcAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+      }
+
+      info.dependencyCount = 1;
+      info.pDependencies = &dependency;
+    } else {
+      info.dependencyCount = 0;
+      info.pDependencies = nullptr;
+    }
+
+    VkRenderPass render_pass;
+
+    if (vkCreateRenderPass(device, &info, nullptr, &render_pass) != VK_SUCCESS) {
+      Assert(false, "VulkanRenderPassBuilder: failed to create a render pass");
+    }
+
+    return std::make_unique<VulkanRenderPass>(device, render_pass, color_attachment_count, have_depth_stencil_attachment);
+  }
+
+private:
+  // TODO: keep this constant somewhere globally?
+  static constexpr size_t kMaxColorAttachments = 32;
+
+  void Expand(size_t id) {
+    color_attachment_count = std::max(color_attachment_count, id + 1);
+  }
+
+  VkDevice device;
+
+  size_t color_attachment_count = 0;
+  std::array<VkAttachmentDescription, kMaxColorAttachments> color_attachments;
+
+  bool have_depth_stencil_attachment = false;
+  VkAttachmentDescription depth_stencil_attachment;
 };
 
 } // namespace Aura

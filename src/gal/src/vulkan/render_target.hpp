@@ -68,20 +68,30 @@ struct VulkanRenderTarget final : RenderTarget {
   auto width() -> u32 override { return width_; }
   auto height() -> u32 override { return height_; }
 
-  auto CreateRenderPass(
-    std::vector<RenderPass::Descriptor> const& color_descriptors = {{}},
-    RenderPass::Descriptor depth_stencil_descriptor = {}
-  ) -> std::unique_ptr<RenderPass> override {
-    return std::make_unique<VulkanRenderPass>(
-      device,
-      color_attachments,
-      color_descriptors,
-      depth_stencil_attachment,
-      depth_stencil_descriptor
-    );
+private:
+  auto CreateRenderPass() -> std::unique_ptr<RenderPass> {
+    auto color_attachment_count = color_attachments.size();
+    auto render_pass_builder = VulkanRenderPassBuilder{device};
+
+    for (size_t i = 0; i < color_attachment_count; i++) {
+      render_pass_builder.SetColorAttachment(i, {
+        color_attachments[i]->GetFormat(),
+        Texture::Layout::Undefined,
+        Texture::Layout::ColorAttachment
+      });
+    }
+
+    if (depth_stencil_attachment) {
+      render_pass_builder.SetDepthAttachment({
+        depth_stencil_attachment->GetFormat(),
+        Texture::Layout::Undefined,
+        Texture::Layout::DepthStencilAttachment
+      });
+    }
+
+    return render_pass_builder.Build();
   }
 
-private:
   VkDevice device;
   VkFramebuffer framebuffer;
   std::unique_ptr<RenderPass> render_pass;

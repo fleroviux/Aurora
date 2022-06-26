@@ -87,47 +87,6 @@ void ForwardRenderPipeline::Render(
   }
 
   command_buffers[1]->EndRenderPass();
-
-  // TODO: use a subpass dependency to transition render target image layouts.
-  MemoryBarrier barriers[]{
-    {
-      color_texture,
-      Access::ColorAttachmentWrite,
-      Access::ShaderRead,
-      Texture::Layout::ColorAttachment,
-      Texture::Layout::ShaderReadOnly
-    },
-    {
-      albedo_texture,
-      Access::ColorAttachmentWrite,
-      Access::ShaderRead,
-      Texture::Layout::ColorAttachment,
-      Texture::Layout::ShaderReadOnly
-    },
-    {
-      normal_texture,
-      Access::ColorAttachmentWrite,
-      Access::ShaderRead,
-      Texture::Layout::ColorAttachment,
-      Texture::Layout::ShaderReadOnly
-    },
-    {
-      depth_texture,
-      Access::DepthStencilAttachmentWrite,
-      Access::ShaderRead,
-      Texture::Layout::DepthStencilAttachment,
-      Texture::Layout::DepthReadOnly,
-      {
-        Texture::Aspect::Depth
-      }
-    }
-  };
-
-  command_buffers[1]->PipelineBarrier(
-    PipelineStage::ColorAttachmentOutput | PipelineStage::LateFragmentTests,
-    PipelineStage::FragmentShader,
-    {barriers, 4}
-  );
 }
 
 auto ForwardRenderPipeline::GetColorTexture() -> Texture* {
@@ -185,7 +144,25 @@ void ForwardRenderPipeline::CreateRenderTarget() {
   );
 
   render_target = render_device->CreateRenderTarget({color_texture, albedo_texture, normal_texture}, depth_texture);
-  render_pass = render_target->CreateRenderPass();
+
+  auto render_pass_builder = render_device->CreateRenderPassBuilder();
+
+  const auto color_attachment_config = RenderPassBuilder::AttachmentConfig{
+    Texture::Format::B8G8R8A8_SRGB,
+    Texture::Layout::Undefined,
+    Texture::Layout::ShaderReadOnly
+  };
+
+  render_pass_builder->SetColorAttachment(0, color_attachment_config);
+  render_pass_builder->SetColorAttachment(1, color_attachment_config);
+  render_pass_builder->SetColorAttachment(2, color_attachment_config);
+  render_pass_builder->SetDepthAttachment({
+    Texture::Format::DEPTH_F32,
+    Texture::Layout::Undefined,
+    Texture::Layout::DepthStencilReadOnly
+  });
+
+  render_pass = render_pass_builder->Build();
 
   render_pass->SetClearColor(0, 0.01, 0.01, 0.01, 1.0);
   render_pass->SetClearColor(1, 0.00, 0.00, 0.00, 0.5);

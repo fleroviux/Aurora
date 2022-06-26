@@ -113,6 +113,8 @@ struct RenderDevice {
     std::shared_ptr<Texture> depth_stencil_attachment = {}
   ) -> std::unique_ptr<RenderTarget> = 0;
 
+  virtual auto CreateRenderPassBuilder() -> std::unique_ptr<RenderPassBuilder> = 0;
+
   virtual auto CreateBindGroupLayout(
     std::vector<BindGroupLayout::Entry> const& entries
   ) -> std::shared_ptr<BindGroupLayout> = 0;

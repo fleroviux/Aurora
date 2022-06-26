@@ -41,4 +41,40 @@ struct RenderPass {
   virtual void SetClearStencil(u32 stencil) = 0;
 };
 
+struct RenderPassBuilder {
+  struct AttachmentConfig {
+    Texture::Format format;
+    Texture::Layout layout_src;
+    Texture::Layout layout_dst;
+
+    RenderPass::LoadOp load_op = RenderPass::LoadOp::Clear;
+    RenderPass::StoreOp store_op = RenderPass::StoreOp::Store;
+
+    RenderPass::LoadOp load_op_stencil = RenderPass::LoadOp::DontCare;
+    RenderPass::StoreOp store_op_stencil = RenderPass::StoreOp::DontCare;
+  };
+
+  virtual ~RenderPassBuilder() = default;
+
+  virtual void SetColorAttachmentCount(size_t count) = 0;
+  virtual void SetColorAttachment(size_t id, AttachmentConfig const& config) = 0;
+  virtual void SetColorAttachmentFormat(size_t id, Texture::Format format) = 0;
+  virtual void SetColorAttachmentSrcLayout(size_t id, Texture::Layout layout) = 0;
+  virtual void SetColorAttachmentDstLayout(size_t id, Texture::Layout layout) = 0;
+  virtual void SetColorAttachmentLoadOp(size_t id, RenderPass::LoadOp op) = 0;
+  virtual void SetColorAttachmentStoreOp(size_t id, RenderPass::StoreOp op) = 0;
+
+  virtual void ClearDepthAttachment() = 0;
+  virtual void SetDepthAttachment(AttachmentConfig const& config) = 0;
+  virtual void SetDepthAttachmentFormat(Texture::Format format) = 0;
+  virtual void SetDepthAttachmentSrcLayout(Texture::Layout layout) = 0;
+  virtual void SetDepthAttachmentDstLayout(Texture::Layout layout) = 0;
+  virtual void SetDepthAttachmentLoadOp(RenderPass::LoadOp op) = 0;
+  virtual void SetDepthAttachmentStoreOp(RenderPass::StoreOp op) = 0;
+  virtual void SetDepthAttachmentStencilLoadOp(RenderPass::LoadOp op) = 0;
+  virtual void SetDepthAttachmentStencilStoreOp(RenderPass::StoreOp op) = 0;
+
+  virtual auto Build() const -> std::unique_ptr<RenderPass> = 0;
+};
+
 } // namespace Aura
