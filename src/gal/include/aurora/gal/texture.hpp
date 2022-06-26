@@ -8,6 +8,25 @@
 
 namespace Aura {
 
+// equivalent to VkComponentSwizzle:
+// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkComponentSwizzle.html 
+enum class ComponentSwizzle {
+  Identity = 0,
+  Zero = 1,
+  One = 2,
+  R = 3,
+  G = 4,
+  B = 5,
+  A = 6
+};
+
+struct ComponentMapping {
+  ComponentSwizzle r = ComponentSwizzle::Identity;
+  ComponentSwizzle g = ComponentSwizzle::Identity;
+  ComponentSwizzle b = ComponentSwizzle::Identity;
+  ComponentSwizzle a = ComponentSwizzle::Identity;
+};
+
 struct Texture {
   // subset of VkImageLayout:
   // https://vulkan.lunarg.com/doc/view/latest/windows/apispec.html#VkImageLayout
@@ -68,6 +87,7 @@ struct Texture {
   };
 
   struct SubresourceRange {
+    // TODO: rename mip_base and layer_base
     Aspect aspect = Aspect::Color;
     u32 mip_base = 0;
     u32 mip_count = 1;
@@ -75,9 +95,35 @@ struct Texture {
     u32 layer_count = 1;
   };
 
+  struct View {
+    // equivalent to VkImageViewType:
+    // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/html/vkspec.html#VkImageViewType
+    enum class Type {
+      _1D = 0,
+      _2D = 1,
+      _3D = 2,
+      Cube = 3,
+      _1D_Array = 4,
+      _2D_Array = 5,
+      CubeArray = 6
+    };
+
+    virtual ~View() = default;
+
+    virtual auto Handle() -> void* = 0;
+    virtual auto GetType() const -> Type = 0;
+    virtual auto GetFormat() const -> Texture::Format = 0;
+    virtual auto GetAspect() const -> Texture::Aspect = 0;
+    virtual auto GetBaseMip() const -> u32 = 0;
+    virtual auto GetMipCount() const -> u32 = 0;
+    virtual auto GetBaseLayer() const -> u32 = 0;
+    virtual auto GetLayerCount() const -> u32 = 0;
+    virtual auto GetSubresourceRange() const -> Texture::SubresourceRange const& = 0;
+    virtual auto GetComponentMapping() const -> ComponentMapping const& = 0;
+  };
+
   virtual ~Texture() = default;
 
-  virtual auto HandleView() -> void* = 0;
   virtual auto Handle() -> void* = 0;
   virtual auto GetGrade() const -> Grade = 0;
   virtual auto GetFormat() const -> Format = 0;
@@ -87,6 +133,18 @@ struct Texture {
   virtual auto GetDepth() const -> u32 = 0;
   virtual auto GetLayerCount() const -> u32 = 0;
   virtual auto GetMipCount() const -> u32 = 0;
+
+  virtual auto DefaultSubresourceRange() const -> SubresourceRange = 0;
+
+  virtual auto DefaultView() const -> View const* = 0;
+  virtual auto DefaultView() -> View* = 0;
+
+  virtual auto CreateView(
+    View::Type type,
+    Format format,
+    SubresourceRange const& range,
+    ComponentMapping const& mapping = {}
+  ) -> std::unique_ptr<View> = 0;
 };
 
 constexpr auto operator|(Texture::Usage lhs, Texture::Usage rhs) -> Texture::Usage {

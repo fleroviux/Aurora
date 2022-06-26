@@ -70,7 +70,7 @@ struct VulkanBindGroup final : BindGroup {
   ) override {
     auto image_info = VkDescriptorImageInfo{
       .sampler = (VkSampler)sampler->Handle(),
-      .imageView = (VkImageView)texture->HandleView(),
+      .imageView = (VkImageView)texture->DefaultView()->Handle(),
       .imageLayout = (VkImageLayout)layout
     };
 

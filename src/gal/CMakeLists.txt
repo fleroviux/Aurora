@@ -22,6 +22,7 @@ set(HEADERS
   src/vulkan/sampler.hpp
   src/vulkan/shader_module.hpp
   src/vulkan/texture.hpp
+  src/vulkan/texture_view.hpp
 )
 
 set(HEADERS_PUBLIC

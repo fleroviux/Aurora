@@ -36,11 +36,11 @@ struct VulkanRenderTarget final : RenderTarget {
     render_pass = CreateRenderPass();
 
     for (auto& texture : color_attachments) {
-      image_views.push_back((VkImageView)texture->HandleView());
+      image_views.push_back((VkImageView)texture->DefaultView()->Handle());
     }
 
     if (depth_stencil_attachment) {
-      image_views.push_back((VkImageView)depth_stencil_attachment->HandleView());
+      image_views.push_back((VkImageView)depth_stencil_attachment->DefaultView()->Handle());
     }
 
     auto info = VkFramebufferCreateInfo{

@@ -7,26 +7,73 @@
 #include <aurora/log.hpp>
 #include <vk_mem_alloc.h>
 
+#include "texture_view.hpp"
+
 namespace Aura {
 
 struct VulkanTexture final : Texture {
  ~VulkanTexture() override {
-    vkDestroyImageView(device, image_view, nullptr);
     if (image_owned) {
       vmaDestroyImage(allocator, image, allocation);
     }
   }
 
-  auto HandleView() -> void* override { return (void*)image_view; }
-  auto Handle() -> void* override { return (void*)image; }
-  auto GetGrade() const -> Grade override { return grade; }
-  auto GetFormat() const -> Format override { return format; };
-  auto GetUsage() const -> Usage override { return usage; }
-  auto GetWidth() const -> u32 override { return width; }
-  auto GetHeight() const -> u32 override { return height; }
-  auto GetDepth() const -> u32 override { return depth; }
-  auto GetLayerCount() const -> u32 override { return layer_count; }
-  auto GetMipCount() const -> u32 override { return mip_count; }
+  auto Handle() -> void* override {
+    return (void*)image;
+  }
+
+  auto GetGrade() const -> Grade override {
+    return grade;
+  }
+
+  auto GetFormat() const -> Format override {
+    return format;
+  }
+
+  auto GetUsage() const -> Usage override {
+    return usage;
+  }
+
+  auto GetWidth() const -> u32 override {
+    return width;
+  }
+
+  auto GetHeight() const -> u32 override {
+    return height;
+  }
+
+  auto GetDepth() const -> u32 override {
+    return depth;
+  }
+
+  auto GetLayerCount() const -> u32 override {
+    return range.layer_count;
+  }
+
+  auto GetMipCount() const -> u32 override {
+    return range.mip_count;
+  }
+
+  auto DefaultSubresourceRange() const -> SubresourceRange override {
+    return range;
+  }
+
+  auto DefaultView() const -> View const* override {
+    return default_view.get();
+  }
+
+  auto DefaultView() -> View* override {
+    return default_view.get();
+  }
+
+  auto CreateView(
+    View::Type type,
+    Format format,
+    SubresourceRange const& range,
+    ComponentMapping const& mapping = {}
+  ) -> std::unique_ptr<View> override {
+    return std::make_unique<VulkanTextureView>(device, this, type, format, range, mapping);
+  }
 
   static auto Create2D(
     VkPhysicalDevice physical_device,
@@ -83,10 +130,10 @@ struct VulkanTexture final : Texture {
     texture->width = width;
     texture->height = height;
     texture->depth = 1;
-    texture->layer_count = 1;
-    texture->mip_count = mip_levels;
+    texture->range = { (Aspect)GetImageAspectFromFormat(format), 0, mip_levels, 0, 1 };
     texture->image_owned = true;
-    texture->CreateImageView();
+    texture->default_view = texture->CreateView(
+      View::Type::_2D, format, texture->DefaultSubresourceRange());
 
     return texture;
   }
@@ -108,10 +155,10 @@ struct VulkanTexture final : Texture {
     texture->width = width;
     texture->height = height;
     texture->depth = 1;
-    texture->layer_count = 1;
-    texture->mip_count = 1;
+    texture->range = { (Aspect)GetImageAspectFromFormat(format), 0, 1, 0, 1 };
     texture->image_owned = false;
-    texture->CreateImageView();
+    texture->default_view = texture->CreateView(
+      View::Type::_2D, format, texture->DefaultSubresourceRange());
 
     return texture;
   }
@@ -171,71 +218,15 @@ struct VulkanTexture final : Texture {
     texture->width = width;
     texture->height = height;
     texture->depth = 1;
-    texture->layer_count = 6;
-    texture->mip_count = mip_levels;
+    texture->range = { (Aspect)GetImageAspectFromFormat(format), 0, mip_levels, 0, 6 };
     texture->image_owned = true;
-    texture->CreateImageViewCube();
+    texture->default_view = texture->CreateView(
+      View::Type::Cube, format, texture->DefaultSubresourceRange());
 
     return texture;
   }
 
 private:
-  void CreateImageView() {
-    auto info = VkImageViewCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .image = image,
-      .viewType = VK_IMAGE_VIEW_TYPE_2D,
-      .format = (VkFormat)format,
-      .components = VkComponentMapping{
-        .r = VK_COMPONENT_SWIZZLE_R,
-        .g = VK_COMPONENT_SWIZZLE_G,
-        .b = VK_COMPONENT_SWIZZLE_B,
-        .a = VK_COMPONENT_SWIZZLE_A,
-      },
-      .subresourceRange = VkImageSubresourceRange{
-        .aspectMask = GetImageAspectFromFormat(GetFormat()),
-        .baseMipLevel = 0,
-        .levelCount = GetMipCount(),
-        .baseArrayLayer = 0,
-        .layerCount = 1
-      }
-    };
-
-    if (vkCreateImageView(device, &info, nullptr, &image_view) != VK_SUCCESS) {
-      Assert(false, "VulkanTexture: failed to create image view");
-    }
-  }
-
-  void CreateImageViewCube() {
-    auto info = VkImageViewCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .image = image,
-      .viewType = VK_IMAGE_VIEW_TYPE_CUBE,
-      .format = (VkFormat)format,
-      .components = VkComponentMapping{
-        .r = VK_COMPONENT_SWIZZLE_R,
-        .g = VK_COMPONENT_SWIZZLE_G,
-        .b = VK_COMPONENT_SWIZZLE_B,
-        .a = VK_COMPONENT_SWIZZLE_A,
-      },
-      .subresourceRange = VkImageSubresourceRange{
-        .aspectMask = GetImageAspectFromFormat(GetFormat()),
-        .baseMipLevel = 0,
-        .levelCount = GetMipCount(),
-        .baseArrayLayer = 0,
-        .layerCount = 6
-      }
-    };
-
-    if (vkCreateImageView(device, &info, nullptr, &image_view) != VK_SUCCESS) {
-      Assert(false, "VulkanTexture: failed to create image view");
-    }
-  }
-
   static auto GetImageAspectFromFormat(Format format) -> VkImageAspectFlags {
     switch (format) {
       case Format::R8G8B8A8_SRGB:
@@ -253,15 +244,14 @@ private:
   VmaAllocator allocator;
   VmaAllocation allocation;
   VkImage image;
-  VkImageView image_view;
   Grade grade;
   Format format;
   Usage usage;
   u32 width;
   u32 height;
   u32 depth;
-  u32 layer_count;
-  u32 mip_count;
+  SubresourceRange range;
+  std::unique_ptr<View> default_view;
   bool image_owned;
 };
 
