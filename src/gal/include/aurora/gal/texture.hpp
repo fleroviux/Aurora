@@ -135,7 +135,7 @@ struct Texture {
   virtual auto GetLayerCount() const -> u32 = 0;
   virtual auto GetMipCount() const -> u32 = 0;
 
-  virtual auto DefaultSubresourceRange() const -> SubresourceRange = 0;
+  virtual auto DefaultSubresourceRange() const -> SubresourceRange const& = 0;
 
   virtual auto DefaultView() const -> View const* = 0;
   virtual auto DefaultView() -> View* = 0;

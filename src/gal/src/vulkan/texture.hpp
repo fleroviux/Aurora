@@ -54,7 +54,7 @@ struct VulkanTexture final : Texture {
     return range.mip_count;
   }
 
-  auto DefaultSubresourceRange() const -> SubresourceRange override {
+  auto DefaultSubresourceRange() const -> SubresourceRange const& override {
     return range;
   }
 
