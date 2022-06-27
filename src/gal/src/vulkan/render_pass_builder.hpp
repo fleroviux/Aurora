@@ -186,9 +186,8 @@ struct VulkanRenderPassBuilder final : RenderPassBuilder {
 
     VkSubpassDependency dependency;
 
-    /*
-     * TOOD: consider another depending(from VB_SUBPASS_EXTERNAL to 0) when
-     * the source image layout is not suitable for rendering.
+    /* TODO: consider another dependency (from VB_SUBPASS_EXTERNAL to 0) when
+     * the source image layout can't be used for rendering.
      */
     if (have_color_layout_transition || have_depth_layout_transition) {
       // TODO: expose dstStageMask and dstAccessMask to the user.
