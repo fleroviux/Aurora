@@ -62,10 +62,19 @@ struct BindGroup {
 
   virtual void Bind(
     u32 binding,
-    AnyPtr<Texture> texture,
+    AnyPtr<Texture::View> texture_view,
     AnyPtr<Sampler> sampler,
     Texture::Layout layout
   ) = 0;
+
+  void Bind(
+    u32 binding,
+    AnyPtr<Texture> texture,
+    AnyPtr<Sampler> sampler,
+    Texture::Layout layout
+  ) {
+    Bind(binding, texture->DefaultView(), sampler, layout);
+  }
 };
 
 } // namespace Aura
