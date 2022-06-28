@@ -11,8 +11,11 @@ namespace Aura {
 
 ForwardRenderPipeline::ForwardRenderPipeline(
   std::shared_ptr<RenderDevice> render_device,
-  std::shared_ptr<GeometryCache> geometry_cache
-)   : render_device(render_device), geometry_cache(geometry_cache) {
+  std::shared_ptr<GeometryCache> geometry_cache,
+  std::shared_ptr<TextureCache> texture_cache
+)   : render_device(render_device)
+    , geometry_cache(geometry_cache)
+    , texture_cache_(texture_cache) {
   CreateCameraUniformBlock();
   CreateRenderTarget();
   CreateBindGroupAndPipelineLayout();
@@ -322,17 +325,11 @@ void ForwardRenderPipeline::RenderObject(
 
   for (int i = 0; i < texture_slots.size(); i++) {
     auto& texture = texture_slots[i];
+
     if (texture) {
-      auto match = texture_cache.find(texture.get());
+      auto& entry = texture_cache_->Get(texture);
 
-      if (match == texture_cache.end()) {
-        UploadTexture((VkCommandBuffer)command_buffers[0]->Handle(), texture);
-        match = texture_cache.find(texture.get());
-      }
-
-      auto& data = match->second;
-
-      object_data.bind_group->Bind(3 + i, data.texture, data.sampler, Texture::Layout::ShaderReadOnly);
+      object_data.bind_group->Bind(3 + i, entry.texture, entry.sampler, Texture::Layout::ShaderReadOnly);
     }
   }
 
@@ -439,101 +436,6 @@ void ForwardRenderPipeline::CompileShaderProgram(AnyPtr<Material> material) {
   auto& data = program_cache[program_key];
   data.shader_vert = render_device->CreateShaderModule(spirv_vert.data(), spirv_vert.size() * sizeof(u32));
   data.shader_frag = render_device->CreateShaderModule(spirv_frag.data(), spirv_frag.size() * sizeof(u32));
-}
-
-void ForwardRenderPipeline::UploadTexture(
-  VkCommandBuffer command_buffer,
-  std::shared_ptr<Texture2D>& texture
-) {
-  // TODO: select mip count based on width/height.
-  int mip_count = 6;
-
-  auto width = texture->width();
-  auto height = texture->height();
-  auto& data = texture_cache[texture.get()];
-
-  if (mip_count == 1) {
-    data.texture = render_device->CreateTexture2D(
-      width,
-      height,
-      Texture::Format::R8G8B8A8_SRGB,
-      Texture::Usage::CopyDst | Texture::Usage::Sampled,
-      1
-    );
-  } else {
-    data.texture = render_device->CreateTexture2D(
-      width,
-      height,
-      Texture::Format::R8G8B8A8_SRGB,
-      Texture::Usage::CopySrc | Texture::Usage::CopyDst | Texture::Usage::Sampled,
-      mip_count
-    );
-  }
-
-  data.buffer = render_device->CreateBufferWithData(
-    Buffer::Usage::CopySrc,
-    texture->data(),
-    sizeof(u32) * width * height
-  );
-
-  data.sampler = render_device->CreateSampler({
-    .address_mode_u = Sampler::AddressMode::Repeat,
-    .address_mode_v = Sampler::AddressMode::Repeat,
-    .min_filter = Sampler::FilterMode::Linear,
-    .mag_filter = Sampler::FilterMode::Linear,
-    .mip_filter = Sampler::FilterMode::Linear,
-    .anisotropy = true,
-    .max_anisotropy = 16
-  });
-
-  auto region = VkBufferImageCopy{
-    .bufferOffset = 0,
-    .bufferRowLength = width,
-    .bufferImageHeight = height,
-    .imageSubresource = VkImageSubresourceLayers{
-      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-      .mipLevel = 0,
-      .baseArrayLayer = 0,
-      .layerCount = 1
-    },
-    .imageOffset = VkOffset3D{
-      .x = 0,
-      .y = 0,
-      .z = 0
-    },
-    .imageExtent = VkExtent3D{
-      .width = width,
-      .height = height,
-      .depth = 1
-    }
-  };
-
-  TransitionImageLayout(
-    command_buffer,
-    data.texture,
-    Texture::Layout::Undefined,
-    Texture::Layout::CopyDst
-  );
-
-  vkCmdCopyBufferToImage(
-    command_buffer,
-    (VkBuffer)data.buffer->Handle(),
-    (VkImage)data.texture->Handle(),
-    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-    1,
-    &region
-  );
-
-  if (mip_count == 1) {
-    TransitionImageLayout(
-      command_buffer,
-      data.texture,
-      Texture::Layout::CopyDst,
-      Texture::Layout::ShaderReadOnly
-    );
-  } else {
-    GenerateMipMaps(command_buffer, data.texture);
-  }
 }
 
 void ForwardRenderPipeline::UploadTextureCube(

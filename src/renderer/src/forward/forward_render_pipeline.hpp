@@ -16,6 +16,7 @@
 #include <vulkan/vulkan.h>
 
 #include "cache/geometry_cache.hpp"
+#include "cache/texture_cache.hpp"
 #include "render_pipeline_base.hpp"
 
 namespace Aura {
@@ -23,7 +24,8 @@ namespace Aura {
 struct ForwardRenderPipeline final : RenderPipelineBase {
   ForwardRenderPipeline(
     std::shared_ptr<RenderDevice> render_device,
-    std::shared_ptr<GeometryCache> geometry_cache
+    std::shared_ptr<GeometryCache> geometry_cache,
+    std::shared_ptr<TextureCache> texture_cache
   );
 
   void Render(
@@ -69,11 +71,6 @@ private:
   void UpdateCamera(GameObject* camera);
 
   void CompileShaderProgram(AnyPtr<Material> material);
-
-  void UploadTexture(
-    VkCommandBuffer command_buffer,
-    std::shared_ptr<Texture2D>& texture
-  );
 
   void UploadTextureCube(
     VkCommandBuffer command_buffer,
@@ -123,6 +120,7 @@ private:
     std::unique_ptr<GraphicsPipeline> pipeline;
   };
   std::shared_ptr<GeometryCache> geometry_cache;
+  std::shared_ptr<TextureCache> texture_cache_;
   std::unordered_map<ProgramKey, ProgramData, pair_hash> program_cache;
   std::unordered_map<Texture2D*, TextureData> texture_cache;
   std::unordered_map<GameObject*, ObjectData> object_cache;

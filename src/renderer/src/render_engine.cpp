@@ -5,6 +5,7 @@
 #include <aurora/renderer/render_engine.hpp>
 
 #include "cache/geometry_cache.hpp"
+#include "cache/texture_cache.hpp"
 #include "effect/ssr/ssr_effect.hpp"
 #include "forward/forward_render_pipeline.hpp"
 #include "render_pipeline_base.hpp"
@@ -27,6 +28,9 @@ struct RenderEngine final : RenderEngineBase {
     // TODO: verify that scene component exists and camera is non-null.
     auto camera = scene->get_component<Scene>()->camera;
 
+    // TODO: set command buffer only once and pass it as a shared_ptr.
+    texture_cache->SetCommandBuffer(command_buffers[0].get());
+
     render_pipeline->Render(scene, camera, command_buffers);
 
     auto color_texture = render_pipeline->GetColorTexture();
@@ -45,10 +49,11 @@ struct RenderEngine final : RenderEngineBase {
 private:
   void CreateSharedCaches() {
     geometry_cache = std::make_shared<GeometryCache>(render_device);
+    texture_cache = std::make_shared<TextureCache>(render_device);
   }
 
   void CreateRenderPipeline() {
-    render_pipeline = std::make_unique<ForwardRenderPipeline>(render_device, geometry_cache);
+    render_pipeline = std::make_unique<ForwardRenderPipeline>(render_device, geometry_cache, texture_cache);
   }
 
   void CreateRenderTarget() {
@@ -64,6 +69,7 @@ private:
 
   std::shared_ptr<RenderDevice> render_device;
   std::shared_ptr<GeometryCache> geometry_cache;
+  std::shared_ptr<TextureCache> texture_cache;
   std::unique_ptr<RenderPipelineBase> render_pipeline;
 
   std::shared_ptr<Texture> render_texture;
