@@ -28,7 +28,8 @@ private:
   void CreateUBO();
   void CreateBindGroupAndPipelineLayout();
   void CreateShaderModules();
-  void CreateGraphicsPipeline(std::shared_ptr<RenderPass> render_pass);
+  void CreateRenderPass();
+  void CreateGraphicsPipeline();
 
   std::shared_ptr<RenderDevice> render_device;
 

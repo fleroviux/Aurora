@@ -15,7 +15,8 @@ SSREffect::SSREffect(std::shared_ptr<RenderDevice> render_device)
   CreateUBO();
   CreateBindGroupAndPipelineLayout();
   CreateShaderModules();
-  //CreateGraphicsPipeline();
+  CreateRenderPass();
+  CreateGraphicsPipeline();
 }
 
 void SSREffect::Render(
@@ -27,24 +28,6 @@ void SSREffect::Render(
   AnyPtr<Texture> depth_texture,
   AnyPtr<Texture> normal_texture
 ) {
-  // TODO(fleroviux): fix this absolutely atrocious terribleness
-  if (pipeline == nullptr) {
-    //render_pass = render_target->CreateRenderPass({ {
-    //}});
-
-    auto render_pass_builder = render_device->CreateRenderPassBuilder();
-
-    render_pass_builder->SetColorAttachment(0, {
-      Texture::Format::B8G8R8A8_SRGB,
-      Texture::Layout::Undefined,
-      Texture::Layout::ShaderReadOnly
-    });
-
-    render_pass = render_pass_builder->Build();
-
-    CreateGraphicsPipeline(render_pass);
-  }
-
   if (camera->has_component<PerspectiveCamera>()) {
     // TODO: cache pointers to the uniform block members
     auto cam = camera->get_component<PerspectiveCamera>();
@@ -67,20 +50,6 @@ void SSREffect::Render(
   command_buffer->BindGraphicsBindGroup(0, pipeline_layout, bind_group);
   command_buffer->Draw(3);
   command_buffer->EndRenderPass();
-
-  /*auto barrier = MemoryBarrier{
-    render_texture,
-    Access::ColorAttachmentWrite,
-    Access::ShaderRead,
-    Texture::Layout::ColorAttachment,
-    Texture::Layout::ShaderReadOnly
-  };
-
-  command_buffer->PipelineBarrier(
-    PipelineStage::ColorAttachmentOutput,
-    PipelineStage::FragmentShader,
-    {&barrier, 1}
-  );*/
 }
 
 void SSREffect::CreateUBO() {
@@ -151,7 +120,19 @@ void SSREffect::CreateShaderModules() {
   shader_frag = render_device->CreateShaderModule(spirv_frag.data(), spirv_frag.size() * sizeof(u32));
 }
 
-void SSREffect::CreateGraphicsPipeline(std::shared_ptr<RenderPass> render_pass) {
+void SSREffect::CreateRenderPass() {
+  auto render_pass_builder = render_device->CreateRenderPassBuilder();
+
+  render_pass_builder->SetColorAttachment(0, {
+    Texture::Format::B8G8R8A8_SRGB,
+    Texture::Layout::Undefined,
+    Texture::Layout::ShaderReadOnly
+  });
+
+  render_pass = render_pass_builder->Build();
+}
+
+void SSREffect::CreateGraphicsPipeline() {
   auto builder = render_device->CreateGraphicsPipelineBuilder();
 
   builder->SetViewport(0, 0, 3200, 1800);
