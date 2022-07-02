@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #pragma once
 
@@ -25,8 +24,11 @@ namespace Aura {
  *   v7 = (max.x, max.y, max.z)
  */
 struct Box3 {
-  Vector3 min; /**< the lower-left vertex */
-  Vector3 max; /**< the upper-right vertex */
+  auto Min() -> Vector3& { return min; }
+  auto Max() -> Vector3& { return max; }
+
+  auto Min() const -> Vector3 const& { return min; }
+  auto Max() const -> Vector3 const& { return max; }
 
   /**
    * Apply a matrix transform on each vertex of this bounding box.
@@ -36,16 +38,16 @@ struct Box3 {
    * @param matrix the matrix transform
    * @return the transformed bounding box
    */
-  auto apply_matrix(Matrix4 const& matrix) const -> Box3 {
+  auto ApplyMatrix(Matrix4 const& matrix) const -> Box3 {
     Box3 box;
 
-    auto min_x = matrix.x().xyz() * min.x();
-    auto max_x = matrix.x().xyz() * max.x();
-    auto min_y = matrix.y().xyz() * min.y();
-    auto max_y = matrix.y().xyz() * max.y();
-    auto min_z = matrix.z().xyz() * min.z();
-    auto max_z = matrix.z().xyz() * max.z();
-    auto translation = matrix.w().xyz();
+    auto min_x = matrix.X().XYZ() * min.X();
+    auto max_x = matrix.X().XYZ() * max.X();
+    auto min_y = matrix.Y().XYZ() * min.Y();
+    auto max_y = matrix.Y().XYZ() * max.Y();
+    auto min_z = matrix.Z().XYZ() * min.Z();
+    auto max_z = matrix.Z().XYZ() * max.Z();
+    auto translation = matrix.W().XYZ();
 
     Vector3 v[8];
     v[0] = min_x + min_y + min_z + translation;
@@ -70,17 +72,21 @@ struct Box3 {
     };
 
     for (int i = 0; i < 8; i++) {
-      box.min.x() = std::min(box.min.x(), v[i].x());
-      box.min.y() = std::min(box.min.y(), v[i].y());
-      box.min.z() = std::min(box.min.z(), v[i].z());
+      box.min.X() = std::min(box.min.X(), v[i].X());
+      box.min.Y() = std::min(box.min.Y(), v[i].Y());
+      box.min.Z() = std::min(box.min.Z(), v[i].Z());
 
-      box.max.x() = std::max(box.max.x(), v[i].x());
-      box.max.y() = std::max(box.max.y(), v[i].y());
-      box.max.z() = std::max(box.max.z(), v[i].z());
+      box.max.X() = std::max(box.max.X(), v[i].X());
+      box.max.Y() = std::max(box.max.Y(), v[i].Y());
+      box.max.Z() = std::max(box.max.Z(), v[i].Z());
     }
 
     return box;
   }
+
+private:
+  Vector3 min; /**< the lower-left vertex */
+  Vector3 max; /**< the upper-right vertex */
 };
 
 } // namespace Aura

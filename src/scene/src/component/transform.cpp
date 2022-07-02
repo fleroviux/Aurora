@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2021 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #include <aurora/math/quaternion.hpp>
 #include <aurora/scene/game_object.hpp>
@@ -10,10 +9,10 @@ namespace Aura {
 void Transform::update_local() {
   matrix_local_ = rotation_.get_matrix();
 
-  matrix_local_.x() *= scale().x();
-  matrix_local_.y() *= scale().y();
-  matrix_local_.z() *= scale().z();
-  matrix_local_.w()  = Vector4{position(), 1.0};
+  matrix_local_.X() *= scale().X();
+  matrix_local_.Y() *= scale().Y();
+  matrix_local_.Z() *= scale().Z();
+  matrix_local_.W()  = Vector4{position(), 1.0};
 }
 
 void Transform::update_world(bool update_children) {

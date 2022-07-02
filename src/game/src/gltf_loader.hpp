@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2021 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #pragma once
 
@@ -60,7 +59,7 @@ private:
   std::vector<BufferView> buffer_views_;
   std::vector<Accessor> accessors_;
   std::vector<Mesh> meshes_;
-  std::vector<std::shared_ptr<Texture>> images_;
+  std::vector<std::shared_ptr<Texture2D>> images_;
   std::vector<std::shared_ptr<Material>> materials_;
 };
 

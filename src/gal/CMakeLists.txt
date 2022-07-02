@@ -18,10 +18,12 @@ set(HEADERS
   src/vulkan/pipeline_layout.hpp
   src/vulkan/queue.hpp
   src/vulkan/render_pass.hpp
+  src/vulkan/render_pass_builder.hpp
   src/vulkan/render_target.hpp
   src/vulkan/sampler.hpp
   src/vulkan/shader_module.hpp
   src/vulkan/texture.hpp
+  src/vulkan/texture_view.hpp
 )
 
 set(HEADERS_PUBLIC

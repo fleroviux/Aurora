@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #pragma once
 
@@ -37,7 +36,7 @@ struct Quaternion {
   /**
    * Construct a Quaternion from a Vector3.
    */
-  Quaternion(Vec3 const& vec3) : data{NumericConstants<T>::zero(), vec3.x(), vec3.y(), vec3.z()} {}
+  Quaternion(Vec3 const& vec3) : data{NumericConstants<T>::Zero(), vec3.x(), vec3.y(), vec3.z()} {}
 
   /**
    * Access a component of the quaternion via its index (between `0` and `3`).
@@ -61,17 +60,17 @@ struct Quaternion {
     return data[index];
   }
 
-  auto w() -> T& { return data[0]; }
-  auto x() -> T& { return data[1]; }
-  auto y() -> T& { return data[2]; }
-  auto z() -> T& { return data[3]; }
+  auto W() -> T& { return data[0]; }
+  auto X() -> T& { return data[1]; }
+  auto Y() -> T& { return data[2]; }
+  auto Z() -> T& { return data[3]; }
 
-  auto w() const -> T { return data[0]; }
-  auto x() const -> T { return data[1]; }
-  auto y() const -> T { return data[2]; }
-  auto z() const -> T { return data[3]; }
+  auto W() const -> T { return data[0]; }
+  auto X() const -> T { return data[1]; }
+  auto Y() const -> T { return data[2]; }
+  auto Z() const -> T { return data[3]; }
 
-  auto xyz() const -> Vec3 { return Vec3{x(), y(), z()}; }
+  auto XYZ() const -> Vec3 { return Vec3{X(), Y(), Z()}; }
 
   /**
    * Perform a component-wise summation of this quaternion with another quaternion.
@@ -82,10 +81,10 @@ struct Quaternion {
    */
   auto operator+(Derived const& rhs) const -> Derived {
     return Derived{
-      w() + rhs.w(),
-      x() + rhs.x(),
-      y() + rhs.y(),
-      z() + rhs.z()
+      W() + rhs.W(),
+      X() + rhs.X(),
+      Y() + rhs.Y(),
+      Z() + rhs.Z()
     };
   }
 
@@ -111,10 +110,10 @@ struct Quaternion {
    */
   auto operator-(Derived const& rhs) const -> Derived {
     return Derived{
-      w() - rhs.w(),
-      x() - rhs.x(),
-      y() - rhs.y(),
-      z() - rhs.z()
+      W() - rhs.W(),
+      X() - rhs.X(),
+      Y() - rhs.Y(),
+      Z() - rhs.Z()
     };
   }
 
@@ -140,10 +139,10 @@ struct Quaternion {
    */
   auto operator*(T scale) const -> Derived {
     return Derived{
-      w() * scale,
-      x() * scale,
-      y() * scale,
-      z() * scale
+      W() * scale,
+      X() * scale,
+      Y() * scale,
+      Z() * scale
     };
   }
 
@@ -171,10 +170,10 @@ struct Quaternion {
    */
   auto operator*(Derived const& rhs) const -> Derived {
     return Derived{
-      w() * rhs.w() - x() * rhs.x() - y() * rhs.y() - z() * rhs.z(),
-      x() * rhs.w() + w() * rhs.x() - z() * rhs.y() + y() * rhs.z(),
-      y() * rhs.w() + z() * rhs.x() + w() * rhs.y() - x() * rhs.z(),
-      z() * rhs.w() - y() * rhs.x() + x() * rhs.y() + w() * rhs.z()
+      W() * rhs.W() - X() * rhs.X() - Y() * rhs.Y() - Z() * rhs.Z(),
+      X() * rhs.W() + W() * rhs.X() - Z() * rhs.Y() + Y() * rhs.Z(),
+      Y() * rhs.W() + Z() * rhs.X() + W() * rhs.Y() - X() * rhs.Z(),
+      Z() * rhs.W() - Y() * rhs.X() + X() * rhs.Y() + W() * rhs.Z()
     };
   }
 
@@ -192,7 +191,7 @@ struct Quaternion {
    * For rotation quaternions the conjugate is equivalent to the inverse.
    * @return a reference to this quaternion.
    */
-  auto conjugate() -> Derived& {
+  auto Conjugate() -> Derived& {
     x() = -x();
     y() = -y();
     z() = -z();
@@ -203,27 +202,27 @@ struct Quaternion {
    * Calculate the inverse of this quaternion.
    * @return the inverse quaternion
    */
-  auto inverse() const -> Derived {
-    return ~(*this) * (NumericConstants<T>::one() / length_squared());
+  auto Inverse() const -> Derived {
+    return ~(*this) * (NumericConstants<T>::One() / LengthSquared());
   }
 
   /**
    * Calculate the squared length of this quaternion.
    * @return the squared length
    */
-  auto length_squared() const -> T {
-    return w() * w() + x() * x() + y() * y() + z() * z();
+  auto LengthSquared() const -> T {
+    return Dot(*(Derived*)this);
   }
 
   /**
    * Calculate the dot product of this quaternion with another quaternion.
    * @return the dot product
    */
-  auto dot(Derived const& rhs) const -> T {
-    return w() * rhs.w() +
-           x() * rhs.x() +
-           y() * rhs.y() +
-           z() * rhs.z();
+  auto Dot(Derived const& rhs) const -> T {
+    return W() * rhs.W() +
+           X() * rhs.X() +
+           Y() * rhs.Y() +
+           Z() * rhs.Z();
   }
 
   /**
@@ -232,21 +231,21 @@ struct Quaternion {
    * @param rhs the right-hand side quaternion
    * @return the result quaternion
    */
-  auto cross(Derived const& rhs) const -> Derived {
+  auto Cross(Derived const& rhs) const -> Derived {
     return Derived{
-      NumericConstants<T>::zero(),
-      y() * rhs.z() - z() * rhs.y(),
-      z() * rhs.x() - x() * rhs.z(),
-      x() * rhs.y() - y() * rhs.x()
+      NumericConstants<T>::Zero(),
+      Y() * rhs.Z() - Z() * rhs.Y(),
+      Z() * rhs.X() - X() * rhs.Z(),
+      X() * rhs.Y() - Y() * rhs.X()
     };
   }
 
 private:
   T data[4] {
-    NumericConstants<T>::one(),
-    NumericConstants<T>::zero(),
-    NumericConstants<T>::zero(),
-    NumericConstants<T>::zero()
+    NumericConstants<T>::One(),
+    NumericConstants<T>::Zero(),
+    NumericConstants<T>::Zero(),
+    NumericConstants<T>::Zero()
   }; /**< the four components of this quaternion. */
 };
 
@@ -262,16 +261,16 @@ struct Quaternion final : detail::Quaternion<Quaternion, Vector3, float> {
    * Calculate the euclidean length of this quaternion.
    * @return the euclidean length
    */
-  auto length() const -> float {
-    return std::sqrt(length_squared());
+  auto Length() const -> float {
+    return std::sqrt(LengthSquared());
   }
 
   /**
    * Normalize this quaternion.
    * @return a reference to this quaternion
    */
-  auto normalize() -> Quaternion& {
-    auto scale = 1.0 / length();
+  auto Normalize() -> Quaternion& {
+    auto scale = 1.0 / Length();
     *this *= scale;
     return *this;
   }
@@ -281,7 +280,7 @@ struct Quaternion final : detail::Quaternion<Quaternion, Vector3, float> {
    * The result is only valid if this is a pure, normalised rotation quaternion.
    * @return the rotation matrix
    */
-  auto to_rotation_matrix() const -> Matrix4 {
+  auto ToRotationMatrix() const -> Matrix4 {
     /*
      * To derive this formula apply quaternion rotation on each
      * basis vector of the 3x3 identity matrix.
@@ -290,43 +289,43 @@ struct Quaternion final : detail::Quaternion<Quaternion, Vector3, float> {
      * mat[1] = Im(q * (0 0 1 0) * ~q)
      * mat[2] = Im(q * (0 0 0 1) * ~q)
      */
-    auto wx = w() * x();
-    auto wy = w() * y();
-    auto wz = w() * z();
+    auto wx = W() * X();
+    auto wy = W() * Y();
+    auto wz = W() * Z();
 
-    auto xx = x() * x();
-    auto xy = x() * y();
-    auto xz = x() * z();
+    auto xx = X() * X();
+    auto xy = X() * Y();
+    auto xz = X() * Z();
 
-    auto yy = y() * y();
-    auto yz = y() * z();
+    auto yy = Y() * Y();
+    auto yz = Y() * Z();
 
-    auto zz = z() * z();
+    auto zz = Z() * Z();
 
     auto mat = Matrix4{};
 
-    mat.x() = Vector4{
+    mat.X() = Vector4{
       1 - 2 * (zz + yy),
       2 * (xy + wz),
       2 * (xz - wy),
       0
     };
 
-    mat.y() = Vector4{
+    mat.Y() = Vector4{
       2 * (xy - wz),
       1 - 2 * (xx + zz),
       2 * (yz + wx),
       0
     };
 
-    mat.z() = Vector4{
+    mat.Z() = Vector4{
       2 * (xz + wy),
       2 * (yz - wx),
       1 - 2 * (xx + yy),
       0
     };
 
-    mat.w().w() = 1;
+    mat.W().W() = 1;
     return mat;
   }
 
@@ -336,7 +335,7 @@ struct Quaternion final : detail::Quaternion<Quaternion, Vector3, float> {
    * @param mat the rotation matrix
    * @return the quaternion
    */
-  static auto from_rotation_matrix(Matrix4 const& mat) -> Quaternion {
+  static auto FromRotationMatrix(Matrix4 const& mat) -> Quaternion {
     /*
      * Thanks to Martin John Baker from euclideanspace.com:
      *   http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
@@ -394,12 +393,12 @@ struct Quaternion final : detail::Quaternion<Quaternion, Vector3, float> {
    * @param angle the angle (in radians)
    * @return the rotation quaternion
    */
-  static auto from_axis_angle(Vector3 const& axis, float angle) -> Quaternion {
+  static auto FromAxisAngle(Vector3 const& axis, float angle) -> Quaternion {
     auto a = angle * 0.5f;
     auto c = std::cos(a);
     auto s = std::sin(a);
 
-    return Quaternion{c, axis.x() * s, axis.y() * s, axis.z() * s};
+    return Quaternion{c, axis.X() * s, axis.Y() * s, axis.Z() * s};
   }
 
   /**
@@ -411,7 +410,7 @@ struct Quaternion final : detail::Quaternion<Quaternion, Vector3, float> {
    * @param q1 the quaternion at `factor = 1`
    * @return the interpolated quaternion
    */
-  static auto lerp(
+  static auto Lerp(
     Quaternion const& q0,
     Quaternion const& q1,
     float t
@@ -427,12 +426,12 @@ struct Quaternion final : detail::Quaternion<Quaternion, Vector3, float> {
    * @param q1 the quaternion at `factor = 1`
    * @return the interpolated quaternion
    */
-  static auto nlerp(
+  static auto NLerp(
     Quaternion const& q0,
     Quaternion const& q1,
     float t
   ) -> Quaternion {
-    return lerp(q0, q1, t).normalize();
+    return Lerp(q0, q1, t).Normalize();
   }
 
   /**
@@ -443,7 +442,7 @@ struct Quaternion final : detail::Quaternion<Quaternion, Vector3, float> {
    * @param q1 the quaternion at `factor = 1`
    * @return the interpolated quaternion
    */
-  static auto slerp(
+  static auto SLerp(
     Quaternion const& q0,
     Quaternion const& q1,
     float t
@@ -459,17 +458,17 @@ struct Quaternion final : detail::Quaternion<Quaternion, Vector3, float> {
     if (t == 0.0) return q0;
     if (t == 1.0) return q1;
 
-    auto cos_theta = q0.dot(q1);
+    auto cos_theta = q0.Dot(q1);
 
     if (cos_theta > 0.9995) {
-      return nlerp(q0, q1, t);
+      return NLerp(q0, q1, t);
     }
 
     cos_theta = std::clamp(cos_theta, -1.0f, +1.0f);
 
     auto theta = std::acos(cos_theta);
     auto theta_t = theta * t;
-    auto q2 = (q1 - q0 * cos_theta).normalize();
+    auto q2 = (q1 - q0 * cos_theta).Normalize();
 
     return q0 * std::cos(theta_t) + q2 * std::sin(theta_t);
   }

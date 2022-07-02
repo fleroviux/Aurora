@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #include <aurora/renderer/component/camera.hpp>
 #include <aurora/log.hpp>
@@ -15,62 +14,42 @@ SSREffect::SSREffect(std::shared_ptr<RenderDevice> render_device)
     : render_device(render_device) {
   CreateUBO();
   CreateBindGroupAndPipelineLayout();
-  CreateSampler();
   CreateShaderModules();
-  //CreateGraphicsPipeline();
+  CreateRenderPass();
+  CreateGraphicsPipeline();
 }
 
 void SSREffect::Render(
   GameObject* camera,
   AnyPtr<CommandBuffer> command_buffer,
-  AnyPtr<GPUTexture> render_texture,
+  AnyPtr<Texture> render_texture,
   AnyPtr<RenderTarget> render_target,
-  AnyPtr<GPUTexture> color_texture,
-  AnyPtr<GPUTexture> depth_texture,
-  AnyPtr<GPUTexture> normal_texture
+  AnyPtr<Texture> color_texture,
+  AnyPtr<Texture> depth_texture,
+  AnyPtr<Texture> normal_texture
 ) {
-  // TODO(fleroviux): fix this absolutely atrocious terribleness
-  if (pipeline == nullptr) {
-    render_pass = render_target->CreateRenderPass({ {
-    } });
-    CreateGraphicsPipeline(render_pass);
-  }
-
   if (camera->has_component<PerspectiveCamera>()) {
     // TODO: cache pointers to the uniform block members
     auto cam = camera->get_component<PerspectiveCamera>();
     auto& projection = cam->get_projection();
     uniform_block.get<Matrix4>("projection") = projection;
-    uniform_block.get<Matrix4>("projection_inverse") = projection.inverse();
+    uniform_block.get<Matrix4>("projection_inverse") = projection.Inverse();
   } else {
     Assert(false, "SSREffect: unsupported camera type");
   }
 
   uniform_buffer->Update(uniform_block.data(), uniform_block.size());
 
-  bind_group->Bind(0, color_texture, sampler, GPUTexture::Layout::ShaderReadOnly);
-  bind_group->Bind(1, depth_texture, sampler, GPUTexture::Layout::DepthReadOnly);
-  bind_group->Bind(2, normal_texture, sampler, GPUTexture::Layout::ShaderReadOnly);
+  auto sampler = render_device->DefaultNearestSampler();
+  bind_group->Bind(0, color_texture, sampler, Texture::Layout::ShaderReadOnly);
+  bind_group->Bind(1, depth_texture, sampler, Texture::Layout::DepthReadOnly);
+  bind_group->Bind(2, normal_texture, sampler, Texture::Layout::ShaderReadOnly);
 
   command_buffer->BeginRenderPass(render_target, render_pass);
   command_buffer->BindGraphicsPipeline(pipeline);
   command_buffer->BindGraphicsBindGroup(0, pipeline_layout, bind_group);
   command_buffer->Draw(3);
   command_buffer->EndRenderPass();
-
-  auto barrier = MemoryBarrier{
-    render_texture,
-    Access::ColorAttachmentWrite,
-    Access::ShaderRead,
-    GPUTexture::Layout::ColorAttachment,
-    GPUTexture::Layout::ShaderReadOnly
-  };
-
-  command_buffer->PipelineBarrier(
-    PipelineStage::ColorAttachmentOutput,
-    PipelineStage::FragmentShader,
-    {&barrier, 1}
-  );
 }
 
 void SSREffect::CreateUBO() {
@@ -100,11 +79,6 @@ void SSREffect::CreateBindGroupAndPipelineLayout() {
   bind_group->Bind(3, uniform_buffer, BindGroupLayout::Entry::Type::UniformBuffer);
 
   pipeline_layout = render_device->CreatePipelineLayout({bind_group_layout});
-}
-
-void SSREffect::CreateSampler() {
-  // TODO: have the render device expose default samplers.
-  sampler = render_device->CreateSampler(Sampler::Config{});
 }
 
 void SSREffect::CreateShaderModules() {
@@ -146,7 +120,19 @@ void SSREffect::CreateShaderModules() {
   shader_frag = render_device->CreateShaderModule(spirv_frag.data(), spirv_frag.size() * sizeof(u32));
 }
 
-void SSREffect::CreateGraphicsPipeline(std::shared_ptr<RenderPass> render_pass) {
+void SSREffect::CreateRenderPass() {
+  auto render_pass_builder = render_device->CreateRenderPassBuilder();
+
+  render_pass_builder->SetColorAttachment(0, {
+    Texture::Format::B8G8R8A8_SRGB,
+    Texture::Layout::Undefined,
+    Texture::Layout::ShaderReadOnly
+  });
+
+  render_pass = render_pass_builder->Build();
+}
+
+void SSREffect::CreateGraphicsPipeline() {
   auto builder = render_device->CreateGraphicsPipelineBuilder();
 
   builder->SetViewport(0, 0, 3200, 1800);

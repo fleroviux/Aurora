@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #pragma once
 
@@ -32,7 +31,7 @@ struct Frustum {
    * @param side the side (or face)
    * @return the parametric {@link #Plane}
    */
-  auto get_plane(Side side) const -> Plane const& {
+  auto GetPlane(Side side) const -> Plane const& {
     return planes[(int)side];
   }
 
@@ -42,7 +41,7 @@ struct Frustum {
    * @param side the side (or face)
    * @param the parametric {@link #Plane}
    */
-  void set_plane(Side side, Plane const& plane) {
+  void SetPlane(Side side, Plane const& plane) {
     planes[(int)side] = plane;
   }
 
@@ -53,15 +52,15 @@ struct Frustum {
    * @param box the bounding box
    * @return true if the {@link #Box3} is partially or fully inside this Frustum
    */
-  bool contains_box(Box3 const& box) const {
+  bool ContainsBox(Box3 const& box) const {
     for (auto& plane : planes) {
       auto point = Vector3{
-        plane.x() > 0 ? box.max.x() : box.min.x(),
-        plane.y() > 0 ? box.max.y() : box.min.y(),
-        plane.z() > 0 ? box.max.z() : box.min.z()
+        plane.X() > 0 ? box.Max().X() : box.Min().X(),
+        plane.Y() > 0 ? box.Max().Y() : box.Min().Y(),
+        plane.Z() > 0 ? box.Max().Z() : box.Min().Z()
       };
 
-      if (plane.get_distance_to_point(point) < 0) {
+      if (plane.GetDistanceToPoint(point) < 0) {
         return false;
       }
     }

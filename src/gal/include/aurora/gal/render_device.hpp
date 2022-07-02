@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #pragma once
 
@@ -82,34 +81,39 @@ struct RenderDevice {
   virtual auto CreateTexture2D(
     u32 width,
     u32 height,
-    GPUTexture::Format format,
-    GPUTexture::Usage usage,
-    u32 mip_levels = 1
-  ) -> std::unique_ptr<GPUTexture> = 0;
+    Texture::Format format,
+    Texture::Usage usage,
+    u32 mip_count = 1
+  ) -> std::unique_ptr<Texture> = 0;
 
   virtual auto CreateTexture2DFromSwapchainImage(
     u32 width,
     u32 height,
-    GPUTexture::Format format,
+    Texture::Format format,
     void* image_handle
-  ) -> std::unique_ptr<GPUTexture> = 0;
+  ) -> std::unique_ptr<Texture> = 0;
 
   virtual auto CreateTextureCube(
     u32 width,
     u32 height,
-    GPUTexture::Format format,
-    GPUTexture::Usage usage,
-    u32 mip_levels = 1
-  ) -> std::unique_ptr<GPUTexture> = 0;
+    Texture::Format format,
+    Texture::Usage usage,
+    u32 mip_count = 1
+  ) -> std::unique_ptr<Texture> = 0;
 
   virtual auto CreateSampler(
     Sampler::Config const& config
   ) -> std::unique_ptr<Sampler> = 0;
 
+  virtual auto DefaultNearestSampler() -> Sampler* = 0;
+  virtual auto DefaultLinearSampler() -> Sampler* = 0;
+
   virtual auto CreateRenderTarget(
-    std::vector<std::shared_ptr<GPUTexture>> const& color_attachments,
-    std::shared_ptr<GPUTexture> depth_stencil_attachment = {}
+    std::vector<std::shared_ptr<Texture>> const& color_attachments,
+    std::shared_ptr<Texture> depth_stencil_attachment = {}
   ) -> std::unique_ptr<RenderTarget> = 0;
+
+  virtual auto CreateRenderPassBuilder() -> std::unique_ptr<RenderPassBuilder> = 0;
 
   virtual auto CreateBindGroupLayout(
     std::vector<BindGroupLayout::Entry> const& entries
@@ -121,11 +125,7 @@ struct RenderDevice {
 
   virtual auto CreateGraphicsPipelineBuilder() -> std::unique_ptr<GraphicsPipelineBuilder> = 0;
 
-  // TODO: better handle queue families
-  virtual auto CreateCommandPool(
-    u32 queue_family,
-    CommandPool::Usage usage
-  ) -> std::shared_ptr<CommandPool> = 0;
+  virtual auto CreateGraphicsCommandPool(CommandPool::Usage usage) -> std::shared_ptr<CommandPool> = 0;
 
   virtual auto CreateCommandBuffer(
     std::shared_ptr<CommandPool> pool

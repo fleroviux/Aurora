@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #pragma once
 
@@ -201,7 +200,7 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
   auto Build() -> std::unique_ptr<GraphicsPipeline> override {
     auto number_of_color_attachments = own.render_pass->GetNumberOfColorAttachments();
 
-    Assert(number_of_color_attachments <= kColorAttachmentLimit,
+    Assert(number_of_color_attachments <= attachment_blend_state.size(),
       "VulkanGraphicsPipelineBuilder: render pass with more than 32 color attachments is unsupported.");
 
     color_blend_info.attachmentCount = (u32)number_of_color_attachments;
@@ -221,8 +220,6 @@ struct VulkanGraphicsPipelineBuilder final : GraphicsPipelineBuilder {
   }
 
 private:
-  static constexpr size_t kColorAttachmentLimit = 32;
-
   void SetScissorInternal(int x, int y, int width, int height) {
     scissor.offset.x = x;
     scissor.offset.y = y;
@@ -426,7 +423,7 @@ private:
     .primitiveRestartEnable = VK_FALSE
   };
 
-  std::array<VkPipelineColorBlendAttachmentState, kColorAttachmentLimit> attachment_blend_state;
+  std::array<VkPipelineColorBlendAttachmentState, VulkanRenderPass::kMaxColorAttachments> attachment_blend_state;
 
   VkPipelineColorBlendStateCreateInfo color_blend_info{
     .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,

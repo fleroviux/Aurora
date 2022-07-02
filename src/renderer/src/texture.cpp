@@ -1,13 +1,12 @@
-/*
- * Copyright (C) 2021 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #include <aurora/renderer/texture.hpp>
 #include <stb_image.h>
 
 namespace Aura {
 
-auto Texture::load(std::string const& path) -> std::unique_ptr<Texture> {
+auto Texture2D::load(std::string const& path) -> std::unique_ptr<Texture2D> {
   int width;
   int height;
   int components;
@@ -15,7 +14,7 @@ auto Texture::load(std::string const& path) -> std::unique_ptr<Texture> {
 
   Assert(data != nullptr, "Failed to load texture: {}", path);
 
-  return std::make_unique<Texture>(width, height, data);
+  return std::make_unique<Texture2D>(width, height, data);
 }
 
 } // namespace Aura

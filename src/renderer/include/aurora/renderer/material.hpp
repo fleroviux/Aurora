@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2021 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #pragma once
 
@@ -51,7 +50,7 @@ struct Material {
   virtual auto get_vert_shader() -> char const* = 0;
   virtual auto get_frag_shader() -> char const* = 0;
   virtual auto get_uniforms() -> UniformBlock& = 0;
-  virtual auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture>> = 0;
+  virtual auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture2D>> = 0;
 
   auto side() const -> Side {
     return side_;
@@ -113,38 +112,38 @@ struct PbrMaterial final : Material {
     return uniforms_.get<float>("roughness");
   }
 
-  auto get_albedo_map() -> std::shared_ptr<Texture> {
+  auto get_albedo_map() -> std::shared_ptr<Texture2D> {
     return texture_slots_[0];
   }
 
-  void set_albedo_map(std::shared_ptr<Texture> texture) {
+  void set_albedo_map(std::shared_ptr<Texture2D> texture) {
     texture_slots_[0] = texture;
     set_compile_option("ENABLE_ALBEDO_MAP", (bool)texture);
   }
 
-  auto get_metalness_map() -> std::shared_ptr<Texture> {
+  auto get_metalness_map() -> std::shared_ptr<Texture2D> {
     return texture_slots_[1];
   }
 
-  void set_metalness_map(std::shared_ptr<Texture> texture) {
+  void set_metalness_map(std::shared_ptr<Texture2D> texture) {
     texture_slots_[1] = texture;
     set_compile_option("ENABLE_METALNESS_MAP", (bool)texture);
   }
 
-  auto get_roughness_map() -> std::shared_ptr<Texture> {
+  auto get_roughness_map() -> std::shared_ptr<Texture2D> {
     return texture_slots_[2];
   }
 
-  void set_roughness_map(std::shared_ptr<Texture> texture) {
+  void set_roughness_map(std::shared_ptr<Texture2D> texture) {
     texture_slots_[2] = texture;
     set_compile_option("ENABLE_ROUGHNESS_MAP", (bool)texture);
   }
 
-  auto get_normal_map() -> std::shared_ptr<Texture> {
+  auto get_normal_map() -> std::shared_ptr<Texture2D> {
     return texture_slots_[3];
   }
 
-  void set_normal_map(std::shared_ptr<Texture> texture) {
+  void set_normal_map(std::shared_ptr<Texture2D> texture) {
     texture_slots_[3] = texture;
     set_compile_option("ENABLE_NORMAL_MAP", (bool)texture);
   }
@@ -161,13 +160,13 @@ struct PbrMaterial final : Material {
     return uniforms_;
   }
 
-  auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture>> override {
+  auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture2D>> override {
     return ArrayView{texture_slots_, 4};
   }
 
 private:
   UniformBlock uniforms_;
-  std::shared_ptr<Texture> texture_slots_[4];
+  std::shared_ptr<Texture2D> texture_slots_[4];
 };
 
 } // namespace Aura

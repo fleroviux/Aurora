@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #pragma once
 
@@ -63,10 +62,19 @@ struct BindGroup {
 
   virtual void Bind(
     u32 binding,
-    AnyPtr<GPUTexture> texture,
+    AnyPtr<Texture::View> texture_view,
     AnyPtr<Sampler> sampler,
-    GPUTexture::Layout layout
+    Texture::Layout layout
   ) = 0;
+
+  void Bind(
+    u32 binding,
+    AnyPtr<Texture> texture,
+    AnyPtr<Sampler> sampler,
+    Texture::Layout layout
+  ) {
+    Bind(binding, texture->DefaultView(), sampler, layout);
+  }
 };
 
 } // namespace Aura

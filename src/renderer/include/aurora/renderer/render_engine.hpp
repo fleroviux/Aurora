@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #pragma once
 
@@ -22,7 +21,7 @@ struct RenderEngineBase {
     std::array<std::unique_ptr<CommandBuffer>, 2>& command_buffers
   ) = 0;
 
-  virtual auto GetOutputTexture() -> GPUTexture* = 0;
+  virtual auto GetOutputTexture() -> Texture* = 0;
 };
 
 auto CreateRenderEngine(

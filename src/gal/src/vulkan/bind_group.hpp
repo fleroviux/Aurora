@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #pragma once
 
@@ -65,13 +64,13 @@ struct VulkanBindGroup final : BindGroup {
 
   void Bind(
     u32 binding,
-    AnyPtr<GPUTexture> texture,
+    AnyPtr<Texture::View> texture_view,
     AnyPtr<Sampler> sampler,
-    GPUTexture::Layout layout
+    Texture::Layout layout
   ) override {
     auto image_info = VkDescriptorImageInfo{
       .sampler = (VkSampler)sampler->Handle(),
-      .imageView = (VkImageView)texture->handle(),
+      .imageView = (VkImageView)texture_view->Handle(),
       .imageLayout = (VkImageLayout)layout
     };
 

@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #include <algorithm>
 #include <shaderc/shaderc.hpp>
@@ -12,8 +11,11 @@ namespace Aura {
 
 ForwardRenderPipeline::ForwardRenderPipeline(
   std::shared_ptr<RenderDevice> render_device,
-  std::shared_ptr<GeometryCache> geometry_cache
-)   : render_device(render_device), geometry_cache(geometry_cache) {
+  std::shared_ptr<GeometryCache> geometry_cache,
+  std::shared_ptr<TextureCache> texture_cache
+)   : render_device(render_device)
+    , geometry_cache(geometry_cache)
+    , texture_cache_(texture_cache) {
   CreateCameraUniformBlock();
   CreateRenderTarget();
   CreateBindGroupAndPipelineLayout();
@@ -44,10 +46,10 @@ void ForwardRenderPipeline::Render(
     // TODO: calculate view * world here and use it both for sorting and for culling.
     if (mesh && mesh->visible && IsObjectInsideCameraFrustum(modelview, mesh->geometry)) {
       auto& position = transform.position();
-      auto  view_z = modelview.x().z() * position.x() +
-                     modelview.y().z() * position.y() +
-                     modelview.z().z() * position.z() +
-                     modelview.w().z();
+      auto  view_z = modelview.X().Z() * position.X() +
+                     modelview.Y().Z() * position.Y() +
+                     modelview.Z().Z() * position.Z() +
+                     modelview.W().Z();
 
       if (mesh->material->blend_state.enable) {
         render_list_transparent.push_back({object, mesh, view_z});
@@ -88,58 +90,17 @@ void ForwardRenderPipeline::Render(
   }
 
   command_buffers[1]->EndRenderPass();
-
-  // TODO: use a subpass dependency to transition render target image layouts.
-  MemoryBarrier barriers[]{
-    {
-      color_texture,
-      Access::ColorAttachmentWrite,
-      Access::ShaderRead,
-      GPUTexture::Layout::ColorAttachment,
-      GPUTexture::Layout::ShaderReadOnly
-    },
-    {
-      albedo_texture,
-      Access::ColorAttachmentWrite,
-      Access::ShaderRead,
-      GPUTexture::Layout::ColorAttachment,
-      GPUTexture::Layout::ShaderReadOnly
-    },
-    {
-      normal_texture,
-      Access::ColorAttachmentWrite,
-      Access::ShaderRead,
-      GPUTexture::Layout::ColorAttachment,
-      GPUTexture::Layout::ShaderReadOnly
-    },
-    {
-      depth_texture,
-      Access::DepthStencilAttachmentWrite,
-      Access::ShaderRead,
-      GPUTexture::Layout::DepthStencilAttachment,
-      GPUTexture::Layout::DepthReadOnly,
-      {
-        GPUTexture::Aspect::Depth
-      }
-    }
-  };
-
-  command_buffers[1]->PipelineBarrier(
-    PipelineStage::ColorAttachmentOutput | PipelineStage::LateFragmentTests,
-    PipelineStage::FragmentShader,
-    {barriers, 4}
-  );
 }
 
-auto ForwardRenderPipeline::GetColorTexture() -> GPUTexture* {
+auto ForwardRenderPipeline::GetColorTexture() -> Texture* {
   return color_texture.get();
 }
 
-auto ForwardRenderPipeline::GetDepthTexture() -> GPUTexture* {
+auto ForwardRenderPipeline::GetDepthTexture() -> Texture* {
   return depth_texture.get();
 }
 
-auto ForwardRenderPipeline::GetNormalTexture() -> GPUTexture* {
+auto ForwardRenderPipeline::GetNormalTexture() -> Texture* {
   return normal_texture.get();
 }
 
@@ -158,35 +119,53 @@ void ForwardRenderPipeline::CreateRenderTarget() {
   color_texture = render_device->CreateTexture2D(
     3200,
     1800,
-    GPUTexture::Format::B8G8R8A8_SRGB,
-    GPUTexture::Usage::ColorAttachment | GPUTexture::Usage::Sampled
+    Texture::Format::B8G8R8A8_SRGB,
+    Texture::Usage::ColorAttachment | Texture::Usage::Sampled
   );
 
   // TODO: use the proper format.
   albedo_texture = render_device->CreateTexture2D(
     3200,
     1800,
-    GPUTexture::Format::B8G8R8A8_SRGB,
-    GPUTexture::Usage::ColorAttachment | GPUTexture::Usage::Sampled
+    Texture::Format::B8G8R8A8_SRGB,
+    Texture::Usage::ColorAttachment | Texture::Usage::Sampled
   );
 
   // TODO: use the proper format.
   normal_texture = render_device->CreateTexture2D(
     3200,
     1800,
-    GPUTexture::Format::B8G8R8A8_SRGB,
-    GPUTexture::Usage::ColorAttachment | GPUTexture::Usage::Sampled
+    Texture::Format::B8G8R8A8_SRGB,
+    Texture::Usage::ColorAttachment | Texture::Usage::Sampled
   );
 
   depth_texture = render_device->CreateTexture2D(
     3200,
     1800,
-    GPUTexture::Format::DEPTH_F32,
-    GPUTexture::Usage::DepthStencilAttachment | GPUTexture::Usage::Sampled
+    Texture::Format::DEPTH_F32,
+    Texture::Usage::DepthStencilAttachment | Texture::Usage::Sampled
   );
 
   render_target = render_device->CreateRenderTarget({color_texture, albedo_texture, normal_texture}, depth_texture);
-  render_pass = render_target->CreateRenderPass();
+
+  auto render_pass_builder = render_device->CreateRenderPassBuilder();
+
+  const auto color_attachment_config = RenderPassBuilder::AttachmentConfig{
+    Texture::Format::B8G8R8A8_SRGB,
+    Texture::Layout::Undefined,
+    Texture::Layout::ShaderReadOnly
+  };
+
+  render_pass_builder->SetColorAttachment(0, color_attachment_config);
+  render_pass_builder->SetColorAttachment(1, color_attachment_config);
+  render_pass_builder->SetColorAttachment(2, color_attachment_config);
+  render_pass_builder->SetDepthAttachment({
+    Texture::Format::DEPTH_F32,
+    Texture::Layout::Undefined,
+    Texture::Layout::DepthStencilReadOnly
+  });
+
+  render_pass = render_pass_builder->Build();
 
   render_pass->SetClearColor(0, 0.01, 0.01, 0.01, 1.0);
   render_pass->SetClearColor(1, 0.00, 0.00, 0.00, 0.5);
@@ -286,14 +265,14 @@ auto ForwardRenderPipeline::CreatePipeline(
 }
 
 void ForwardRenderPipeline::CreateExampleCubeMap(VkCommandBuffer command_buffer) {
-  std::shared_ptr<Texture> nx = Texture::load("env/nx.png");
-  std::shared_ptr<Texture> ny = Texture::load("env/ny.png");
-  std::shared_ptr<Texture> nz = Texture::load("env/nz.png");
-  std::shared_ptr<Texture> px = Texture::load("env/px.png");
-  std::shared_ptr<Texture> py = Texture::load("env/py.png");
-  std::shared_ptr<Texture> pz = Texture::load("env/pz.png");
+  std::shared_ptr<Texture2D> nx = Texture2D::load("env/nx.png");
+  std::shared_ptr<Texture2D> ny = Texture2D::load("env/ny.png");
+  std::shared_ptr<Texture2D> nz = Texture2D::load("env/nz.png");
+  std::shared_ptr<Texture2D> px = Texture2D::load("env/px.png");
+  std::shared_ptr<Texture2D> py = Texture2D::load("env/py.png");
+  std::shared_ptr<Texture2D> pz = Texture2D::load("env/pz.png");
 
-  std::array<std::shared_ptr<Texture>, 6> textures{ px, nx, py, ny, pz, nz };
+  std::array<std::shared_ptr<Texture2D>, 6> textures{ px, nx, py, ny, pz, nz };
 
   UploadTextureCube(command_buffer, textures);
 
@@ -346,22 +325,16 @@ void ForwardRenderPipeline::RenderObject(
 
   for (int i = 0; i < texture_slots.size(); i++) {
     auto& texture = texture_slots[i];
+
     if (texture) {
-      auto match = texture_cache.find(texture.get());
+      auto& entry = texture_cache_->Get(texture);
 
-      if (match == texture_cache.end()) {
-        UploadTexture((VkCommandBuffer)command_buffers[0]->Handle(), texture);
-        match = texture_cache.find(texture.get());
-      }
-
-      auto& data = match->second;
-
-      object_data.bind_group->Bind(3 + i, data.texture, data.sampler, GPUTexture::Layout::ShaderReadOnly);
+      object_data.bind_group->Bind(3 + i, entry.texture, entry.sampler, Texture::Layout::ShaderReadOnly);
     }
   }
 
   auto& cube_entry = texture_cache[cubemap_handle];
-  object_data.bind_group->Bind(34, cube_entry.texture, cube_entry.sampler, GPUTexture::Layout::ShaderReadOnly);
+  object_data.bind_group->Bind(34, cube_entry.texture, cube_entry.sampler, Texture::Layout::ShaderReadOnly);
 
   // Update and bind material UBO
   auto& uniforms = material->get_uniforms();
@@ -391,9 +364,9 @@ void ForwardRenderPipeline::RenderObject(
 }
 
 bool ForwardRenderPipeline::IsObjectInsideCameraFrustum(Matrix4 const& modelview, std::shared_ptr<Geometry> const& geometry) {
-  auto aabb = geometry->get_bounding_box().apply_matrix(modelview);
+  auto aabb = geometry->get_bounding_box().ApplyMatrix(modelview);
 
-  return camera_data.frustum->contains_box(aabb);
+  return camera_data.frustum->ContainsBox(aabb);
 }
 
 void ForwardRenderPipeline::UpdateCamera(GameObject* camera) {
@@ -412,7 +385,7 @@ void ForwardRenderPipeline::UpdateCamera(GameObject* camera) {
     Assert(false, "Renderer: camera does not hold a camera component");
   }
 
-  *camera_data.view = camera->transform().world().inverse();
+  *camera_data.view = camera->transform().world().Inverse();
 
   camera_data.ubo->Update(camera_data.data.data(), camera_data.data.size());
 }
@@ -465,104 +438,9 @@ void ForwardRenderPipeline::CompileShaderProgram(AnyPtr<Material> material) {
   data.shader_frag = render_device->CreateShaderModule(spirv_frag.data(), spirv_frag.size() * sizeof(u32));
 }
 
-void ForwardRenderPipeline::UploadTexture(
-  VkCommandBuffer command_buffer,
-  std::shared_ptr<Texture>& texture
-) {
-  // TODO: select mip count based on width/height.
-  int mip_count = 6;
-
-  auto width = texture->width();
-  auto height = texture->height();
-  auto& data = texture_cache[texture.get()];
-
-  if (mip_count == 1) {
-    data.texture = render_device->CreateTexture2D(
-      width,
-      height,
-      GPUTexture::Format::R8G8B8A8_SRGB,
-      GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled,
-      1
-    );
-  } else {
-    data.texture = render_device->CreateTexture2D(
-      width,
-      height,
-      GPUTexture::Format::R8G8B8A8_SRGB,
-      GPUTexture::Usage::CopySrc | GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled,
-      mip_count
-    );
-  }
-
-  data.buffer = render_device->CreateBufferWithData(
-    Buffer::Usage::CopySrc,
-    texture->data(),
-    sizeof(u32) * width * height
-  );
-
-  data.sampler = render_device->CreateSampler({
-    .address_mode_u = Sampler::AddressMode::Repeat,
-    .address_mode_v = Sampler::AddressMode::Repeat,
-    .min_filter = Sampler::FilterMode::Linear,
-    .mag_filter = Sampler::FilterMode::Linear,
-    .mip_filter = Sampler::FilterMode::Linear,
-    .anisotropy = true,
-    .max_anisotropy = 16
-  });
-
-  auto region = VkBufferImageCopy{
-    .bufferOffset = 0,
-    .bufferRowLength = width,
-    .bufferImageHeight = height,
-    .imageSubresource = VkImageSubresourceLayers{
-      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-      .mipLevel = 0,
-      .baseArrayLayer = 0,
-      .layerCount = 1
-    },
-    .imageOffset = VkOffset3D{
-      .x = 0,
-      .y = 0,
-      .z = 0
-    },
-    .imageExtent = VkExtent3D{
-      .width = width,
-      .height = height,
-      .depth = 1
-    }
-  };
-
-  TransitionImageLayout(
-    command_buffer,
-    data.texture,
-    GPUTexture::Layout::Undefined,
-    GPUTexture::Layout::CopyDst
-  );
-
-  vkCmdCopyBufferToImage(
-    command_buffer,
-    (VkBuffer)data.buffer->Handle(),
-    (VkImage)data.texture->handle2(),
-    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-    1,
-    &region
-  );
-
-  if (mip_count == 1) {
-    TransitionImageLayout(
-      command_buffer,
-      data.texture,
-      GPUTexture::Layout::CopyDst,
-      GPUTexture::Layout::ShaderReadOnly
-    );
-  } else {
-    GenerateMipMaps(command_buffer, data.texture);
-  }
-}
-
 void ForwardRenderPipeline::UploadTextureCube(
   VkCommandBuffer command_buffer,
-  std::array<std::shared_ptr<Texture>, 6>& textures
+  std::array<std::shared_ptr<Texture2D>, 6>& textures
 ) {
   // TODO: select mip count based on width/height.
   int mip_count = 6;
@@ -576,15 +454,15 @@ void ForwardRenderPipeline::UploadTextureCube(
     data.texture = render_device->CreateTextureCube(
       width,
       height,
-      GPUTexture::Format::R8G8B8A8_SRGB,
-      GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled
+      Texture::Format::R8G8B8A8_SRGB,
+      Texture::Usage::CopyDst | Texture::Usage::Sampled
     );
   } else {
     data.texture = render_device->CreateTextureCube(
       width,
       height,
-      GPUTexture::Format::R8G8B8A8_SRGB,
-      GPUTexture::Usage::CopySrc | GPUTexture::Usage::CopyDst | GPUTexture::Usage::Sampled,
+      Texture::Format::R8G8B8A8_SRGB,
+      Texture::Usage::CopySrc | Texture::Usage::CopyDst | Texture::Usage::Sampled,
       mip_count
     );
   }
@@ -630,14 +508,14 @@ void ForwardRenderPipeline::UploadTextureCube(
   TransitionImageLayout(
     command_buffer,
     data.texture,
-    GPUTexture::Layout::Undefined,
-    GPUTexture::Layout::CopyDst
+    Texture::Layout::Undefined,
+    Texture::Layout::CopyDst
   );
 
   vkCmdCopyBufferToImage(
     command_buffer,
     (VkBuffer)data.buffer->Handle(),
-    (VkImage)data.texture->handle2(),
+    (VkImage)data.texture->Handle(),
     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
     1,
     &region
@@ -647,27 +525,27 @@ void ForwardRenderPipeline::UploadTextureCube(
     TransitionImageLayout(
       command_buffer,
       data.texture,
-      GPUTexture::Layout::CopyDst,
-      GPUTexture::Layout::ShaderReadOnly
+      Texture::Layout::CopyDst,
+      Texture::Layout::ShaderReadOnly
     );
   } else {
     GenerateMipMaps(command_buffer, data.texture);
   }
 }
 
-void ForwardRenderPipeline::GenerateMipMaps(VkCommandBuffer command_buffer, AnyPtr<GPUTexture> texture) {
-  const int mip_count = texture->mip_levels();
+void ForwardRenderPipeline::GenerateMipMaps(VkCommandBuffer command_buffer, AnyPtr<Texture> texture) {
+  const int mip_count = texture->GetMipCount();
 
   TransitionImageLayout(
     command_buffer,
     texture,
-    GPUTexture::Layout::CopyDst,
-    GPUTexture::Layout::CopySrc,
+    Texture::Layout::CopyDst,
+    Texture::Layout::CopySrc,
     0
   );
 
-  auto mip_width = texture->width();
-  auto mip_height = texture->height();
+  auto mip_width = texture->GetWidth();
+  auto mip_height = texture->GetHeight();
 
   for (int i = 1; i < mip_count; i++) {
     auto blit = VkImageBlit{
@@ -675,39 +553,39 @@ void ForwardRenderPipeline::GenerateMipMaps(VkCommandBuffer command_buffer, AnyP
         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
         .mipLevel = (u32)(i - 1),
         .baseArrayLayer = 0,
-        .layerCount = texture->layers()
+        .layerCount = texture->GetLayerCount()
       },
       .dstSubresource = VkImageSubresourceLayers{
         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
         .mipLevel = (u32)i,
         .baseArrayLayer = 0,
-        .layerCount = texture->layers()
+        .layerCount = texture->GetLayerCount()
       }
     };
 
-    blit.srcOffsets[0] = { .x = 0, .y = 0, .z = 0 };
-    blit.srcOffsets[1] = { .x = (s32)mip_width, .y = (s32)mip_height, .z = 1 };
+    blit.srcOffsets[0] = {.x = 0, .y = 0, .z = 0};
+    blit.srcOffsets[1] = {.x = (s32)mip_width, .y = (s32)mip_height, .z = 1};
 
     if (mip_width > 1) mip_width /= 2;
     if (mip_height > 1) mip_height /= 2;
 
-    blit.dstOffsets[0] = { .x = 0, .y = 0, .z = 0 };
-    blit.dstOffsets[1] = { .x = (s32)mip_width, .y = (s32)mip_height, .z = 1 };
+    blit.dstOffsets[0] = {.x = 0, .y = 0, .z = 0};
+    blit.dstOffsets[1] = {.x = (s32)mip_width, .y = (s32)mip_height, .z = 1};
 
     TransitionImageLayout(
       command_buffer,
       texture,
-      GPUTexture::Layout::Undefined,
-      GPUTexture::Layout::CopyDst,
+      Texture::Layout::Undefined,
+      Texture::Layout::CopyDst,
       i
     );
 
     // TODO: we might want to use a cubic filter if available!
     vkCmdBlitImage(
       command_buffer,
-      (VkImage)texture->handle2(),
+      (VkImage)texture->Handle(),
       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-      (VkImage)texture->handle2(),
+      (VkImage)texture->Handle(),
       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
       1, &blit,
       VK_FILTER_LINEAR
@@ -717,8 +595,8 @@ void ForwardRenderPipeline::GenerateMipMaps(VkCommandBuffer command_buffer, AnyP
     TransitionImageLayout(
       command_buffer,
       texture,
-      GPUTexture::Layout::CopyDst,
-      GPUTexture::Layout::CopySrc,
+      Texture::Layout::CopyDst,
+      Texture::Layout::CopySrc,
       i
     );
   }
@@ -726,8 +604,8 @@ void ForwardRenderPipeline::GenerateMipMaps(VkCommandBuffer command_buffer, AnyP
   TransitionImageLayout(
     command_buffer,
     texture,
-    GPUTexture::Layout::CopySrc,
-    GPUTexture::Layout::ShaderReadOnly,
+    Texture::Layout::CopySrc,
+    Texture::Layout::ShaderReadOnly,
     0,
     mip_count
   );
@@ -735,9 +613,9 @@ void ForwardRenderPipeline::GenerateMipMaps(VkCommandBuffer command_buffer, AnyP
 
 void ForwardRenderPipeline::TransitionImageLayout(
   VkCommandBuffer command_buffer,
-  AnyPtr<GPUTexture> texture,
-  GPUTexture::Layout old_layout,
-  GPUTexture::Layout new_layout,
+  AnyPtr<Texture> texture,
+  Texture::Layout old_layout,
+  Texture::Layout new_layout,
   u32 base_mip,
   u32 mip_count
 ) {
@@ -749,47 +627,47 @@ void ForwardRenderPipeline::TransitionImageLayout(
     .newLayout = (VkImageLayout)new_layout,
     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
     .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-    .image = (VkImage)texture->handle2(),
+    .image = (VkImage)texture->Handle(),
     .subresourceRange = VkImageSubresourceRange{
       .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
       .baseMipLevel = base_mip,
       .levelCount = mip_count,
       .baseArrayLayer = 0,
-      .layerCount = texture->layers()
+      .layerCount = texture->GetLayerCount()
     }
   };
 
   auto src_stage = VkPipelineStageFlags{};
   auto dst_stage = VkPipelineStageFlags{};
 
-  if (old_layout == GPUTexture::Layout::Undefined && new_layout == GPUTexture::Layout::CopyDst) {
+  if (old_layout == Texture::Layout::Undefined && new_layout == Texture::Layout::CopyDst) {
     barrier.srcAccessMask = 0;
     barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
     src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  } else if (old_layout == GPUTexture::Layout::CopyDst && new_layout == GPUTexture::Layout::CopySrc) {
+  } else if (old_layout == Texture::Layout::CopyDst && new_layout == Texture::Layout::CopySrc) {
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
     // TODO: make sure that this is actually valid and correct.
     src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  } else if (old_layout == GPUTexture::Layout::CopySrc && new_layout == GPUTexture::Layout::ShaderReadOnly) {
+  } else if (old_layout == Texture::Layout::CopySrc && new_layout == Texture::Layout::ShaderReadOnly) {
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
     // TODO: what if a texture is read from the vertex shader?
     src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  } else if (old_layout == GPUTexture::Layout::CopyDst && new_layout == GPUTexture::Layout::ShaderReadOnly) {
+  } else if (old_layout == Texture::Layout::CopyDst && new_layout == Texture::Layout::ShaderReadOnly) {
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
     // TODO: what if a texture is read from the vertex shader?
     src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  } else if (old_layout == GPUTexture::Layout::ColorAttachment && new_layout == GPUTexture::Layout::ShaderReadOnly) {
+  } else if (old_layout == Texture::Layout::ColorAttachment && new_layout == Texture::Layout::ShaderReadOnly) {
     barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 

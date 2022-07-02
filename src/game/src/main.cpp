@@ -1,7 +1,6 @@
 
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #include <aurora/gal/backend/vulkan.hpp>
 #include <aurora/renderer/component/camera.hpp>
@@ -353,9 +352,9 @@ struct ScreenRenderer {
     std::unique_ptr<CommandBuffer>& command_buffer,
     std::unique_ptr<RenderTarget>& render_target,
     std::shared_ptr<RenderPass>& render_pass, 
-    GPUTexture* texture
+    Texture* texture
   ) {
-    bind_group->Bind(1, texture, sampler, GPUTexture::Layout::ShaderReadOnly);
+    bind_group->Bind(1, texture, sampler, Texture::Layout::ShaderReadOnly);
 
     render_pass->SetClearColor(0, 1, 0, 0, 1);
 
@@ -389,7 +388,7 @@ private:
 
   void CreateUniformBuffer() {
     // TODO: get rid of this once we reworked the shader
-    auto transform = Matrix4::perspective_vk(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0);
+    auto transform = Matrix4::PerspectiveVK(45 / 180.0 * 3.141592, 1600.0 / 900, 0.01, 100.0);
 
     ubo = render_device->CreateBufferWithData(
       Aura::Buffer::Usage::UniformBuffer,
@@ -494,10 +493,10 @@ struct Application {
     vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, swapchain_images.data());
 
     for (auto swapchain_image : swapchain_images) {
-      auto texture = (std::shared_ptr<GPUTexture>)render_device->CreateTexture2DFromSwapchainImage(
+      auto texture = (std::shared_ptr<Texture>)render_device->CreateTexture2DFromSwapchainImage(
         1600,
         900,
-        GPUTexture::Format::B8G8R8A8_SRGB,
+        Texture::Format::B8G8R8A8_SRGB,
         (void*)swapchain_image
       );
 
@@ -506,11 +505,14 @@ struct Application {
       render_targets.push_back(std::move(render_target));
     }
 
-    render_pass = render_targets[0]->CreateRenderPass({ RenderPass::Descriptor{
-      //.load_op = RenderPass::LoadOp::DontCare,
-      .layout_src = GPUTexture::Layout::Undefined,
-      .layout_dst = GPUTexture::Layout::PresentSrc
-    }});
+    auto render_pass_builder = render_device->CreateRenderPassBuilder();
+
+    render_pass_builder->SetColorAttachment(0, {
+      Texture::Format::B8G8R8A8_SRGB,
+      Texture::Layout::Undefined,
+      Texture::Layout::PresentSrc
+    });
+    render_pass = render_pass_builder->Build();
   }
 
   VkInstance instance;
@@ -616,8 +618,8 @@ struct GlassMaterial final : Material {
     return uniforms;
   }
 
-  auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture>> override {
-    return ArrayView<std::shared_ptr<Texture>>{nullptr, 0};
+  auto get_texture_slots() -> ArrayView<std::shared_ptr<Texture2D>> override {
+    return ArrayView<std::shared_ptr<Texture2D>>{nullptr, 0};
   }
 private:
   UniformBlock uniforms;
@@ -679,10 +681,8 @@ int main(int argc, char** argv) {
 
   auto& render_device = app.render_device;
 
-  auto command_pool = render_device->CreateCommandPool(
-    queue_family_graphics,
-    CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer
-  );
+  auto command_pool = render_device->CreateGraphicsCommandPool(
+    CommandPool::Usage::Transient | CommandPool::Usage::ResetCommandBuffer);
 
   auto command_buffers = std::array<std::unique_ptr<CommandBuffer>, 2>{};
   command_buffers[0] = render_device->CreateCommandBuffer(command_pool);
@@ -736,7 +736,7 @@ int main(int argc, char** argv) {
 
   auto camera = new GameObject{};
   camera->add_component<PerspectiveCamera>();
-  camera->transform().position().z() = 3;
+  camera->transform().position().Z() = 3;
   scene->add_child(camera);
   scene->add_component<Scene>(camera);
 
@@ -749,19 +749,19 @@ int main(int argc, char** argv) {
     auto const& camera_local = camera->transform().local();
 
     if (state[SDL_SCANCODE_W]) {
-      camera->transform().position() -= camera_local[2].xyz() * 0.05;
+      camera->transform().position() -= camera_local[2].XYZ() * 0.05;
     }
 
     if (state[SDL_SCANCODE_S]) {
-      camera->transform().position() += camera_local[2].xyz() * 0.05;
+      camera->transform().position() += camera_local[2].XYZ() * 0.05;
     }
 
     if (state[SDL_SCANCODE_A]) {
-      camera->transform().position() -= camera_local[0].xyz() * 0.05;
+      camera->transform().position() -= camera_local[0].XYZ() * 0.05;
     }
 
     if (state[SDL_SCANCODE_D]) {
-      camera->transform().position() += camera_local[0].xyz() * 0.05;
+      camera->transform().position() += camera_local[0].XYZ() * 0.05;
     }
 
     if (state[SDL_SCANCODE_UP])    x += 0.01;

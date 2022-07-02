@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #include <aurora/gal/backend/vulkan.hpp>
 
@@ -26,10 +25,11 @@ struct VulkanRenderDevice final : RenderDevice {
   VulkanRenderDevice(VulkanRenderDeviceOptions const& options)
       : instance(options.instance)
       , physical_device(options.physical_device)
-      , device(options.device) {
+      , device(options.device)
+      , queue_family_graphics(options.queue_family_graphics) {
     CreateVmaAllocator();
     CreateDescriptorPool();
-    CreateQueues(options);
+    CreateQueues();
   }
 
  ~VulkanRenderDevice() {
@@ -67,30 +67,30 @@ struct VulkanRenderDevice final : RenderDevice {
   auto CreateTexture2D(
     u32 width,
     u32 height,
-    GPUTexture::Format format,
-    GPUTexture::Usage usage,
-    u32 mip_levels = 1
-  ) -> std::unique_ptr<GPUTexture> override {
-    return VulkanTexture::create(physical_device, device, allocator, width, height, mip_levels, format, usage);
+    Texture::Format format,
+    Texture::Usage usage,
+    u32 mip_count = 1
+  ) -> std::unique_ptr<Texture> override {
+    return VulkanTexture::Create2D(device, allocator, width, height, mip_count, format, usage);
   }
 
   auto CreateTexture2DFromSwapchainImage(
     u32 width,
     u32 height,
-    GPUTexture::Format format,
+    Texture::Format format,
     void* image_handle
-  ) -> std::unique_ptr<GPUTexture> override {
-    return VulkanTexture::from_swapchain_image(device, width, height, format, (VkImage)image_handle);
+  ) -> std::unique_ptr<Texture> override {
+    return VulkanTexture::Create2DFromSwapchain(device, width, height, format, (VkImage)image_handle);
   }
 
   auto CreateTextureCube(
     u32 width,
     u32 height,
-    GPUTexture::Format format,
-    GPUTexture::Usage usage,
-    u32 mip_levels = 1
-  ) -> std::unique_ptr<GPUTexture> override {
-    return VulkanTexture::create_cube(physical_device, device, allocator, width, height, mip_levels, format, usage);
+    Texture::Format format,
+    Texture::Usage usage,
+    u32 mip_count = 1
+  ) -> std::unique_ptr<Texture> override {
+    return VulkanTexture::CreateCube(device, allocator, width, height, mip_count, format, usage);
   }
 
   auto CreateSampler(
@@ -99,11 +99,39 @@ struct VulkanRenderDevice final : RenderDevice {
     return std::make_unique<VulkanSampler>(device, config);
   }
 
+  auto DefaultNearestSampler() -> Sampler* override {
+    if (!default_nearest_sampler) {
+      default_nearest_sampler = CreateSampler(Sampler::Config{
+        .mag_filter = Sampler::FilterMode::Nearest,
+        .min_filter = Sampler::FilterMode::Nearest,
+        .mip_filter = Sampler::FilterMode::Nearest
+      });
+    }
+
+    return default_nearest_sampler.get();
+  }
+
+  auto DefaultLinearSampler() -> Sampler* override {
+    if (!default_linear_sampler) {
+      default_linear_sampler = CreateSampler(Sampler::Config{
+        .mag_filter = Sampler::FilterMode::Linear,
+        .min_filter = Sampler::FilterMode::Linear,
+        .mip_filter = Sampler::FilterMode::Linear
+      });
+    }
+
+    return default_linear_sampler.get();
+  }
+
   auto CreateRenderTarget(
-    std::vector<std::shared_ptr<GPUTexture>> const& color_attachments,
-    std::shared_ptr<GPUTexture> depth_stencil_attachment = {}
+    std::vector<std::shared_ptr<Texture>> const& color_attachments,
+    std::shared_ptr<Texture> depth_stencil_attachment = {}
   ) -> std::unique_ptr<RenderTarget> override {
     return std::make_unique<VulkanRenderTarget>(device, color_attachments, depth_stencil_attachment);
+  }
+
+  auto CreateRenderPassBuilder() -> std::unique_ptr<RenderPassBuilder> override {
+    return std::make_unique<VulkanRenderPassBuilder>(device);
   }
 
   auto CreateBindGroupLayout(
@@ -122,12 +150,8 @@ struct VulkanRenderDevice final : RenderDevice {
     return std::make_unique<VulkanGraphicsPipelineBuilder>(device);
   }
 
-  // TODO: better handle queue families
-  auto CreateCommandPool(
-    u32 queue_family,
-    CommandPool::Usage usage
-  ) -> std::shared_ptr<CommandPool> override {
-    return std::make_shared<VulkanCommandPool>(device, queue_family, usage);
+  auto CreateGraphicsCommandPool(CommandPool::Usage usage) -> std::shared_ptr<CommandPool> override {
+    return std::make_shared<VulkanCommandPool>(device, queue_family_graphics, usage);
   }
 
   auto CreateCommandBuffer(
@@ -195,9 +219,9 @@ private:
     }
   }
 
-  void CreateQueues(VulkanRenderDeviceOptions const& options) {
+  void CreateQueues() {
     VkQueue graphics;
-    vkGetDeviceQueue(device, options.queue_family_graphics, 0, &graphics);
+    vkGetDeviceQueue(device, queue_family_graphics, 0, &graphics);
     graphics_queue = std::make_unique<VulkanQueue>(graphics);
   }
 
@@ -208,6 +232,10 @@ private:
   VmaAllocator allocator;
   VulkanCommandBuffer* transfer_cmd_buffer;
   std::unique_ptr<VulkanQueue> graphics_queue;
+  u32 queue_family_graphics;
+
+  std::unique_ptr<Sampler> default_nearest_sampler;
+  std::unique_ptr<Sampler> default_linear_sampler;
 };
 
 auto CreateVulkanRenderDevice(

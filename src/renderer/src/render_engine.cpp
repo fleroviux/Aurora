@@ -1,11 +1,11 @@
-/*
- * Copyright (C) 2022 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #include <aurora/renderer/component/scene.hpp>
 #include <aurora/renderer/render_engine.hpp>
 
 #include "cache/geometry_cache.hpp"
+#include "cache/texture_cache.hpp"
 #include "effect/ssr/ssr_effect.hpp"
 #include "forward/forward_render_pipeline.hpp"
 #include "render_pipeline_base.hpp"
@@ -28,6 +28,9 @@ struct RenderEngine final : RenderEngineBase {
     // TODO: verify that scene component exists and camera is non-null.
     auto camera = scene->get_component<Scene>()->camera;
 
+    // TODO: set command buffer only once and pass it as a shared_ptr.
+    texture_cache->SetCommandBuffer(command_buffers[0].get());
+
     render_pipeline->Render(scene, camera, command_buffers);
 
     auto color_texture = render_pipeline->GetColorTexture();
@@ -37,7 +40,7 @@ struct RenderEngine final : RenderEngineBase {
     ssr_effect->Render(camera, command_buffers[1], render_texture, render_target, color_texture, depth_texture, normal_texture);
   }
 
-  auto GetOutputTexture() -> GPUTexture* override {
+  auto GetOutputTexture() -> Texture* override {
     // TODO: return our render texture
     //return render_pipeline->GetOutputTexture();
     return render_texture.get();
@@ -46,15 +49,16 @@ struct RenderEngine final : RenderEngineBase {
 private:
   void CreateSharedCaches() {
     geometry_cache = std::make_shared<GeometryCache>(render_device);
+    texture_cache = std::make_shared<TextureCache>(render_device);
   }
 
   void CreateRenderPipeline() {
-    render_pipeline = std::make_unique<ForwardRenderPipeline>(render_device, geometry_cache);
+    render_pipeline = std::make_unique<ForwardRenderPipeline>(render_device, geometry_cache, texture_cache);
   }
 
   void CreateRenderTarget() {
     render_texture = render_device->CreateTexture2D(
-      3200, 1800, GPUTexture::Format::B8G8R8A8_SRGB, GPUTexture::Usage::ColorAttachment | GPUTexture::Usage::Sampled);
+      3200, 1800, Texture::Format::B8G8R8A8_SRGB, Texture::Usage::ColorAttachment | Texture::Usage::Sampled);
 
     render_target = render_device->CreateRenderTarget({render_texture});
   }
@@ -65,9 +69,10 @@ private:
 
   std::shared_ptr<RenderDevice> render_device;
   std::shared_ptr<GeometryCache> geometry_cache;
+  std::shared_ptr<TextureCache> texture_cache;
   std::unique_ptr<RenderPipelineBase> render_pipeline;
 
-  std::shared_ptr<GPUTexture> render_texture;
+  std::shared_ptr<Texture> render_texture;
   std::unique_ptr<RenderTarget> render_target;
 
   std::unique_ptr<SSREffect> ssr_effect;

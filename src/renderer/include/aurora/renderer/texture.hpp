@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2021 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #pragma once
 
@@ -13,14 +12,14 @@
 
 namespace Aura {
 
-struct Texture final : GPUResource, NonCopyable, NonMovable {
-  Texture(uint width, uint height, u8* data)
+struct Texture2D final : GPUResource, NonCopyable, NonMovable {
+  Texture2D(uint width, uint height, u8 * data)
       : width_(width)
       , height_(height)
       , data_(data) {
   }
 
- ~Texture() override {
+ ~Texture2D() override {
     delete data();
   }
 
@@ -40,7 +39,7 @@ struct Texture final : GPUResource, NonCopyable, NonMovable {
     return height_;
   }
 
-  static auto load(std::string const& path) -> std::unique_ptr<Texture>;
+  static auto load(std::string const& path) -> std::unique_ptr<Texture2D>;
 
 private:
   uint width_;

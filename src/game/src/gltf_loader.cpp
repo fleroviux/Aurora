@@ -1,6 +1,5 @@
-/*
- * Copyright (C) 2021 fleroviux
- */
+
+// Copyright (C) 2022 fleroviux. All rights reserved.
 
 #include <aurora/log.hpp>
 #include <fstream>
@@ -259,7 +258,7 @@ void GLTFLoader::load_images(nlohmann::json const& gltf) {
       auto uri = image["uri"].get<std::string>();
 
       // TODO: URI can be a data-URI but we assume a file path right now
-      images_.push_back(Texture::load((base_path_ / uri).string()));
+      images_.push_back(Texture2D::load((base_path_ / uri).string()));
 
       Log<Info>("GLTFLoader: loaded image: {}", uri);
     }
