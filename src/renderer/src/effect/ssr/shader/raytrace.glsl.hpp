@@ -55,48 +55,51 @@ constexpr auto raytrace_frag = R"(
     const float DISTANCE = 10.0;
     const float THRESHOLD = 0.05;
 
-    vec3 view_position = GetViewPosition(v_uv);
-    vec3 normal = GetNormal(v_uv);
-    vec3 view_direction = normalize(view_position);
-    vec3 reflected = reflect(view_direction, normal);
-
-    vec3 ray_position = view_position + reflected * 0.05;
     vec3 reflection = vec3(0.0);
 
-    for (uint i = 0; i < SAMPLE_COUNT; i++) {
-      vec4 proj = u_projection * vec4(ray_position, 1.0);
-      proj.xyz /= proj.w;
+    if (GetDepth(v_uv) < 0.999) {
+      vec3 view_position = GetViewPosition(v_uv);
+      vec3 normal = GetNormal(v_uv);
+      vec3 view_direction = normalize(view_position);
+      vec3 reflected = reflect(view_direction, normal);
 
-      vec2 uv = vec2(proj.x, -proj.y) * 0.5 + 0.5;
+      vec3 ray_position = view_position + reflected * 0.05;
 
-      // TODO: can this be better solved using clamp-to-edge wrapping?
-      if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-        break;
-      }
+      for (uint i = 0; i < SAMPLE_COUNT; i++) {
+        vec4 proj = u_projection * vec4(ray_position, 1.0);
+        proj.xyz /= proj.w;
 
-      //float depth_expect = proj.z;
-      //float depth_real = GetDepth(uv);
+        vec2 uv = vec2(proj.x, -proj.y) * 0.5 + 0.5;
 
-      // TODO: simplify this calculation?
-      float z = GetViewPosition(uv).z;
-      float z_diff = z - ray_position.z;
-
-      if (z_diff >= 0.0 && z_diff < THRESHOLD) {
-        // avoid hitting backfaces
-        if (dot(reflected, GetNormal(uv)) < 0.0) {
-          reflection = texture(u_color_map, vec2(uv.x, uv.y)).rgb;
+        // TODO: can this be better solved using clamp-to-edge wrapping?
+        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+          break;
         }
-        break;
+
+        //float depth_expect = proj.z;
+        //float depth_real = GetDepth(uv);
+
+        // TODO: simplify this calculation?
+        float z = GetViewPosition(uv).z;
+        float z_diff = z - ray_position.z;
+
+        if (z_diff >= 0.0 && z_diff < THRESHOLD) {
+          // avoid hitting backfaces
+          if (dot(reflected, GetNormal(uv)) < 0.0) {
+            reflection = texture(u_color_map, vec2(uv.x, uv.y)).rgb;
+          }
+          break;
+        }
+
+        ray_position += reflected * 0.025;
       }
 
-      ray_position += reflected * 0.025;
+      const float F0 = 0.04;
+
+      float n_dot_v = max(0.0, dot(normal, -view_direction));
+      float fresnel = F0 + (1.0 - F0) * pow(1.0 - n_dot_v, 5.0);
+      reflection *= fresnel;
     }
-
-    const float F0 = 0.04;
-
-    float n_dot_v = max(0.0, dot(normal, -view_direction));
-    float fresnel = F0 + (1.0 - F0) * pow(1.0 - n_dot_v, 5.0);
-    reflection *= fresnel;
 
     frag_color = texture(u_color_map, v_uv) + vec4(reflection, 0.0);
   }
