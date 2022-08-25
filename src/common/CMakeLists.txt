@@ -14,6 +14,7 @@ set(HEADERS_PUBLIC
   include/aurora/array_view.hpp
   include/aurora/integer.hpp
   include/aurora/log.hpp
+  include/aurora/result.hpp
   include/aurora/utility.hpp
 )
 
