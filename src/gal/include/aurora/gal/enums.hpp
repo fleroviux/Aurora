@@ -156,6 +156,7 @@ constexpr auto operator|(PipelineStage lhs, PipelineStage rhs) -> PipelineStage 
 // subset of VkAccessFlagBits:
 // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkAccessFlagBits.html
 enum class Access : u32 {
+  None = 0,
   IndirectCommandRead = 0x0000'0001,
   IndexRead = 0x0000'0002,
   VertexAttributeRead = 0x0000'0004,
