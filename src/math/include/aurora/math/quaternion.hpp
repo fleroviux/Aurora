@@ -36,7 +36,7 @@ struct Quaternion {
   /**
    * Construct a Quaternion from a Vector3.
    */
-  Quaternion(Vec3 const& vec3) : data{NumericConstants<T>::Zero(), vec3.x(), vec3.y(), vec3.z()} {}
+  Quaternion(Vec3 const& vec3) : data{NumericConstants<T>::Zero(), vec3.X(), vec3.Y(), vec3.Z()} {}
 
   /**
    * Access a component of the quaternion via its index (between `0` and `3`).
@@ -192,9 +192,9 @@ struct Quaternion {
    * @return a reference to this quaternion.
    */
   auto Conjugate() -> Derived& {
-    x() = -x();
-    y() = -y();
-    z() = -z();
+    X() = -X();
+    Y() = -Y();
+    Z() = -Z();
     return *static_cast<Derived*>(this);
   }
 

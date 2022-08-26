@@ -59,7 +59,7 @@ inline void Assert(bool condition, Args... args) {
 
 template<typename... Args>
 inline void Panic(std::string_view format, Args... args) {
-  fmt::print("\e[31mpanic: {}", fmt::format(format, args...);
+  fmt::print("\e[31mpanic: {}", fmt::format(format, args...));
   std::exit(-1);
 }
 
